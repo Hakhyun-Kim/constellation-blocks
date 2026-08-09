@@ -1,6 +1,7 @@
 # 의존성
 node_modules/
 /CLAUDE.md
+/.claude/
 /scripts/
 /src/app/
 /src/balance/
