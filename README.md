@@ -1,39 +1,40 @@
 # Constellation Defense
 
-**Match the stars. Command the battle.**
+**A real-time match-3 tactics defense game.**
 
-Constellation Defense is a browser-first real-time tactics defense game. You command three automatic guardian lanes while using a live match-3 board as a spellbook. The *place* of a match targets a lane, its colour chooses the tactic, and a four- or five-star constellation becomes a devastating nova or starfall.
+Constellation Defense keeps the full 3D kingdom-defense experience — summon and position heroes, combine their ranks, improve a castle, withstand boss waves, and grow the Star Warden — while replacing the former learning gate with a live tactical starboard.
+
+During battle, match neighbouring stars on the 6×6 board. The matched columns point to the left, center, or right road; the constellation type decides the effect:
+
+- ☄️ **Flare** deals damage on that road.
+- ❄️ **Tide** slows that road's enemy line.
+- 🛡️ **Bloom** restores the citadel and pushes danger back.
+- Four- and five-star constellations are stronger tactical moments.
+
+Hero combinations are now immediate, gold-only preparation choices. The real-time puzzle is the combat layer: it creates last-second saves without replacing the army-building strategy.
 
 ## Play
 
-Open [the live game](https://hakhyun-kim.github.io/constellation-defense/) once GitHub Pages finishes deploying, or run it locally:
+[Play in the browser](https://hakhyun-kim.github.io/constellation-defense/)
 
 ```bash
 npm install
 npm run build
 npm run serve
+npm run check
 ```
-
-## Controls and rules
-
-- Click two neighboring stars to swap them.
-- Columns 1–2 attack **Aurora**, 3–4 **Comet**, and 5–6 **Nebula**.
-- Orange **Flare** stars damage enemies, blue **Tide** stars freeze them, and green **Bloom** stars heal or rally a defender.
-- Spend stardust between waves to upgrade the guardian in a lane.
-- Three stars cast a lane tactic; four make a nova; five call a starfall.
 
 ## Built with Codex
 
-This project was rebuilt from a defense-game prototype into a new game loop with Codex as a development collaborator. Codex helped translate the design goal into a playable browser architecture, build the responsive match-3 board and real-time lane simulation, and iterate on readable visual feedback. The creative decisions — linking board columns to lanes, assigning tactical identities to star colours, and keeping match-3 play active during combat — were deliberately selected to make every swap a battlefield decision instead of a detached minigame.
+Codex was used as a development collaborator to evolve an existing 3D defense foundation into a distinct match-3 tactics game. It helped map the new game loop onto the existing renderer and pure simulation engine, add a deterministic tactical-board flow, and preserve the original responsive UI, automatic demo player, procedural 3D world, synthesized audio, and engine invariants.
 
-The game uses no image or audio assets. Its night sky, battlefield, enemy movement, projectiles, constellation board, and UI are generated in HTML, CSS, and JavaScript.
+The design decisions were human-led: the match location must map to a visible road, tactical colors must have clearly different jobs, and the puzzle must remain active during combat rather than becoming a detached reward screen.
 
 ## Technical notes
 
-- Static browser build, with no runtime server or account requirement.
-- `src/main.js` owns deterministic gameplay state, matching, tactics, waves, and rendering.
-- The bundle is generated with esbuild and committed so the game can be opened without a local build step.
+- Browser-only static build with esbuild.
+- The `src/engine/` layer is DOM- and renderer-free, enabling node-based invariant checks.
+- `src/app/tacticflow.js` owns board input and cascades; `src/engine/combat.js` resolves its effects into the game's usual event stream.
+- All 3D models, VFX, terrain, and Web Audio sound are generated procedurally — no game-art or audio asset files are required.
 
-## License and credits
-
-The game uses Google Fonts (Fredoka and Space Grotesk). See [CREDITS.md](CREDITS.md).
+See [CREDITS.md](CREDITS.md) for font credits.

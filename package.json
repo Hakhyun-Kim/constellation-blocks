@@ -1,14 +1,18 @@
 {
   "name": "constellation-defense",
   "version": "2.1.0",
-  "description": "A real-time match-3 tactics defense game built with Codex.",
+  "description": "A 3D real-time match-3 tactics defense game built with Codex.",
   "type": "module",
   "private": false,
   "scripts": {
     "build": "esbuild src/main.js --bundle --outfile=dist/game.js --format=iife --minify-whitespace",
     "watch": "esbuild src/main.js --bundle --outfile=dist/game.js --format=iife --watch",
+    "balance": "node scripts/balance-bot.mjs",
     "serve": "node scripts/serve.mjs",
-    "check": "npm run build"
+    "balance:check": "node scripts/balance-check.mjs 60",
+    "math:check": "node scripts/math-check.mjs 3000",
+    "engine:check": "node scripts/engine-check.mjs",
+    "check": "npm run engine:check && npm run build"
   },
   "dependencies": {
     "three": "^0.166.0"

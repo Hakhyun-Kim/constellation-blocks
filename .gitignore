@@ -2,21 +2,6 @@
 node_modules/
 /CLAUDE.md
 /.claude/
-/scripts/
-/src/app/
-/src/balance/
-/src/engine/
-/src/gfx/
-/src/mathgen/
-/src/bot.js
-/src/data.js
-/src/demo.js
-/src/engine.js
-/src/math.js
-/src/music.js
-/src/sfx.js
-/src/story.js
-/src/ui.js
 
 # 로그/캐시
 npm-debug.log*

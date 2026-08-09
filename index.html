@@ -1,63 +1,374 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#100d2c">
-  <title>Constellation Defense</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>🌌 Constellation Defense</title>
+<!-- 폰트: Jua(제목) + Gaegu(숫자·문제) — 둘 다 SIL Open Font License 1.1 (CREDITS.md 참조) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@700&display=swap">
+<link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-  <main class="app-shell">
-    <header>
-      <a class="brand" href="#top" aria-label="Constellation Defense home"><span>✦</span> CONSTELLATION<br>DEFENSE</a>
-      <div class="status"><span id="waveLabel">WAVE 1 · PREPARE</span><span class="dot">●</span><span id="goldLabel">120 stardust</span></div>
-      <button class="sound" id="helpBtn">HOW TO PLAY</button>
+<div class="wrap">
+
+  <!-- ===== 왼쪽: 3D 전장 ===== -->
+  <div class="left">
+    <header class="topbar">
+      <h1>🌌 Constellation Defense</h1>
+      <div class="top-right">
+        <div class="record">🏆 <b id="bestWave">-</b>웨이브</div>
+        <div class="record shard">✨ <b id="shards">0</b></div>
+        <button id="bookBtn" title="도감·업적 (B)">📖 도감<span id="bookDot" class="tabdot hidden"></span></button>
+        <button id="metaBtn">🌟 별의 축복</button>
+      </div>
     </header>
 
-    <section class="hero" id="top">
-      <div>
-        <p class="eyebrow">MATCH THE STARS. COMMAND THE BATTLE.</p>
-        <h1>Defend the sky<br>one constellation at a time.</h1>
-        <p class="lede">A real-time match-3 tactics defense game. The column you match chooses the lane; the constellation you build decides its magic.</p>
+    <div class="castlebar-wrap">
+      <div class="castlebar-label"><span>🏰 성 체력</span><span id="castleText">100 / 100</span></div>
+      <div class="castlebar">
+        <div id="castleGhost"></div>
+        <div id="castleFill"></div>
       </div>
-      <div class="legend"><span><i class="flare"></i> Flare: strike</span><span><i class="tide"></i> Tide: freeze</span><span><i class="bloom"></i> Bloom: rally</span></div>
+    </div>
+
+    <div class="stage">
+      <div id="scene3d"></div>
+      <div id="hitFlash"></div>
+      <div id="demoBar" class="hidden">
+        <span id="demoCaption">🎬 데모</span>
+        <button id="demoExit">✕ 데모 끝내기 (D)</button>
+      </div>
+      <div id="lowHpVignette"></div>
+      <div id="bossVignette"></div>
+      <div id="rarityFlash"></div>
+      <div id="revealCard" class="reveal hidden"></div>
+      <div id="bossWarnBanner" class="hidden">⚠️ 보스 접근!</div>
+      <div id="bossBanner" class="hidden">🐉 보스 드래곤 출현!!</div>
+      <div id="bossBar" class="hidden">
+        <span id="bossBarName">🐉 보스</span>
+        <div class="bossbar-track"><div id="bossBarFill"></div></div>
+      </div>
+      <div id="comboChip" class="hidden"></div>
+      <!-- 별지기 칩: 초상 · 레벨 · 체력/경험치 · 마법 버튼 -->
+      <div id="champChip">
+        <button id="champFace" title="옷장 열기 — 이름과 모습을 바꿔요!">🌠</button>
+        <div class="champ-mid">
+          <div class="champ-name"><b id="champName">루나</b> <span id="champLv" class="champ-lv">Lv 1</span><span id="champKoTag" class="champ-ko hidden">😵 쓰러짐</span></div>
+          <div class="champ-hp"><div id="champHpFill"></div></div>
+          <div class="champ-xp" title="경험치"><div id="champXpFill"></div></div>
+        </div>
+        <div class="champ-btns">
+          <button id="spellBtn" title="별똥별 — 성문에 가까운 적에게 별이 떨어져요 (A)">
+            <span class="cdfill" id="spellCdFill"></span><span class="bicon">☄️</span><span class="bkey">A</span>
+          </button>
+          <button id="ultBtn" title="은하수 — 화면의 모든 적을 때리고 얼려요! 처치로 충전 (E)">
+            <span class="cdfill ult" id="ultFill"></span><span class="bicon">🌌</span><span class="bkey">E</span>
+          </button>
+          <button id="skillBtn" title="별자리 (스킬트리) — 레벨 업으로 얻은 포인트를 써요 (V)">
+            <span class="bicon">✨</span><span id="spBadge" class="spbadge hidden">1</span><span class="bkey">V</span>
+          </button>
+        </div>
+      </div>
+      <div id="waveInfo" class="hidden">👾 <span id="remainN"></span></div>
+      <div id="wavePreview" class="hidden"></div>
+      <button id="waveBtn" class="wave-btn">▶ 1웨이브 시작!</button>
+      <div id="coachChip" class="hidden">
+        👋 <b>처음이시죠?</b> ① 오른쪽에서 용사 소환 → ② 용사 카드 클릭 → ③ 길 옆 <b>돌 발판</b>을 눌러 배치!<br>
+        🌌 전투 중 오른쪽 별자리 전술판을 맞추면, 그 길에 유성·서리·수호 마법이 떨어져요!
+      </div>
+      <div id="toasts"></div>
+    </div>
+
+    <!-- 배치 중 안내 — 전장 "아래"에 둔다. 전장 위에 얹으면 하필 발판을 가린다. -->
+    <div id="placeBar" class="placebar">
+      <span id="placeBarText">🎲 용사를 소환하고, 카드를 눌러 배치하세요</span>
+      <button id="placeBarCancel">✕ 취소</button>
+    </div>
+
+    <div class="under-row">
+      <div class="difficulty" id="diffRow">
+        <span class="dlabel">난이도</span>
+        <button data-d="easy">🌱 쉬움</button>
+        <button data-d="normal" class="on">⚔️ 보통</button>
+        <button data-d="hard">🔥 어려움</button>
+      </div>
+      <button id="helpBtn" class="helpbtn">❓ 조작법</button>
+    </div>
+    <div id="helpBox" class="helpbox hidden">
+      <p>🖱 <b>배치</b> 벤치 카드 클릭 → 길 옆 <b>돌 발판</b> 클릭(🟦 찬 자리를 누르면 그 용사와 <b>교환</b>) ·
+        <b>이동/교환</b> 배치된 용사를 클릭하고 갈 곳(빈 발판 🟩 / 다른 용사 🟦)을 클릭 ·
+        <b>회수</b> 우클릭</p>
+      <p>⌨️ <b>Space</b> 웨이브 · <b>S</b> 소환 · <b>C</b> 조합 · <b>Tab</b> 벤치 · <b>F</b> 배치된 용사 ·
+        <b>←→</b> 발판 · <b>Enter</b> 배치/이동/교환 · <b>R</b> 회수 · <b>X</b> 판매 ·
+        <b>B</b> 도감 · <b>7~9</b> 성 · <b>M</b> 음소거 · <b>Esc</b> 취소</p>
+      <p>🌠 <b>별지기</b> — 길을 지키는 기사예요. <b>A</b> 별똥별(무료·쿨다운) · <b>E</b> 은하수(처치로 충전) ·
+        <b>V</b> 별자리(스킬). 쓰러지면 그 웨이브엔 마법을 못 쓰고, 다음 준비 때 다시 일어나요.
+        성이 무피해로 버티면(완벽 방어) ✨별조각 +1! 왼쪽 아래 <b>초상을 누르면 옷장</b> — 이름·머리·옷·무기를 바꿔요.</p>
+      <p>💾 <b>저장</b> 웨이브가 끝날 때마다 <b>자동 저장</b>돼요 — 다시 열면 이어하기 메뉴가 떠요 ·
+        💾 버튼으로 파일 저장(준비 중에만), 📂로 불러오기 ·
+        <b>여러 명 판매</b>는 벤치 아래 💰 버튼!</p>
+      <p>💡 몬스터는 세 갈래 길로 와요(가운데는 보스 지름길!). 갈림길 옆 발판이 명당이에요.</p>
+    </div>
+  </div>
+
+  <!-- ===== 오른쪽: 용사 / 별자리 전술 / 성 관리 ===== -->
+  <aside class="right">
+
+    <section class="card fixed" id="statCard">
+      <div class="statrow">
+        <div class="stat">💰 <b id="gold">150</b></div>
+        <div class="stat">🌊 <b id="waveNo">1</b>웨이브<span id="loopChip" class="loopchip hidden"></span></div>
+        <div class="minibtns">
+          <button id="speedBtn" title="게임 속도 (Q)">⏩ x1</button>
+          <button id="sfxBtn" title="효과음 끄기/켜기">🔊</button>
+          <button id="bgmBtn" title="배경음악 끄기/켜기 (M: 전체)">🎵</button>
+          <button id="saveBtn" title="이번 판을 파일로 저장해요 (준비 단계에서)">💾</button>
+          <button id="loadBtn" title="저장 파일을 불러와 이어서 해요">📂</button>
+          <button id="demoBtn" title="AI가 대신 플레이하는 걸 구경해요 (D)">🎬 데모</button>
+          <input type="file" id="loadFile" accept=".json,application/json" class="hidden">
+        </div>
+      </div>
+      <div class="gradebar hidden" aria-hidden="true">
+        <span class="glabel" title="조합할 때 나올 문제의 학년">🧮 문제</span>
+        <div class="grades" id="grades">
+          <button data-g="3" class="on">3학년</button>
+          <button data-g="4">4학년</button>
+          <button data-g="5">5학년</button>
+          <button data-g="6">6학년</button>
+        </div>
+      </div>
     </section>
 
-    <section class="game-grid" aria-label="Constellation Defense game">
-      <section class="battle-panel">
-        <div class="panel-title"><div><small>SKYWARD CITADEL</small><h2>Three lanes. One last light.</h2></div><div id="castleLabel" class="castle-hp">100 / 100</div></div>
-        <div class="castle-track"><div id="castleFill"></div></div>
-        <div id="battlefield" class="battlefield" aria-live="polite">
-          <div class="moon"></div><div class="mountain mountain-a"></div><div class="mountain mountain-b"></div>
-          <div class="citadel">♜</div>
-          <div class="lane l0"><span class="lane-name">LEFT — AURORA</span><div class="defender" id="defender0">✧<b>1</b></div><div class="enemy-track" id="lane0"></div></div>
-          <div class="lane l1"><span class="lane-name">CENTER — COMET</span><div class="defender" id="defender1">✧<b>1</b></div><div class="enemy-track" id="lane1"></div></div>
-          <div class="lane l2"><span class="lane-name">RIGHT — NEBULA</span><div class="defender" id="defender2">✧<b>1</b></div><div class="enemy-track" id="lane2"></div></div>
-          <div id="battleMessage" class="battle-message">Build a constellation before the assault.</div>
-        </div>
-        <div class="battle-controls">
-          <button id="waveBtn" class="primary">BEGIN WAVE</button>
-          <button class="upgrade" data-lane="0">AURORA <span>LV 1 · 55</span></button>
-          <button class="upgrade" data-lane="1">COMET <span>LV 1 · 55</span></button>
-          <button class="upgrade" data-lane="2">NEBULA <span>LV 1 · 55</span></button>
-        </div>
-      </section>
-
-      <section class="puzzle-panel">
-        <div class="panel-title"><div><small>TACTICAL STARBOARD</small><h2>Match where danger is.</h2></div><div id="comboLabel" class="combo">×0</div></div>
-        <p class="puzzle-copy">Swap neighbouring stars. Columns 1–2 target Aurora, 3–4 Comet, and 5–6 Nebula.</p>
-        <div id="board" class="board" role="grid" aria-label="Tactical match three board"></div>
-        <div class="tactics"><div><strong>3 match</strong><span>lane tactic</span></div><div><strong>4 match</strong><span>nova burst</span></div><div><strong>5 match</strong><span>starfall</span></div></div>
-      </section>
+    <section class="card fixed" id="benchCard">
+      <button id="summonBtn" class="big amber">🎲 용사 소환 (💰 50 · S)</button>
+      <div id="benchHint" class="benchhint hidden">🟩 빈 발판 = 배치 · 🟦 찬 발판 = 자리 교환 · ←→ 고르고 Enter</div>
+      <div id="bench" class="bench"></div>
+      <div class="sellbar">
+        <button id="sellModeBtn" title="여러 용사를 골라 한 번에 팔아요">💰 여러 명 판매</button>
+        <span id="sellInfo" class="sellinfo hidden"></span>
+        <button id="sellAllBtn" class="hidden">전체 선택</button>
+        <button id="sellGoBtn" class="hidden">팔기</button>
+      </div>
     </section>
 
-    <section class="footer-note"><span>CLICK TWO NEIGHBOURING STARS TO SWAP</span><span id="eventLog">The board is listening.</span></section>
-  </main>
-  <dialog id="help"><button id="closeHelp" class="close">×</button><p class="eyebrow">HOW TO PLAY</p><h2>Use the board as your spellbook.</h2><p>Enemies advance in three lanes. Your guardians attack automatically. Match stars in the threatened lane to fire immediate magic: orange Flare stars deal damage, blue Tide stars freeze enemies, and green Bloom stars heal the citadel and rally its guardian.</p><p>Four or five matched stars create powerful novas and starfalls. Spend stardust between waves to permanently improve a lane's guardian.</p><button id="startHelp" class="primary">START DEFENDING</button></dialog>
-  <script src="dist/game.js"></script>
+    <section class="card tactic-card" id="tacticCard">
+      <div class="tactic-head">
+        <div><h2>🌌 별자리 전술판</h2><span>세 칸 이상 맞추면 그 열의 길에 마법을 내려요</span></div>
+        <div class="tactic-lanes"><b>←</b><b>↑</b><b>→</b></div>
+      </div>
+      <div class="tactic-routes"><span>왼쪽 길</span><span>가운데 길</span><span>오른쪽 길</span></div>
+      <div id="tacticBoard" class="tactic-board" aria-label="별자리 3매치 전술판"></div>
+      <div class="tactic-key"><span>☄️ 유성: 공격</span><span>❄️ 서리: 감속</span><span>🛡️ 수호: 회복·밀치기</span></div>
+      <div id="tacticStatus" class="tactic-status">웨이브가 시작되면 별들이 깨어나요.</div>
+    </section>
+
+    <!-- 탭: 한 번에 하나만 보여 세로 길이를 줄인다 -->
+    <div class="tabs" id="tabs">
+      <button data-tab="combine" class="on">⚗️ 조합<span id="combineDot" class="tabdot hidden"></span></button>
+      <button data-tab="castle">🏰 성</button>
+      <button data-tab="hero">🧍 용사<span id="heroDot" class="tabdot hidden"></span></button>
+    </div>
+
+    <div class="tabbody">
+      <section class="card pane" data-pane="combine">
+        <h2>⚗️ 용사 조합 <span class="sub">같은 등급 2명 + 골드</span></h2>
+        <div id="combineRows"></div>
+      </section>
+
+      <section class="card pane hidden" data-pane="castle">
+        <h2>🏰 성 관리 <span class="sub">골드로 성을 강화해요</span></h2>
+        <div id="castleRows"></div>
+      </section>
+
+      <section class="card pane hidden" data-pane="hero" id="heroPanel">
+        <h2 id="hpTitle">🧍 선택한 용사</h2>
+        <div id="hpInfo"></div>
+        <div id="moveHint" class="movehint hidden">
+          🎯 갈 곳을 클릭하면 이동! <b>다른 용사를 클릭하면 🔀 자리 교환</b>이에요.<br>
+          끌어다 놓아도 되고, <b>←→</b>로 발판을 고르고 <b>Enter</b>도 돼요.
+        </div>
+        <div class="rowbtns">
+          <button id="recallBtn">↩ 벤치로 회수</button>
+          <button id="sellBtn">💰 판매</button>
+        </div>
+      </section>
+    </div>
+
+  </aside>
+</div>
+
+<!-- ===== 수학 문제 모달 ===== -->
+<div id="mathModal" class="modal hidden">
+  <div class="modal-card">
+    <h2 id="mTitle">✏️ 지혜의 시험!</h2>
+    <div class="mmeta">
+      <span id="mGrade" class="mgrade">3학년 문제</span>
+      <span id="mDiff" class="mdiff">⭐ 쉬움</span>
+      <span id="mSteps" class="msteps hidden">1 / 2</span>
+      <span id="mTries" class="mtries hidden">❤️ 3</span>
+      <span id="mStreak" class="mstreak hidden">🔥 2연승</span>
+    </div>
+    <div id="mQuiz">
+      <div id="mTimer" class="mtimer">
+        <div id="mTimerFill"></div>
+        <span id="mTimerText">45</span>
+      </div>
+      <div id="mProblem" class="mproblem"></div>
+      <div class="mrow">
+        <input id="mInput" type="text" inputmode="decimal" autocomplete="off" placeholder="정답을 입력하세요">
+        <button id="mSubmit" class="big blue">확인!</button>
+      </div>
+      <!-- 5초쯤 지나면 뜨는 세로셈 칸 (문제집의 계산 칸) -->
+      <div id="mVert" class="mvert hidden"></div>
+      <div id="mHint" class="mhint hidden"></div>
+    </div>
+    <div id="mFeedback" class="mfeedback"></div>
+    <div class="mrow">
+      <button id="mHintBtn" class="hintbtn">💡 힌트 (💰30 · H)</button>
+      <button id="mNext" class="hidden">➡ 다음 문제 (Enter)</button>
+      <button id="mClose">닫기 (Esc)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 시작 메뉴 (자동 저장이 있을 때만) ===== -->
+<div id="startModal" class="modal hidden">
+  <div class="modal-card start">
+    <h2>🏰 용사 수학 디펜스</h2>
+    <p id="continueInfo" class="continue-info"></p>
+    <button id="continueBtn" class="big amber">⏩ 이어하기 (Enter)</button>
+    <button id="newGameBtn" class="big blue">🆕 처음부터 시작하기</button>
+    <p class="start-note">웨이브가 끝날 때마다 자동 저장돼요 · 💾 버튼으로 파일 저장도 됩니다</p>
+  </div>
+</div>
+
+<!-- ===== 게임 오버 모달 ===== -->
+<div id="overModal" class="modal hidden">
+  <div class="modal-card over">
+    <h2>💥 성이 함락되었어요…</h2>
+    <div id="overStats"></div>
+    <div id="overShards" class="over-shards"></div>
+    <p class="over-msg">별조각으로 <b>별의 축복</b>을 받으면 다음 도전이 쉬워져요!</p>
+    <div class="rowbtns">
+      <button id="overMetaBtn">🌟 별의 축복</button>
+      <button id="shareBtn">📸 기록 카드</button>
+    </div>
+    <button id="restartBtn" class="big amber">🔄 처음부터 다시 도전! (Enter)</button>
+  </div>
+</div>
+
+<!-- ===== 도감 · 기록 (용사 / 몬스터 / 업적 / 수학) ===== -->
+<div id="bookModal" class="modal hidden">
+  <div class="modal-card book">
+    <h2>📖 도감 · 기록</h2>
+    <div class="book-tabs" id="bookTabs">
+      <button data-btab="heroes" class="on">🧍 용사</button>
+      <button data-btab="enemies">👾 몬스터</button>
+      <button data-btab="ach">🏅 업적</button>
+      <button data-btab="math">🌌 전술</button>
+    </div>
+    <div id="bookBody" class="book-body"></div>
+    <button id="bookClose" class="big blue">닫기 (Esc)</button>
+  </div>
+</div>
+
+<!-- ===== 서른 번째 아침 (승리) ===== -->
+<div id="victoryModal" class="modal hidden">
+  <div class="modal-card victory">
+    <div class="victory-sun">🌅</div>
+    <h2 id="victoryTitle">서른 번째 아침</h2>
+    <div id="victoryStats" class="victory-stats"></div>
+    <div id="victoryShards" class="over-shards"></div>
+    <p class="victory-msg" id="victoryMsg">성은 무너지지 않았다. 셈이 맞았기 때문이다.</p>
+    <button id="victoryTrialBtn" class="big amber">🌟 별의 시련 — 더 강한 마왕군에 도전!</button>
+    <p class="victory-note">별지기의 성장은 그대로, 용사·골드·성은 처음부터 · 몬스터가 훨씬 세져요</p>
+    <div class="rowbtns">
+      <button id="victoryContinueBtn">▶ 계속 지키기 (Enter)</button>
+      <button id="victoryShareBtn">📸 기록 카드</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 별의 축복 (메타 업그레이드) ===== -->
+<div id="metaModal" class="modal hidden">
+  <div class="modal-card">
+    <h2>🌟 별의 축복</h2>
+    <p class="meta-desc">게임에서 모은 <b>별조각 ✨<span id="metaShards">0</span>개</b>로 영구 축복을 받아요.<br>축복은 다음 게임부터 적용돼요!</p>
+    <div id="metaRows"></div>
+    <button id="metaClose" class="big blue">닫기</button>
+  </div>
+</div>
+
+<!-- ===== 별지기의 옷장 (꾸미기) ===== -->
+<div id="closetModal" class="modal hidden">
+  <div class="modal-card closet">
+    <h2>🪞 별지기의 옷장</h2>
+    <div class="closet-top">
+      <div id="closetPreview"><span class="closet-emoji">🌠</span></div>
+      <div class="closet-namebox">
+        <label for="closetName">이름</label>
+        <input id="closetName" maxlength="8" placeholder="루나" autocomplete="off">
+        <p class="closet-note">이름과 모습은 이 기기에 저장돼요.<br>다음 판에도 그대로 이어져요!</p>
+      </div>
+    </div>
+    <div id="closetRows"></div>
+    <div class="rowbtns">
+      <button id="closetSave" class="big amber">이걸로 입을래! (저장)</button>
+      <button id="closetClose">닫기 (Esc)</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 별지기 별자리 (스킬트리) ===== -->
+<div id="skillModal" class="modal hidden">
+  <div class="modal-card skill">
+    <h2 id="skillTitle">✨ 별지기의 별자리</h2>
+    <p class="skill-desc">레벨 업으로 얻은 <b>스킬 포인트 <span id="skillPts">0</span>개</b>로 별을 잇습니다.<br>
+      같은 별자리의 별을 먼저 밝혀야 다음 별이 열려요!</p>
+    <div id="skillCols"></div>
+    <button id="skillClose" class="big blue">닫기 (Esc)</button>
+  </div>
+</div>
+
+<!-- 막간 이야기 -->
+<div id="storyModal" class="modal hidden">
+  <div class="modal-card story">
+    <div class="story-icon" id="storyIcon">📜</div>
+    <h2 id="storyTitle">이야기</h2>
+    <div class="story-lines" id="storyLines"></div>
+    <button id="storyNext" class="big blue">계속 (Enter)</button>
+    <button id="storyOff" class="story-off">이야기 그만 보기</button>
+  </div>
+</div>
+
+<!-- 전설·신화 탄생 연출 -->
+<div id="revealModal" class="modal hidden">
+  <div class="reveal-card" id="revealCard">
+    <div class="reveal-rays"></div>
+    <div class="reveal-tier" id="revealTier">전설</div>
+    <div class="reveal-art" id="revealArt">⚔️</div>
+    <div class="reveal-name" id="revealName">검성</div>
+    <div class="reveal-desc" id="revealDesc"></div>
+    <div class="reveal-hint">아무 키나 눌러 계속</div>
+  </div>
+</div>
+
+<!-- 용사 상세 정보 툴팁 -->
+<div id="tooltip" class="hidden"></div>
+
+<script>
+/* ?rafshim: 숨겨진 탭/자동화 환경에서 rAF가 스로틀될 때 타이머로 구동 (테스트용) */
+(function () {
+  var q = new URLSearchParams(location.search);
+  if (!q.has('rafshim') && document.visibilityState !== 'hidden') return;
+  window.requestAnimationFrame = function (cb) {
+    return setTimeout(function () { cb(performance.now()); }, 33);
+  };
+  window.cancelAnimationFrame = clearTimeout;
+})();
+</script>
+<script src="dist/game.js"></script>
 </body>
 </html>
