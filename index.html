@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#100d2c">
+  <title>Constellation Defense</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="app-shell">
+    <header>
+      <a class="brand" href="#top" aria-label="Constellation Defense home"><span>✦</span> CONSTELLATION<br>DEFENSE</a>
+      <div class="status"><span id="waveLabel">WAVE 1 · PREPARE</span><span class="dot">●</span><span id="goldLabel">120 stardust</span></div>
+      <button class="sound" id="helpBtn">HOW TO PLAY</button>
+    </header>
+
+    <section class="hero" id="top">
+      <div>
+        <p class="eyebrow">MATCH THE STARS. COMMAND THE BATTLE.</p>
+        <h1>Defend the sky<br>one constellation at a time.</h1>
+        <p class="lede">A real-time match-3 tactics defense game. The column you match chooses the lane; the constellation you build decides its magic.</p>
+      </div>
+      <div class="legend"><span><i class="flare"></i> Flare: strike</span><span><i class="tide"></i> Tide: freeze</span><span><i class="bloom"></i> Bloom: rally</span></div>
+    </section>
+
+    <section class="game-grid" aria-label="Constellation Defense game">
+      <section class="battle-panel">
+        <div class="panel-title"><div><small>SKYWARD CITADEL</small><h2>Three lanes. One last light.</h2></div><div id="castleLabel" class="castle-hp">100 / 100</div></div>
+        <div class="castle-track"><div id="castleFill"></div></div>
+        <div id="battlefield" class="battlefield" aria-live="polite">
+          <div class="moon"></div><div class="mountain mountain-a"></div><div class="mountain mountain-b"></div>
+          <div class="citadel">♜</div>
+          <div class="lane l0"><span class="lane-name">LEFT — AURORA</span><div class="defender" id="defender0">✧<b>1</b></div><div class="enemy-track" id="lane0"></div></div>
+          <div class="lane l1"><span class="lane-name">CENTER — COMET</span><div class="defender" id="defender1">✧<b>1</b></div><div class="enemy-track" id="lane1"></div></div>
+          <div class="lane l2"><span class="lane-name">RIGHT — NEBULA</span><div class="defender" id="defender2">✧<b>1</b></div><div class="enemy-track" id="lane2"></div></div>
+          <div id="battleMessage" class="battle-message">Build a constellation before the assault.</div>
+        </div>
+        <div class="battle-controls">
+          <button id="waveBtn" class="primary">BEGIN WAVE</button>
+          <button class="upgrade" data-lane="0">AURORA <span>LV 1 · 55</span></button>
+          <button class="upgrade" data-lane="1">COMET <span>LV 1 · 55</span></button>
+          <button class="upgrade" data-lane="2">NEBULA <span>LV 1 · 55</span></button>
+        </div>
+      </section>
+
+      <section class="puzzle-panel">
+        <div class="panel-title"><div><small>TACTICAL STARBOARD</small><h2>Match where danger is.</h2></div><div id="comboLabel" class="combo">×0</div></div>
+        <p class="puzzle-copy">Swap neighbouring stars. Columns 1–2 target Aurora, 3–4 Comet, and 5–6 Nebula.</p>
+        <div id="board" class="board" role="grid" aria-label="Tactical match three board"></div>
+        <div class="tactics"><div><strong>3 match</strong><span>lane tactic</span></div><div><strong>4 match</strong><span>nova burst</span></div><div><strong>5 match</strong><span>starfall</span></div></div>
+      </section>
+    </section>
+
+    <section class="footer-note"><span>CLICK TWO NEIGHBOURING STARS TO SWAP</span><span id="eventLog">The board is listening.</span></section>
+  </main>
+  <dialog id="help"><button id="closeHelp" class="close">×</button><p class="eyebrow">HOW TO PLAY</p><h2>Use the board as your spellbook.</h2><p>Enemies advance in three lanes. Your guardians attack automatically. Match stars in the threatened lane to fire immediate magic: orange Flare stars deal damage, blue Tide stars freeze enemies, and green Bloom stars heal the citadel and rally its guardian.</p><p>Four or five matched stars create powerful novas and starfalls. Spend stardust between waves to permanently improve a lane's guardian.</p><button id="startHelp" class="primary">START DEFENDING</button></dialog>
+  <script src="dist/game.js"></script>
+</body>
+</html>
