@@ -7,6 +7,7 @@ import * as D from '../data.js';
 import { champStats, champKillXp, gainChampXp, chargeUlt } from './champion.js';
 import { heroMods } from './roster.js';
 import { damageEnemy, applyBurn, applySlow, applyStun } from './effects.js';
+import { createResonance, resonanceDamageMul } from './resonance.js';
 
 /* ---------- 웨이브 생성 ---------- */
 function pickWeighted(state, mix) {
@@ -152,15 +153,16 @@ function firstInRange(state, x, y, range) {
 }
 
 function meleeStrike(state, h, mods, e, events) {
+  const baseDmg = Math.round(h.dmg * resonanceDamageMul(state, e.route));
   for (let k = 0; k < mods.hits; k++) {
     /* 치명타: 짧은 사거리를 보상하는 한 방 */
     const crit = mods.crit && state.rng() < mods.crit.chance;
-    const dmg = crit ? Math.round(h.dmg * mods.crit.mul) : h.dmg;
+    const dmg = crit ? Math.round(baseDmg * mods.crit.mul) : baseDmg;
     damageEnemy(state, e, dmg, events, crit ? 'crit' : 'hit', mods.healOnKill);
     if (e.dead) break;
   }
   if (!e.dead) {
-    if (mods.burn) applyBurn(e, h.dmg, mods.burn);
+    if (mods.burn) applyBurn(e, baseDmg, mods.burn);
     if (mods.slowOnHit) applySlow(e, mods.slowOnHit);
   }
 }
@@ -567,18 +569,20 @@ function updateProjectiles(state, dt, events) {
         for (const e of state.enemies) {
           if (e.dead) continue;
           if (Math.hypot(e.x - t.x, e.y - t.y) <= p.splash) {
-            damageEnemy(state, e, p.dmg, events);
+            const dmg = Math.round(p.dmg * resonanceDamageMul(state, e.route));
+            damageEnemy(state, e, dmg, events);
             if (!e.dead) {
               if (p.splashSlow) applySlow(e, p.splashSlow);
-              if (p.burn) applyBurn(e, p.dmg, p.burn);
+              if (p.burn) applyBurn(e, dmg, p.burn);
             }
           }
         }
       } else {
-        damageEnemy(state, t, p.dmg, events);
+        const hitDmg = Math.round(p.dmg * resonanceDamageMul(state, t.route));
+        damageEnemy(state, t, hitDmg, events);
         if (!t.dead) {
           if (p.slowOnHit) applySlow(t, p.slowOnHit);
-          if (p.burn) applyBurn(t, p.dmg, p.burn);
+          if (p.burn) applyBurn(t, hitDmg, p.burn);
         }
         if (p.kind === 'bolt') events.push({ type: 'boltHit', x: t.x, y: t.y });
         if (p.pierce > 1) {
@@ -602,7 +606,8 @@ function updateProjectiles(state, dt, events) {
             });
           for (const e of cands) {
             if (remaining <= 0) break;
-            damageEnemy(state, e, p.dmg, events, 'pierce');
+            const pierceDmg = Math.round(p.dmg * resonanceDamageMul(state, e.route));
+            damageEnemy(state, e, pierceDmg, events, 'pierce');
             if (!e.dead && p.slowOnHit) applySlow(e, p.slowOnHit);
             events.push({ type: 'pierceHit', x: e.x, y: e.y });
             remaining--;
@@ -660,6 +665,7 @@ function endWave(state, events) {
   }
   state.wave++;
   state.phase = 'prep';
+  state.resonance = createResonance(state.wave);
   state.pendingWave = buildWave(state);
 }
 

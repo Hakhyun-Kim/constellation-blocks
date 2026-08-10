@@ -5,6 +5,7 @@ import * as D from '../data.js';
 import { champStats } from './champion.js';
 import { makeHero, padOccupant, placeHero } from './roster.js';
 import { buildWave } from './combat.js';
+import { createResonance, restoreResonance } from './resonance.js';
 
 const riFor = (rng) => (a, b) => Math.floor(rng() * (b - a + 1)) + a;
 const pickFor = (rng) => (arr) => arr[Math.floor(rng() * arr.length)];
@@ -43,6 +44,8 @@ export function createGame(opts = {}) {
     feasts: 0, feastWave: 0,
     shardsEarned: 0,
     tacticCasts: 0,
+    resonanceCasts: 0,
+    resonance: createResonance(1),
     mythicPress: 0,             // 이번 웨이브가 반응하는 신화 용사 수 (enemies.js)
     combo: { count: 0, timer: 0 },
     discovered: new Set(),      // 이번 판에 만들어 본 조합 결과 (도감 ✓)
@@ -95,10 +98,10 @@ export function nextLoop(state) {
  * 객체 그래프라 직렬화가 잘 깨지고, 전투 도중 복원을 허용하면 반쯤 이긴
  * 웨이브를 저장해 두고 골드만 불리는 꼼수가 생긴다. 그래서 웨이브 진행은
  * 담지 않고, 불러오면 그 웨이브의 준비 단계에서 다시 시작한다. */
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const SAVE_STATS = [
   'kills', 'bossKills', 'midBossKills', 'summons', 'combos', 'goldEarned',
-  'specialsMade', 'mythicsMade', 'tacticCasts',
+  'specialsMade', 'mythicsMade', 'tacticCasts', 'resonanceCasts',
   'champKills', 'starCasts', 'ultCasts', 'perfectWaves', 'feasts',
 ];
 
@@ -114,6 +117,7 @@ export function serialize(state) {
     wave: state.wave,
     gold: state.gold,
     feastWave: state.feastWave,          // 이번 준비에 잔치를 했는가 — 불러와도 다시 못 연다
+    resonance: { active: [...(state.resonance?.active || [])] },
     castleHp: state.castleHp,
     castleMax: state.castleMax,
     castle: { ...state.castle },
@@ -145,6 +149,7 @@ export function deserialize(data, opts = {}) {
   const state = createGame({ difficulty, metaLevels: meta, rng: opts.rng, loop: data.loop });
 
   state.wave = clamp(data.wave, 1, 999, 1);
+  restoreResonance(state, data.resonance);
   state.gold = clamp(data.gold, 0, 1e9, state.gold);
   state.feastWave = clamp(data.feastWave, 0, 999, 0);
   state.castle.fortify = clamp(data.castle && data.castle.fortify, 0, D.CASTLE_UPGRADES.fortify.max, 0);

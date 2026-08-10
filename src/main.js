@@ -406,6 +406,11 @@ function doCombineDirect(action) {
   if (r.hero.tier >= 2) { renderer.combineFlourish(r.pad, r.hero.tier); ui.flashCombine(r.hero.tier); }
   if (r.pad >= 0) renderer.burst((D.PADS[r.pad].x - D.FIELD_W / 2) / 36, 0.5, (D.PADS[r.pad].y - D.FIELD_H / 2) / 36, 0x7fff9e, 12, 2.4);
   ui.toast(msg, 'good');
+  if (r.resonance?.activated) {
+    const pct = Math.round((D.RESONANCE_DAMAGE_MUL - 1) * 100);
+    ui.toast(`✦ 성좌 공명! 합 ${r.resonance.value} = ${E.laneName(r.resonance.lane)} 길 · 이번 웨이브 그 길 피해 +${pct}%`, 'good');
+    if (r.pad >= 0) renderer.burst((D.PADS[r.pad].x - D.FIELD_W / 2) / 36, 0.5, (D.PADS[r.pad].y - D.FIELD_H / 2) / 36, 0xffdb72, 20, 3.2);
+  }
   if (r.hero.tier === 3) ui.toast(`👑 전설! [${D.LEGEND_ABILITIES[r.hero.cls].name}] ${D.LEGEND_ABILITIES[r.hero.cls].desc}`, 'good');
   refreshAll();
 }

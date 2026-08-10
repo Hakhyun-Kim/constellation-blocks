@@ -3,6 +3,7 @@
  * ===================================================== */
 import * as D from '../data.js';
 import { gainChampXp } from './champion.js';
+import { activateResonance, heroStarValue, matchingResonanceLanes } from './resonance.js';
 
 export function makeHero(state, cls, tier) {
   const s = D.heroStats(cls, tier);
@@ -210,8 +211,11 @@ export function listCombos(state) {
 export function bestCombo(state) {
   const combos = listCombos(state).filter(c => c.affordable);
   if (!combos.length) return null;
+  const opensResonance = (combo) => matchingResonanceLanes(state, combo)
+    .some(lane => !state.resonance?.active?.[lane]);
   return combos.sort((a, b) =>
     b.resultTier - a.resultTier ||
+    Number(opensResonance(b)) - Number(opensResonance(a)) ||
     (b.kind === 'recipe' ? 1 : 0) - (a.kind === 'recipe' ? 1 : 0)
   )[0];
 }
@@ -232,7 +236,8 @@ export function combineRankUp(state, cls, tier) {
   /* 재료가 배치돼 있었다면 결과도 그 자리에 바로 배치 (회수 불필요) */
   if (pad >= 0) placeHero(state, hero.id, pad);
   state.combos++;
-  return { ok: true, hero, lucky, cost, pad };
+  const resonance = activateResonance(state, heroStarValue(cls) * 2);
+  return { ok: true, hero, lucky, cost, pad, resonance };
 }
 
 /* 레시피 조합 — 같은 등급 2명끼리, 결과는 그 등급 +1 (신화까지) */
@@ -258,7 +263,8 @@ export function combineRecipe(state, result) {
   state.discovered.add(result);
   if (R.mythic) state.mythicsMade++;
   else state.specialsMade++;
-  return { ok: true, hero, cost, pad };
+  const resonance = activateResonance(state, heroStarValue(r.a) + heroStarValue(r.b));
+  return { ok: true, hero, cost, pad, resonance };
 }
 
 /* ---------- 배치 / 이동 / 회수 / 판매 ---------- */

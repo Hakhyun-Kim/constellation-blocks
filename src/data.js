@@ -25,5 +25,6 @@ export * from './balance/enemies.js';
 export * from './balance/castle.js';
 export * from './balance/economy.js';
 export * from './balance/tactics.js';
+export * from './balance/resonance.js';
 export * from './balance/champion.js';
 export * from './balance/achievements.js';

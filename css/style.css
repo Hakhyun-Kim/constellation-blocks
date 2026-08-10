@@ -993,6 +993,28 @@ button { font-family: inherit; }
   margin-bottom: 10px;
 }
 .now-title { font-size: 13px; font-weight: 900; color: #8a6a12; margin-bottom: 6px; }
+.resonance-card {
+  margin: 0 0 10px;
+  padding: 8px;
+  border: 1px solid #c9b8ef;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8f3ff, #eff8ff);
+  color: #4e4670;
+}
+.resonance-title { display: flex; align-items: baseline; gap: 6px; }
+.resonance-title b { color: #573a9d; font-size: 13px; }
+.resonance-title span { color: #7c709d; font-size: 10px; font-weight: 700; }
+.resonance-lanes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 6px; }
+.resonance-lane { display: grid; gap: 1px; padding: 5px 4px; border: 1px solid #ddd4f3; border-radius: 8px; background: #fff; text-align: center; }
+.resonance-lane b { color: #776a9f; font-size: 9px; }
+.resonance-lane strong { color: #463184; font-size: 15px; line-height: 1; }
+.resonance-lane small, .resonance-lane em { color: #9a91af; font-size: 8px; font-style: normal; font-weight: 800; }
+.resonance-lane.active { border-color: #f0b95b; background: linear-gradient(180deg, #fff9db, #fff1ae); box-shadow: 0 0 10px #ffd76a88; }
+.resonance-lane.active strong, .resonance-lane.active em { color: #a26511; }
+.resonance-card p { margin: 6px 0 0; color: #6a6288; font-size: 10px; line-height: 1.35; }
+.resonance-card p b { color: #553b9c; }
+.res-badge { flex: none; border-radius: 5px; padding: 2px 4px; background: #ece8f4; color: #807698; font-size: 9px; font-weight: 900; white-space: nowrap; }
+.res-badge.match { background: #fff0bb; color: #9d6513; box-shadow: 0 0 0 1px #efbc56 inset; }
 .now-btn {
   display: flex;
   align-items: center;

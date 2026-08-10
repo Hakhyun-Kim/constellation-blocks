@@ -380,6 +380,64 @@ function tacticState(route = 0, count = 1) {
   ok('전술: 적 없는 길은 상태를 바꾸지 않고 거부한다', !none.ok && none.reason === 'none' && empty.tacticCasts === 0);
 }
 
+/* ---------- ✦ 성좌 공명: 조합은 정상 완료, 정확한 합만 한 웨이브 길 보너스 ---------- */
+{
+  const st = fresh();
+  st.resonance = { targets: [2, 5, 7], active: [false, false, false] };
+  put(st, 'knight', 0, null);
+  put(st, 'knight', 0, null);
+  const rank = E.listCombos(st).find(c => c.kind === 'rankup' && c.cls === 'knight');
+  ok('공명: 같은 직업 조합의 별 합을 계산한다', E.comboStarValue(rank) === 2);
+  const rr = E.combineRankUp(st, 'knight', 0);
+  ok('공명: 정확한 합은 왼쪽 길을 켠다', rr.ok && rr.resonance.activated && rr.resonance.lane === 0 && st.resonance.active[0]);
+  ok('공명: 길 피해 배율은 설정값과 같다', E.resonanceDamageMul(st, 0) === D.RESONANCE_DAMAGE_MUL && E.resonanceDamageMul(st, 1) === 1);
+
+  const saved = E.serialize(st);
+  const back = E.deserialize(JSON.parse(JSON.stringify(saved)));
+  ok('공명: 저장 후에도 켠 길과 결정적 목표가 유지된다',
+    back.resonance.active[0] && back.resonance.targets.join(',') === st.resonance.targets.join(','));
+  ok('공명: 특수·신화 값은 실제 레시피 재료의 합을 이어받는다', D.RECIPES.every(recipe =>
+    D.HERO_STAR_VALUE[recipe.result] === D.HERO_STAR_VALUE[recipe.a] + D.HERO_STAR_VALUE[recipe.b]));
+}
+{
+  const st = fresh();
+  st.resonance = { targets: [2, 5, 7], active: [false, false, false] };
+  put(st, 'knight', 0, null);
+  put(st, 'mage', 0, null);
+  const recipe = E.listCombos(st).find(c => c.kind === 'recipe' && c.result === 'spellblade');
+  ok('공명: 특수 레시피의 별 합을 계산한다', E.comboStarValue(recipe) === 5);
+  const rc = E.combineRecipe(st, 'spellblade');
+  ok('공명: 레시피도 맞는 길을 켜며 용사는 정상 탄생한다', rc.ok && rc.hero.cls === 'spellblade' && rc.resonance.lane === 1 && st.resonance.active[1]);
+}
+{
+  const st = fresh();
+  st.resonance = { targets: [4, 5, 7], active: [false, false, false] };
+  put(st, 'knight', 0, null);
+  put(st, 'knight', 0, null);
+  const normal = E.combineRankUp(st, 'knight', 0);
+  ok('공명: 합이 달라도 일반 승급은 막히지 않는다', normal.ok && !normal.resonance.matched && !st.resonance.active.some(Boolean));
+}
+{
+  const st = fresh();
+  st.resonance = { targets: [2, 5, 7], active: [true, false, false] };
+  E.startWave(st);
+  st.spawnQueue = [{ t: 0, type: 'goblin', route: 0 }];
+  E.tick(st, 0.001);
+  const enemy = st.enemies[0];
+  const h = put(st, 'guard', 0, 0);
+  enemy.hp = 100; enemy.maxHp = 100;
+  h.cd = 0;
+  E.tick(st, 0.001);
+  ok('공명: 켜진 길에서 용사 실제 타격 피해가 증가한다', enemy.hp === 100 - Math.round(h.dmg * D.RESONANCE_DAMAGE_MUL));
+}
+{
+  const st = fresh();
+  st.resonance = { targets: [2, 4, 7], active: [true, false, false] };
+  put(st, 'knight', 0, null); put(st, 'knight', 0, null);
+  put(st, 'guard', 0, null); put(st, 'guard', 0, null);
+  ok('공명: 자동·밸런스 봇도 같은 등급이면 새 공명을 우선한다', E.bestCombo(st)?.cls === 'guard');
+}
+
 /* ---------- ⑧ 잔치: 랜덤 승급 · 준비마다 한 번 · 저장해도 리롤 불가 ---------- */
 {
   const st = fresh();

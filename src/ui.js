@@ -461,6 +461,25 @@ export class UI {
     const byResult = new Map(combos.filter(c => c.kind === 'recipe').map(c => [c.result, c]));
     let html = '';
 
+    /* 성좌 공명은 조합 자체를 막지 않는다. 작은 합을 맞추면 길 하나가 이번 웨이브에
+     * 강해지는 보너스라, 숫자를 싫어하는 플레이어도 평소처럼 조합할 수 있다. */
+    const resonance = state.resonance || { targets: [], active: [] };
+    const resBadge = (combo) => {
+      const value = E.comboStarValue(combo);
+      const lanes = E.matchingResonanceLanes(state, combo);
+      const fresh = lanes.find(lane => !resonance.active[lane]);
+      const label = fresh == null ? `✦합 ${value}` : `✦합 ${value} · ${['←', '↑', '→'][fresh]} 공명`;
+      return `<span class="res-badge${fresh == null ? '' : ' match'}">${label}</span>`;
+    };
+    const bonusPct = Math.round((D.RESONANCE_DAMAGE_MUL - 1) * 100);
+    html += `<div class="resonance-card">
+      <div class="resonance-title"><b>✦ 성좌 공명</b><span>조합의 별 합을 길에 맞춰요</span></div>
+      <div class="resonance-lanes">${resonance.targets.map((target, lane) =>
+        `<span class="resonance-lane${resonance.active[lane] ? ' active' : ''}"><b>${['← 왼쪽', '↑ 가운데', '→ 오른쪽'][lane]}</b><strong>✦ ${target}</strong>${resonance.active[lane] ? '<em>공명 중</em>' : '<small>대기</small>'}</span>`
+      ).join('')}</div>
+      <p>조합의 <b>✦합</b>이 길 숫자와 같으면, 그 길에 가하는 용사 피해가 이번 웨이브 <b>+${bonusPct}%</b>. 맞지 않아도 조합은 그대로 완성돼요.</p>
+    </div>`;
+
     /* 지금 당장 되는 것을 맨 위에 모은다 — 아이는 스크롤하지 않는다.
      * "확실히 알고, 되면 착착"의 핵심이라 규칙 안내보다도 위에 둔다. */
     const ready = combos.filter(c => c.affordable);
@@ -477,6 +496,7 @@ export class UI {
           <span class="now-what">${what}</span>
           <span class="now-arrow">→</span>
           <span class="now-res" style="color:${D.TIERS[c.resultTier].color}">${R.emoji} ${D.TIERS[c.resultTier].name} ${R.name}</span>
+          ${resBadge(c)}
           <span class="now-cost">💰${c.cost}</span>
         </button>`;
       }
@@ -516,6 +536,7 @@ export class UI {
       html += `<div class="combine-row${c.affordable ? ' ready' : ' broke'}">
         <span class="peek" data-cls="${c.cls}" data-rtier="${c.resultTier}">${C.emoji}</span> ${C.name}
         <span class="cnt" style="color:${D.TIERS[c.tier].color}">${D.TIERS[c.tier].name}×2</span>
+        ${resBadge(c)}
         ${shortBadge(c.cost)}
         <button data-kind="rankup" data-cls="${c.cls}" data-tier="${c.tier}"
           class="${!c.affordable ? 'lack' : ''}" ${!c.affordable ? 'disabled' : ''}>⚗ ${D.TIERS[c.resultTier].name} 💰${c.cost}</button>
@@ -580,6 +601,7 @@ export class UI {
           ${ing(r.a, A, ta)}+${ing(r.b, B, tb)}
           <span class="rarrow">→</span>
           <span class="peek" data-cls="${r.result}" data-rtier="${rtier}">${R.emoji} <b>${R.name}</b>${made ? ' <span class="found">✓</span>' : ''}</span>
+          ${resBadge({ kind: 'recipe', a: r.a, b: r.b })}
           ${right}
         </div>`;
       }
