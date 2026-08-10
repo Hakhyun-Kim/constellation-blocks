@@ -1,4 +1,5 @@
 import * as Board from '../src/tactics/board.js';
+import { describeTacticMove } from '../src/demo.js';
 
 let failures = 0;
 function check(condition, message) {
@@ -35,6 +36,8 @@ const legal = legalMoves.find(move => move.from === 1 && move.to === 7);
 check(!!legal, 'legal swaps include an adjacent swap that creates a match');
 check(legal && legal.groups.some(group => group.length === 3 && legal.cells[group[0]] === 'flare'),
   'legal swap reports its matched type and group');
+check(legal && describeTacticMove(legal) === '🌌 왼쪽 길 · 유성 3매치',
+  'spectator copy reports the real matched lane, type, and size');
 check(legalSource[1] === 'tide' && legalSource[7] === 'flare', 'legal-swap search does not mutate its source board');
 
 const separate = Array.from({ length: 36 }, (_, index) => `cell-${index}`);

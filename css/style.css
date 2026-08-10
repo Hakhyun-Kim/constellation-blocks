@@ -1696,7 +1696,7 @@ button { font-family: inherit; }
 .reveal-card.short .reveal-hint { display: none; }
 
 
-/* ===== 데모 모드 ===== */
+/* ===== AI 관전 모드 ===== */
 #demoBtn.on { background: #ffe0e0; border-color: #ff8a8a; color: #a33; }
 #demoBar {
   position: absolute;
@@ -1705,19 +1705,20 @@ button { font-family: inherit; }
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   padding: 8px 12px;
   border-radius: 999px;
   background: rgba(20, 32, 50, 0.88);
   color: #fff;
-  font-size: 14px;
-  font-weight: 800;
   z-index: 9;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
   max-width: 92%;
 }
 #demoBar.hidden { display: none; }
-#demoCaption { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.demo-bot { flex: none; font-size: 20px; filter: drop-shadow(0 1px 3px #0008); }
+.demo-copy { min-width: 0; display: grid; gap: 1px; }
+#demoCaption { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 13px; font-weight: 900; }
+#demoDetail { color: #b9d5ff; font-size: 10px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #demoCaption.pop { animation: demopop 0.35s cubic-bezier(0.2, 1.5, 0.4, 1); }
 @keyframes demopop {
   0%   { transform: translateY(5px); opacity: 0.3; }
@@ -2266,6 +2267,12 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 .tactic-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tactic-head h2 { margin: 0; font-size: 16px; color: #403279; }
 .tactic-head span { display: block; margin-top: 2px; color: #7a7899; font-size: 11px; }
+.tactic-actions { display: flex; align-items: center; gap: 5px; flex: none; }
+.tactic-spectate { padding: 5px 7px; border: 1px solid #b8a8e8; border-radius: 8px; background: #fff; color: #574182; font-family: inherit; font-size: 10px; font-weight: 900; cursor: pointer; white-space: nowrap; box-shadow: 0 1px 2px #8979c333; }
+.tactic-spectate:hover { background: #eee8ff; transform: translateY(-1px); }
+.tactic-spectate.on { border-color: #ff8a8a; background: #ffe0e0; color: #a33; }
+.tactic-spectate span { display: inline; margin: 0 0 0 2px; padding: 1px 3px; border-radius: 3px; background: #e8e2fb; color: #6c5b9c; font-size: 8px; }
+.tactic-spectate.on span { background: #ffd0d0; color: #a33; }
 .tactic-lanes { display: flex; gap: 3px; color: #7652b8; font-size: 15px; }
 .tactic-lanes b { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 8px; background: #e5d9ff; }
 .tactic-routes { display: grid; grid-template-columns: repeat(3, 1fr); margin: 8px 0 3px; text-align: center; color: #77739a; font-size: 10px; font-weight: 800; }
@@ -2301,7 +2308,12 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 @keyframes tacticroute { 0% { filter: brightness(.8); } 55% { filter: brightness(1.45); } 100% { filter: brightness(1); } }
 @keyframes tacticbeam { 0% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(0); } 22% { opacity: 1; } 76% { opacity: 1; transform: rotate(var(--beam-angle)) scaleX(1); } 100% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(1.08); } }
 @keyframes tacticboardflash { 0% { transform: scale(.985); filter: brightness(.9); } 62% { transform: scale(1.012); filter: brightness(1.12); } 100% { transform: scale(1); filter: brightness(1); } }
-@media (max-width: 720px) { .tactic-star { font-size: 23px; } }
+@media (max-width: 720px) {
+  .tactic-star { font-size: 23px; }
+  .tactic-head { align-items: flex-start; }
+  .tactic-spectate { padding: 4px 5px; font-size: 9px; }
+  .tactic-lanes { display: none; }
+}
 
 /* 옷장 잠금 */
 .clopt.locked {

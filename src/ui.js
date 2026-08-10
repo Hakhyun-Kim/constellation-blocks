@@ -95,7 +95,7 @@ export class UI {
       'castleRows', 'heroPanel', 'hpTitle', 'hpInfo', 'recallBtn', 'sellBtn', 'moveHint',
       'diffRow',
       'storyModal', 'storyIcon', 'storyTitle', 'storyLines', 'storyNext', 'storyOff',
-      'demoBtn', 'demoBar', 'demoCaption', 'demoExit',
+      'demoBtn', 'spectateBtn', 'demoBar', 'demoCaption', 'demoDetail', 'demoExit',
       'revealModal', 'revealCard', 'revealTier', 'revealArt', 'revealName', 'revealDesc',
       'wavePreview', 'bossBar', 'bossBarFill', 'bossBarName', 'bossWarnBanner',
       'saveBtn', 'loadBtn', 'loadFile',
@@ -223,6 +223,7 @@ export class UI {
       if (ev.key === 'Enter') h.onClosetSave();
     });
     el.demoBtn.addEventListener('click', h.onDemoToggle);
+    el.spectateBtn.addEventListener('click', h.onDemoToggle);
     el.demoExit.addEventListener('click', h.onDemoToggle);
     el.storyNext.addEventListener('click', h.onStoryClose);
     el.storyOff.addEventListener('click', h.onStoryOff);
@@ -1069,9 +1070,16 @@ export class UI {
   setDemoMode(on, profile) {
     this.el.demoBar.classList.toggle('hidden', !on);
     this.el.demoBtn.classList.toggle('on', !!on);
-    this.el.demoBtn.textContent = on ? '⏹ 데모 끝' : '🎬 데모';
+    this.el.spectateBtn.classList.toggle('on', !!on);
+    this.el.demoBtn.textContent = on ? '⏹ 관전 끝' : '🎬 관전';
+    this.el.spectateBtn.innerHTML = on
+      ? '⏹ 관전 끝 <span>D</span>'
+      : '🎬 AI 관전 <span>D</span>';
     document.body.classList.toggle('demo-on', !!on);
-    if (on && profile) this.setDemoCaption(`🎬 ${profile} 플레이어가 대신 플레이합니다`);
+    this.el.demoDetail.textContent = on
+      ? '실제 스왑 · 실제 전술 · 실제 방어 규칙'
+      : '밸런스 봇과 같은 실제 플레이 규칙';
+    if (on && profile) this.setDemoCaption(`🤖 ${profile} AI 관전 중`);
   }
   setDemoCaption(text) {
     const el = this.el.demoCaption;

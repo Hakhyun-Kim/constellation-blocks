@@ -36,9 +36,13 @@
     <div class="stage">
       <div id="scene3d"></div>
       <div id="hitFlash"></div>
-      <div id="demoBar" class="hidden">
-        <span id="demoCaption">🎬 데모</span>
-        <button id="demoExit">✕ 데모 끝내기 (D)</button>
+      <div id="demoBar" class="hidden" aria-live="polite" aria-atomic="true">
+        <span class="demo-bot" aria-hidden="true">🤖</span>
+        <span class="demo-copy">
+          <b id="demoCaption">AI 관전</b>
+          <small id="demoDetail">밸런스 봇과 같은 실제 플레이 규칙</small>
+        </span>
+        <button id="demoExit">✕ 관전 끝내기 (D)</button>
       </div>
       <div id="lowHpVignette"></div>
       <div id="bossVignette"></div>
@@ -96,7 +100,10 @@
     <section class="card tactic-card" id="tacticCard">
       <div class="tactic-head">
         <div><h2>🌌 별자리 전술판</h2><span>세 칸 이상 맞추면 그 열의 길에 마법을 내려요</span></div>
-        <div class="tactic-lanes"><b>←</b><b>↑</b><b>→</b></div>
+        <div class="tactic-actions">
+          <button id="spectateBtn" class="tactic-spectate" type="button" title="밸런스 봇이 실제 전술 스왑과 방어를 수행하는 모습을 봐요 (D)">🎬 AI 관전 <span>D</span></button>
+          <div class="tactic-lanes"><b>←</b><b>↑</b><b>→</b></div>
+        </div>
       </div>
       <div class="tactic-routes"><span data-route="0">왼쪽 길</span><span data-route="1">가운데 길</span><span data-route="2">오른쪽 길</span></div>
       <div id="tacticBoard" class="tactic-board" aria-label="별자리 3매치 전술판"></div>
@@ -143,7 +150,7 @@
           <button id="bgmBtn" title="배경음악 끄기/켜기 (M: 전체)">🎵</button>
           <button id="saveBtn" title="이번 판을 파일로 저장해요 (준비 단계에서)">💾</button>
           <button id="loadBtn" title="저장 파일을 불러와 이어서 해요">📂</button>
-          <button id="demoBtn" title="AI가 대신 플레이하는 걸 구경해요 (D)">🎬 데모</button>
+          <button id="demoBtn" title="밸런스 봇이 실제 게임을 플레이하는 모습을 봐요 (D)">🎬 관전</button>
           <input type="file" id="loadFile" accept=".json,application/json" class="hidden">
         </div>
       </div>

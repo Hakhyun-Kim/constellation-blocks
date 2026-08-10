@@ -10,6 +10,21 @@
  * 데모 전용 지름길을 만들면 데모에서만 되는 버그가 생긴다.
  * ===================================================== */
 import * as Bot from './bot.js';
+import { laneForGroup } from './tactics/board.js';
+
+const TACTIC_LABEL = { flare: '유성', tide: '서리', bloom: '수호' };
+const LANE_LABEL = ['왼쪽', '가운데', '오른쪽'];
+
+/* 관전자는 봇의 실제 판단을 읽을 수 있어야 한다. 이 함수는 이미 고른 합법 스왑을
+ * 설명할 뿐, 점수나 결과를 바꾸지 않는다. */
+export function describeTacticMove(move) {
+  const group = move.groups?.[0];
+  if (!group) return '🌌 별자리를 이어 전술을 준비합니다';
+  const kind = move.cells[group[0]];
+  const lane = laneForGroup(group);
+  const extra = move.groups.length > 1 ? ` + ${move.groups.length - 1}연쇄` : '';
+  return `🌌 ${LANE_LABEL[lane]} 길 · ${TACTIC_LABEL[kind] || '별자리'} ${group.length}매치${extra}`;
+}
 
 /* 사람이 보기 좋은 속도. 너무 빠르면 뭘 하는지 안 보이고, 느리면 지루하다 */
 const PACE = {
@@ -114,7 +129,7 @@ export const demo = {
       this.midT = 2;
       const move = Bot.chooseTacticSwap(state, A.getTacticBoard(), P, state.rng || Math.random);
       if (move) {
-        this.say('🌌 별자리를 이어 방어로에 전술을 내립니다');
+        this.say(describeTacticMove(move));
         A.tacticSwap(move.from, move.to);
         this.t = PACE.tactic;
         return;
