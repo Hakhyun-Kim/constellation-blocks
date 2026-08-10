@@ -6,7 +6,7 @@
  * 각본을 따르지 않고 **봇의 판단(src/bot.js)을 그대로 써서 진짜로 논다.**
  * 덕분에 각본을 유지보수할 필요가 없고, 게임이 바뀌면 데모도 따라 바뀐다.
  *
- * 조작은 전부 사람이 쓰는 경로로 흘린다(doSummon·doPlace·openMath·submitMath…).
+ * 조작은 전부 사람이 쓰는 경로로 흘린다(doSummon·doPlace·combine·tacticSwap…).
  * 데모 전용 지름길을 만들면 데모에서만 되는 버그가 생긴다.
  * ===================================================== */
 import * as Bot from './bot.js';
@@ -14,7 +14,7 @@ import * as Bot from './bot.js';
 /* 사람이 보기 좋은 속도. 너무 빠르면 뭘 하는지 안 보이고, 느리면 지루하다 */
 const PACE = {
   prep: 0.55,        // 준비 단계 행동 사이 (초)
-  answer: 1.5,       // 문제가 뜨고 답을 넣기까지 — 문제를 읽을 시간
+  tactic: 0.45,      // 전술 스왑 뒤 다음 판단까지
   afterWave: 1.2,    // 웨이브를 깬 뒤 숨 고르기
   restart: 4.0,      // 게임오버 후 다시 시작까지
 };
@@ -65,8 +65,7 @@ export const demo = {
     if (this.api) this.api.onCaption(text);
   },
 
-  /* 매 프레임 호출된다. 게임 시뮬레이션이 모달로 멈춰 있어도 이건 돌아야
-   * 문제창을 처리할 수 있다 — 그래서 main.js의 isPaused() 바깥에 붙는다. */
+  /* 매 프레임 호출된다. */
   step(dt) {
     if (!this.active || !this.api) return;
     const A = this.api;
@@ -82,23 +81,7 @@ export const demo = {
     /* ② 전설·신화 연출은 스스로 닫히므로 기다리기만 한다 */
     if (A.isRevealOpen()) return;
 
-    /* ③ 문제창 — 답을 넣는다. 봇은 동전을 던지지만 여기선 실제 정답을 타이핑한다 */
-    if (A.isMathOpen()) {
-      if (A.isAnswered()) return;              // 채점 결과 표시 중 (자동으로 다음으로 간다)
-      if (this.t <= 0) {
-        const prob = A.getProblem();
-        if (prob) {
-          const ans = Bot.answerFor(prob, P, state.rng || Math.random);
-          A.typeAnswer(ans);
-          this.t = PACE.answer;
-        } else {
-          this.t = 0.3;
-        }
-      }
-      return;
-    }
-
-    /* ④ 게임오버 — 잠깐 보여 주고 새 판 */
+    /* ③ 게임오버 — 잠깐 보여 주고 새 판 */
     if (state.phase === 'over') {
       if (this.t <= 0) {
         this.say(`🎬 ${state.wave}웨이브에서 성이 무너졌어요 — 다시 시작합니다`);
@@ -110,7 +93,7 @@ export const demo = {
       return;
     }
 
-    /* ⑤ 준비 단계 — 봇의 판단을 하나씩 소비한다 */
+    /* ④ 준비 단계 — 봇의 판단을 하나씩 소비한다 */
     if (state.phase === 'prep') {
       if (this.t > 0) return;
       const act = Bot.nextPrepAction(state, P, state.rng || Math.random);
@@ -125,10 +108,17 @@ export const demo = {
       return;
     }
 
-    /* ⑥ 전투 중 — 별지기 마법 + 여유 골드로 소환·배치 */
+    /* ⑤ 전투 중 — 실제 전술 스왑 + 별지기 마법 + 여유 골드로 소환·배치 */
     this.midT -= dt;
     if (this.midT <= 0) {
       this.midT = 2;
+      const move = Bot.chooseTacticSwap(state, A.getTacticBoard(), P, state.rng || Math.random);
+      if (move) {
+        this.say('🌌 별자리를 이어 방어로에 전술을 내립니다');
+        A.tacticSwap(move.from, move.to);
+        this.t = PACE.tactic;
+        return;
+      }
       /* 별지기 마법 — 봇과 같은 판단 (bot.js) */
       if (Bot.wantsUlt(state, P)) {
         this.say('🌌 은하수! 하늘의 별을 전부 쏟아붓습니다');
@@ -161,8 +151,8 @@ export const demo = {
         break;
       case 'combine': {
         const name = A.comboLabel(act.combo);
-        this.say(`⚗️ ${name} 조합 — 수학 문제를 풉니다`);
-        A.openCombine(act.action);
+        this.say(`⚗️ ${name} 조합을 실행합니다`);
+        A.combine(act.action);
         break;
       }
       case 'place':

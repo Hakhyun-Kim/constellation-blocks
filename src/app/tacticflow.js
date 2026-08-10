@@ -21,7 +21,7 @@ const ICON = { flare: '✦', tide: '✧', bloom: '❋' };
 const LABEL = { flare: '유성 폭격', tide: '서리 결계', bloom: '수호 회복' };
 const ROUTE_LABEL = ['왼쪽', '가운데', '오른쪽'];
 
-export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onPreview, toast }) {
+export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onMatch, onPreview, toast }) {
   const board = document.getElementById('tacticBoard');
   const status = document.getElementById('tacticStatus');
   const card = board.closest('.tactic-card');
@@ -62,6 +62,9 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onPr
   function clearVisuals() {
     board.classList.remove('casting');
     board.style.removeProperty('--tactic-glow');
+    delete board.dataset.matchSize;
+    delete card.dataset.matchSize;
+    delete card.dataset.tactic;
     card.querySelectorAll('.tactic-routes span.active').forEach(element =>
       element.classList.remove('active', ...STAR_TYPES)
     );
@@ -102,11 +105,28 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onPr
     clearVisuals();
     board.classList.add('casting');
     board.style.setProperty('--tactic-glow', type === 'flare' ? '#ff8b62' : type === 'tide' ? '#71dcff' : '#8eea94');
+    board.dataset.matchSize = String(size);
+    card.dataset.matchSize = String(size);
+    card.dataset.tactic = type;
     hit.forEach(index => {
       const element = board.querySelector(`button[data-i="${index}"]`);
       if (element) element.classList.add('matched', type, ...(size >= 4 ? ['jackpot'] : []));
     });
     showBeam(hit, lane, type);
+  }
+
+  function attemptSwap(first, index) {
+    if (resolving || getPhase() !== 'wave' || !areNeighbors(first, index, BOARD_SIZE)) return false;
+    const swapped = swapCells(cells, first, index);
+    const matches = findMatchGroups(swapped, BOARD_SIZE);
+    if (!matches.length) return false;
+    selected = null;
+    cells = swapped;
+    /* 교환된 보드를 먼저 보여 준다. 이전 셀을 그대로 두면 매치 강조가 실제 바뀐 별과
+     * 어긋나 보여 전술의 원인을 읽기 어려워진다. */
+    draw();
+    resolveQueue(matches);
+    return true;
   }
 
   function choose(index) {
@@ -129,15 +149,10 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onPr
       return;
     }
 
-    const swapped = swapCells(cells, first, index);
-    const matches = findMatchGroups(swapped, BOARD_SIZE);
-    if (!matches.length) {
+    if (!attemptSwap(first, index)) {
       status.textContent = '별자리가 이어지지 않았어요. 다른 별을 바꿔 보세요.';
       draw();
-      return;
     }
-    cells = swapped;
-    resolveQueue(matches);
   }
 
   function resolveQueue(queue, token = generation) {
@@ -162,6 +177,7 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onPr
     const size = Math.min(5, hit.length);
     status.textContent = `${ROUTE_LABEL[lane]} 길 · ${LABEL[type]} ${size >= 5 ? '별똥별 준비!' : size === 4 ? '강화 준비!' : '연결!'}`;
     showMatch(hit, type, lane, size);
+    onMatch?.(type, lane, size);
     later(() => {
       if (token !== generation) return;
       const result = resolveTactic(lane, type, size);
@@ -175,7 +191,7 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onPr
       }
       draw();
       later(() => resolveQueue(queue, token), 45);
-    }, 300);
+    }, 210);
   }
 
   function reset() {
@@ -205,10 +221,18 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onPr
       resolving = false;
       draw();
       onPreview?.(type, safeLane, safeSize);
-    }, 340);
+    }, 250);
     return true;
   }
 
   make();
-  return { reset, preview };
+  return {
+    reset,
+    preview,
+    getBoard: () => [...cells],
+    swap(first, second) {
+      if (!Number.isInteger(first) || !Number.isInteger(second)) return false;
+      return attemptSwap(first, second);
+    },
+  };
 }

@@ -1,10 +1,9 @@
 /* =====================================================
  * 업적 — 세션을 넘는 목표. 달성하면 별조각을 주고, 일부는 옷장을 연다.
  *
- * check(c)의 c = { state, codex, mathLog, bestWave }
+ * check(c)의 c = { state, codex, bestWave }
  *   state   : 지금 판 (없으면 null — 판 밖에서도 평가할 수 있게 방어)
  *   codex   : 기기 누적 도감 { heroes: {"cls:tier":n}, kills: {type:n} }
- *   mathLog : 기기 누적 수학 기록 { total, correct, clean, types }
  *   bestWave: 모든 난이도를 통틀어 가장 멀리 간 웨이브
  *
  * 규칙: 한 번 달성하면 영원히 남는다(기기 저장). 조건은 전부 "숫자 비교"라
@@ -63,13 +62,10 @@ export const ACHIEVEMENTS = [
   { key: 'perfect3', emoji: '🛡️', name: '철벽 수비',
     desc: '한 판에서 완벽 방어 3번 (성 무피해)', shards: 6,
     check: (c) => !!c.state && c.state.perfectWaves >= 3 },
-  { key: 'streak5', emoji: '🔥', name: '지혜 5연승',
-    desc: '수학 문제를 다섯 번 연달아 한 번에 맞히기', shards: 5,
+  { key: 'tactic10', emoji: '🌌', name: '성좌 지휘관',
+    desc: '한 판에서 별자리 전술 10번 발동하기', shards: 5,
     unlocks: { axis: 'hair', key: 'gold' },
-    check: (c) => !!c.state && c.state.bestStreak >= 5 },
-  { key: 'persist3', emoji: '💪', name: '포기를 모르는',
-    desc: '한 판에서 틀렸다가 끝내 맞히기 3번', shards: 6,
-    check: (c) => !!c.state && (c.state.persisted || 0) >= 3 },
+    check: (c) => !!c.state && (c.state.tacticCasts || 0) >= 10 },
   { key: 'boss3', emoji: '🐉', name: '용 사냥꾼',
     desc: '한 판에서 대보스 3마리 처치', shards: 8,
     check: (c) => !!c.state && c.state.bossKills >= 3 },
@@ -81,13 +77,10 @@ export const ACHIEVEMENTS = [
     desc: '한 판에서 잔치 3번 벌이기', shards: 4,
     check: (c) => !!c.state && (c.state.feasts || 0) >= 3 },
 
-  { key: 'math100', emoji: '🧮', name: '백 문제의 현자',
-    desc: '수학 문제 100개 풀기 (누적)', shards: 10,
+  { key: 'tactic40', emoji: '☄️', name: '별자리 숙련자',
+    desc: '한 판에서 별자리 전술 40번 발동하기', shards: 10,
     unlocks: { axis: 'weapon', key: 'staff' },
-    check: (c) => c.mathLog.total >= 100 },
-  { key: 'clean50', emoji: '✏️', name: '한 번에 쉰 문제',
-    desc: '한 번에·힌트 없이 맞히기 50번 (누적)', shards: 10,
-    check: (c) => c.mathLog.clean >= 50 },
+    check: (c) => !!c.state && (c.state.tacticCasts || 0) >= 40 },
 
   { key: 'codexHalf', emoji: '📖', name: '도감 절반',
     desc: `용사 도감 절반 채우기 (${Math.ceil(CODEX_HERO_CELLS / 2)}칸)`, shards: 10,

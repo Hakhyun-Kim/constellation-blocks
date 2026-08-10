@@ -3,7 +3,7 @@
  * ===================================================== */
 import * as D from '../data.js';
 import { champStats } from './champion.js';
-import { makeHero, empowerHero, padOccupant, placeHero } from './roster.js';
+import { makeHero, padOccupant, placeHero } from './roster.js';
 import { buildWave } from './combat.js';
 
 const riFor = (rng) => (a, b) => Math.floor(rng() * (b - a + 1)) + a;
@@ -12,7 +12,7 @@ const pickFor = (rng) => (arr) => arr[Math.floor(rng() * arr.length)];
 export function createGame(opts = {}) {
   const rng = opts.rng || Math.random;
   const meta = Object.assign(
-    { startGold: 0, castleHp: 0, heroDmg: 0, mathBonus: 0, champHp: 0, champDmg: 0, champUlt: 0 },
+    { startGold: 0, castleHp: 0, heroDmg: 0, champHp: 0, champDmg: 0, champUlt: 0 },
     opts.metaLevels);
   const diff = D.DIFFICULTIES[opts.difficulty] || D.DIFFICULTIES.normal;
   const castleMax = D.META_UPGRADES.castleHp.apply(meta.castleHp);
@@ -23,7 +23,6 @@ export function createGame(opts = {}) {
     /* 별의 시련 회차 — 0 = 첫 여정. 몬스터 체력·골드가 회차만큼 강해진다 (enemies.js) */
     loop: Math.max(0, Math.min(99, Math.round(opts.loop || 0))),
     dmgMul: D.META_UPGRADES.heroDmg.apply(meta.heroDmg),
-    mathMul: D.META_UPGRADES.mathBonus.apply(meta.mathBonus),
 
     phase: 'prep',
     gold: D.META_UPGRADES.startGold.apply(meta.startGold),
@@ -38,15 +37,12 @@ export function createGame(opts = {}) {
     spawnQueue: [], waveT: 0,
     pendingWave: null,
 
-    kills: 0, bossKills: 0, midBossKills: 0, summons: 0, combos: 0,
-    solved: 0, correct: 0, goldEarned: 0, hints: 0, firstTryWins: 0, bestStreak: 0, timeOuts: 0,
-    retries: 0, retryGold: 0, persisted: 0,
+    kills: 0, bossKills: 0, midBossKills: 0, summons: 0, combos: 0, goldEarned: 0,
     specialsMade: 0, mythicsMade: 0,
     champKills: 0, starCasts: 0, ultCasts: 0, perfectWaves: 0,
     feasts: 0, feastWave: 0,
-    shardsEarned: 0, mathShards: 0,
-    mathWindow: [],             // 최근 "한 번에 맞힘" 기록 (적응형 난이도, mathgate.js)
-    mathLocked: new Set(),      // 포기했거나 세 번 틀린 조합 — 이번 준비 단계 동안 잠긴다
+    shardsEarned: 0,
+    tacticCasts: 0,
     mythicPress: 0,             // 이번 웨이브가 반응하는 신화 용사 수 (enemies.js)
     combo: { count: 0, timer: 0 },
     discovered: new Set(),      // 이번 판에 만들어 본 조합 결과 (도감 ✓)
@@ -91,8 +87,6 @@ export function nextLoop(state) {
   }
   next.seenStory = new Set(state.seenStory || []);
   next.revealed = new Set(state.revealed || []);
-  /* 적응형 난이도는 판이 아니라 아이의 것 — 이어 간다 */
-  next.mathWindow = [...(state.mathWindow || [])];
   return next;
 }
 
@@ -101,21 +95,19 @@ export function nextLoop(state) {
  * 객체 그래프라 직렬화가 잘 깨지고, 전투 도중 복원을 허용하면 반쯤 이긴
  * 웨이브를 저장해 두고 골드만 불리는 꼼수가 생긴다. 그래서 웨이브 진행은
  * 담지 않고, 불러오면 그 웨이브의 준비 단계에서 다시 시작한다. */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 const SAVE_STATS = [
-  'kills', 'bossKills', 'midBossKills', 'summons', 'combos', 'solved', 'correct',
-  'goldEarned', 'hints', 'firstTryWins', 'bestStreak', 'timeOuts', 'retries', 'retryGold', 'persisted',
-  'specialsMade', 'mythicsMade', 'mathShards',
+  'kills', 'bossKills', 'midBossKills', 'summons', 'combos', 'goldEarned',
+  'specialsMade', 'mythicsMade', 'tacticCasts',
   'champKills', 'starCasts', 'ultCasts', 'perfectWaves', 'feasts',
 ];
 
 export function serialize(state) {
-  /* spark = 빠른 풀이 보너스. 안 담으면 불러올 때 공격력이 조용히 깎인다 */
-  const hero = (h) => ({ cls: h.cls, tier: h.tier, pad: h.padIndex, spark: h.spark || 0 });
+  const hero = (h) => ({ cls: h.cls, tier: h.tier, pad: h.padIndex });
   const stats = {};
   for (const k of SAVE_STATS) stats[k] = state[k];
   return {
-    game: 'defenehero', v: SAVE_VERSION,
+    game: 'constellation-defense', v: SAVE_VERSION,
     difficulty: state.difficulty,
     meta: { ...state.meta },
     loop: state.loop || 0,               // 별의 시련 회차 — 이어하기가 회차를 잊으면 안 된다
@@ -135,8 +127,6 @@ export function serialize(state) {
     } : null,
     stats,
     discovered: [...state.discovered],
-    mathWindow: [...(state.mathWindow || [])],   // 적응형 난이도가 이어하기에서도 이어지게
-    mathLocked: [...(state.mathLocked || [])],   // 저장했다 불러오는 것으로 잠금을 풀 수 없게
     seenStory: state.seenStory ? [...state.seenStory] : [],
     revealed: state.revealed ? [...state.revealed] : [],
   };
@@ -166,7 +156,6 @@ export function deserialize(data, opts = {}) {
     if (!rec || !D.CLASSES[rec.cls]) return;
     if (state.bench.length >= D.BENCH_MAX) return;
     const h = makeHero(state, rec.cls, clamp(rec.tier, 0, D.maxTierOf(rec.cls), 0));
-    empowerHero(h, clamp(rec.spark, 0, D.SPEED_POWER_MAX, 0));   // 빠른 풀이 보너스도 되살린다
     state.bench.push(h);
     if (Number.isInteger(pad) && pad >= 0 && pad < D.PADS.length && !padOccupant(state, pad)) {
       placeHero(state, h.id, pad);
@@ -203,12 +192,6 @@ export function deserialize(data, opts = {}) {
   state.revealed = new Set(strings(data.revealed));
   const stats = (data.stats && typeof data.stats === 'object') ? data.stats : {};
   for (const k of SAVE_STATS) state[k] = clamp(stats[k], 0, 1e9, 0);
-  /* 0/1만 남긴다 — 저장 파일은 사용자가 고칠 수 있는 입력이라 값을 그대로 믿지 않는다 */
-  state.mathWindow = (Array.isArray(data.mathWindow) ? data.mathWindow : [])
-    .filter(v => v === 0 || v === 1).slice(-D.ADAPT_WINDOW);
-  state.mathLocked = new Set((Array.isArray(data.mathLocked) ? data.mathLocked : [])
-    .filter(v => typeof v === 'string').slice(0, 64));
-
   state.pendingWave = buildWave(state);
   return state;
 }

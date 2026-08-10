@@ -34,7 +34,7 @@ The design decisions were human-led: the match location must map to a visible ro
 
 - Browser-only static build with esbuild.
 - The `src/engine/` layer is DOM- and renderer-free, enabling node-based invariant checks.
-- `src/app/tacticflow.js` owns board input and cascades; `src/engine/combat.js` resolves its effects into the game's usual event stream.
+- `src/app/tacticflow.js` owns board input and cascades; `src/engine/tactics.js` resolves the resulting commands into the game's usual event stream.
 - All 3D models, VFX, terrain, and Web Audio sound are generated procedurally — no game-art or audio asset files are required.
 
 See [CREDITS.md](CREDITS.md) for font credits.

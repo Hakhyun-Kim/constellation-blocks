@@ -13,16 +13,6 @@ export function makeHero(state, cls, tier) {
   };
 }
 
-/* 빠른 풀이 보너스를 용사에게 새긴다 (mathgate.js 참고).
- * spark 를 따로 들고 있는 이유: 저장/불러오기에서 dmg 는 등급표로 다시 계산되므로,
- * 곱한 결과만 남기면 불러올 때 보너스가 사라진다. */
-export function empowerHero(hero, power) {
-  if (!hero || !(power > 0)) return 0;
-  hero.spark = Math.min(1, (hero.spark || 0) + power);
-  hero.dmg = Math.round(hero.dmg * (1 + power));
-  return hero.spark;
-}
-
 /* 등급 오버라이드를 합친 실효 수정자 (전설 → 신화 순으로 덮어씌움) */
 export function heroMods(h) {
   const C = D.CLASSES[h.cls];
@@ -175,26 +165,12 @@ export function recipeStatus(state, r, cost) {
   };
 }
 
-/* 조합 하나를 가리키는 열쇠 — 잠금 집합의 키이자 UI/봇이 같은 것을 가리키는 이름.
- * pending 객체(main.js)와 listCombos 항목 둘 다 이 함수로 같은 문자열이 나와야 한다. */
-export const comboKey = (c) =>
-  (c.kind === 'rankup' ? `rankup:${c.cls}:${Number(c.tier)}` : `recipe:${c.result}`);
-
-/* listCombos 항목 → 수학 관문에 걸 pending 액션 (UI 버튼 dataset과 같은 모양) */
+/* listCombos 항목 → 실행 액션 (UI 버튼 dataset과 같은 모양) */
 export function comboToAction(c) {
   return c.kind === 'rankup'
     ? { kind: 'rankup', cls: c.cls, tier: String(c.tier) }
     : { kind: 'recipe', result: c.result };
 }
-
-/* 포기하거나 세 번 틀린 조합을 잠근다 (mathgate.js 참고).
- * 웨이브를 한 번 치르면 풀린다 — 영구 박탈이 아니라 "이번엔 못 한다"이다. */
-export function lockCombo(state, key) {
-  if (!state.mathLocked) state.mathLocked = new Set();
-  state.mathLocked.add(key);
-  return state.mathLocked;
-}
-export const isComboLocked = (state, key) => !!(state.mathLocked && state.mathLocked.has(key));
 
 export function listCombos(state) {
   const out = [];
@@ -210,8 +186,6 @@ export function listCombos(state) {
         kind: 'rankup', cls: h.cls, tier: h.tier, result: h.cls, resultTier: h.tier + 1,
         cost, affordable: state.gold >= cost,
       };
-      c.key = comboKey(c);
-      c.locked = isComboLocked(state, c.key);
       out.push(c);
     }
   }
@@ -225,8 +199,6 @@ export function listCombos(state) {
       tier: pair.base, ta: pair.ta, tb: pair.tb, resultTier: pair.resultTier,
       cost, affordable: state.gold >= cost,
     };
-    c.key = comboKey(c);
-    c.locked = isComboLocked(state, c.key);
     out.push(c);
   }
   return out;
@@ -234,9 +206,9 @@ export function listCombos(state) {
 
 /* 지금 가능한 조합 중 최선 — 높은 등급 우선, 동급이면 특수 레시피 우선.
  * 게임(main)과 봇(bot)이 같은 함수를 봐야 판단이 갈라지지 않는다.
- * 잠긴 조합은 후보에서 뺀다 — 안 그러면 봇이 같은 관문을 무한히 다시 연다. */
+ */
 export function bestCombo(state) {
-  const combos = listCombos(state).filter(c => c.affordable && !c.locked);
+  const combos = listCombos(state).filter(c => c.affordable);
   if (!combos.length) return null;
   return combos.sort((a, b) =>
     b.resultTier - a.resultTier ||
@@ -401,9 +373,8 @@ export function holdFeast(state) {
   }
   const from = hero.tier;
   hero.tier++;
-  /* 공격력은 등급표에서 다시 계산하고, 빠른 풀이 보너스(spark)는 그 위에 다시 얹는다 */
+  /* 공격력은 현재 등급과 메타 배율에서 다시 계산한다. */
   hero.dmg = Math.round(D.heroStats(hero.cls, hero.tier).dmg * state.dmgMul);
-  if (hero.spark > 0) hero.dmg = Math.round(hero.dmg * (1 + hero.spark));
 
   const events = [];
   gainChampXp(state, D.feastChampXp(state.wave), events);

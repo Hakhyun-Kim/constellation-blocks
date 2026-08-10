@@ -348,6 +348,7 @@ function tacticState(route = 0, count = 1) {
   const fr = E.castTactic(flare, 0, 'flare', 3);
   const hpAfter = flare.enemies.reduce((sum, e) => sum + e.hp, 0);
   ok('전술: Flare가 피해·별똥별 이벤트를 낸다', fr.ok && fr.events.filter(e => e.type === 'starfall').length === 3 && hpAfter < hpBefore);
+  ok('전술: 성공한 시전만 전술 기록에 남는다', flare.tacticCasts === 1);
 
   const flare4 = tacticState(0, 6);
   const flare5 = tacticState(0, 6);
@@ -374,7 +375,7 @@ function tacticState(route = 0, count = 1) {
 
   const empty = tacticState(0, 1);
   const none = E.castTactic(empty, 1, 'tide', 3);
-  ok('전술: 적 없는 길은 상태를 바꾸지 않고 거부한다', !none.ok && none.reason === 'none');
+  ok('전술: 적 없는 길은 상태를 바꾸지 않고 거부한다', !none.ok && none.reason === 'none' && empty.tacticCasts === 0);
 }
 
 /* ---------- ⑧ 잔치: 랜덤 승급 · 준비마다 한 번 · 저장해도 리롤 불가 ---------- */

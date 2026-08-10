@@ -8,7 +8,7 @@
  *   engine/ · gfx/ · ui.js · main.js 와 scripts/ 의 봇·진단 전부가
  *   `import * as D from '(../)data.js'` 형태로 이 경로를 보고 있다.
  *   배럴을 남겨두면 그 파일들이 한 줄도 바뀌지 않고,
- *   원본(defenehero)과의 cherry-pick / merge 충돌면이 최소화된다.
+ *   기존 기반과의 cherry-pick / merge 충돌면이 최소화된다.
  *
  * ▸ 어디를 고쳐야 하나
  *   field.js    전장 지오메트리 (길·발판·좌표 유틸)      — 레벨 디자인
@@ -17,7 +17,6 @@
  *   castle.js   성·포탑
  *   economy.js  골드·조합 비용·메타 진행                  ★ 성장 곡선의 축
  *   tactics.js  3매치가 방어선에 적용하는 전술 수치
- *   mathgate.js 수학 관문 규칙 (문제 자체는 src/mathgen/) ★ 성인판 재설계 대상
  * ===================================================== */
 
 export * from './balance/field.js';
@@ -26,6 +25,5 @@ export * from './balance/enemies.js';
 export * from './balance/castle.js';
 export * from './balance/economy.js';
 export * from './balance/tactics.js';
-export * from './balance/mathgate.js';
 export * from './balance/champion.js';
 export * from './balance/achievements.js';

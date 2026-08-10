@@ -130,15 +130,6 @@
           <input type="file" id="loadFile" accept=".json,application/json" class="hidden">
         </div>
       </div>
-      <div class="gradebar hidden" aria-hidden="true">
-        <span class="glabel" title="조합할 때 나올 문제의 학년">🧮 문제</span>
-        <div class="grades" id="grades">
-          <button data-g="3" class="on">3학년</button>
-          <button data-g="4">4학년</button>
-          <button data-g="5">5학년</button>
-          <button data-g="6">6학년</button>
-        </div>
-      </div>
     </section>
 
     <section class="card fixed" id="benchCard">
@@ -199,44 +190,10 @@
   </aside>
 </div>
 
-<!-- ===== 수학 문제 모달 ===== -->
-<div id="mathModal" class="modal hidden">
-  <div class="modal-card">
-    <h2 id="mTitle">✏️ 지혜의 시험!</h2>
-    <div class="mmeta">
-      <span id="mGrade" class="mgrade">3학년 문제</span>
-      <span id="mDiff" class="mdiff">⭐ 쉬움</span>
-      <span id="mSteps" class="msteps hidden">1 / 2</span>
-      <span id="mTries" class="mtries hidden">❤️ 3</span>
-      <span id="mStreak" class="mstreak hidden">🔥 2연승</span>
-    </div>
-    <div id="mQuiz">
-      <div id="mTimer" class="mtimer">
-        <div id="mTimerFill"></div>
-        <span id="mTimerText">45</span>
-      </div>
-      <div id="mProblem" class="mproblem"></div>
-      <div class="mrow">
-        <input id="mInput" type="text" inputmode="decimal" autocomplete="off" placeholder="정답을 입력하세요">
-        <button id="mSubmit" class="big blue">확인!</button>
-      </div>
-      <!-- 5초쯤 지나면 뜨는 세로셈 칸 (문제집의 계산 칸) -->
-      <div id="mVert" class="mvert hidden"></div>
-      <div id="mHint" class="mhint hidden"></div>
-    </div>
-    <div id="mFeedback" class="mfeedback"></div>
-    <div class="mrow">
-      <button id="mHintBtn" class="hintbtn">💡 힌트 (💰30 · H)</button>
-      <button id="mNext" class="hidden">➡ 다음 문제 (Enter)</button>
-      <button id="mClose">닫기 (Esc)</button>
-    </div>
-  </div>
-</div>
-
 <!-- ===== 시작 메뉴 (자동 저장이 있을 때만) ===== -->
 <div id="startModal" class="modal hidden">
   <div class="modal-card start">
-    <h2>🏰 용사 수학 디펜스</h2>
+    <h2>🌌 Constellation Defense</h2>
     <p id="continueInfo" class="continue-info"></p>
     <button id="continueBtn" class="big amber">⏩ 이어하기 (Enter)</button>
     <button id="newGameBtn" class="big blue">🆕 처음부터 시작하기</button>
@@ -259,7 +216,7 @@
   </div>
 </div>
 
-<!-- ===== 도감 · 기록 (용사 / 몬스터 / 업적 / 수학) ===== -->
+<!-- ===== 도감 · 기록 (용사 / 몬스터 / 업적 / 전술) ===== -->
 <div id="bookModal" class="modal hidden">
   <div class="modal-card book">
     <h2>📖 도감 · 기록</h2>
@@ -267,7 +224,7 @@
       <button data-btab="heroes" class="on">🧍 용사</button>
       <button data-btab="enemies">👾 몬스터</button>
       <button data-btab="ach">🏅 업적</button>
-      <button data-btab="math">🌌 전술</button>
+      <button data-btab="tactics">🌌 전술</button>
     </div>
     <div id="bookBody" class="book-body"></div>
     <button id="bookClose" class="big blue">닫기 (Esc)</button>
@@ -281,7 +238,7 @@
     <h2 id="victoryTitle">서른 번째 아침</h2>
     <div id="victoryStats" class="victory-stats"></div>
     <div id="victoryShards" class="over-shards"></div>
-    <p class="victory-msg" id="victoryMsg">성은 무너지지 않았다. 셈이 맞았기 때문이다.</p>
+    <p class="victory-msg" id="victoryMsg">성은 무너지지 않았다. 별자리가 길을 지켰기 때문이다.</p>
     <button id="victoryTrialBtn" class="big amber">🌟 별의 시련 — 더 강한 마왕군에 도전!</button>
     <p class="victory-note">별지기의 성장은 그대로, 용사·골드·성은 처음부터 · 몬스터가 훨씬 세져요</p>
     <div class="rowbtns">

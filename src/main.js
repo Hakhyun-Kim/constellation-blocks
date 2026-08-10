@@ -3,7 +3,6 @@
  * ===================================================== */
 import * as D from './data.js';
 import * as E from './engine.js';
-import * as MathGen from './math.js';
 import { Renderer3D } from './gfx/renderer.js';
 import { heroPortrait, champPortrait } from './gfx/units3d.js';
 import { UI } from './ui.js';
@@ -13,9 +12,8 @@ import * as Story from './story.js';
 import { demo } from './demo.js';
 import {
   store, heroName,
-  codex, mathLog, earned, codexAddHero, codexAddKill, mathAdd, flushRecords, markDirty,
+  codex, earned, codexAddHero, codexAddKill, flushRecords, markDirty,
 } from './app/store.js';
-import { createMathFlow } from './app/mathflow.js';
 import { createTacticFlow } from './app/tacticflow.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
@@ -60,8 +58,6 @@ const renderer = new Renderer3D(ui.el.scene3d, {
 });
 
 let state = null;
-let grade = 3;
-let gradeBeforeDemo = null;   // 데모가 프로필 학년으로 바꾸기 전의 값
 let speed = 1;
 let selBench = null;      // 배치 대기 중인 벤치 용사
 let selHero = null;       // 정보 패널에 표시 중인 용사 (벤치/필드)
@@ -73,25 +69,9 @@ let sellMode = false;         // 여러 명 판매 모드 (벤치 카드가 체�
 const sellSel = new Set();    // 판매하려고 고른 용사 id
 let tactics = null;
 
-/* 수학 관문 흐름 (app/mathflow.js) — state는 새 게임/불러오기로 갈아끼워지므로 getter로 넘긴다 */
-const flow = createMathFlow({
-  getState: () => state, getGrade: () => grade,
-  ui, renderer, store,
-  refreshAll: (...a) => refreshAll(...a),
-  playStory: (...a) => playStory(...a),
-  playReveal: (...a) => playReveal(...a),
-  /* 수학 성장 기록 — 데모(봇)의 풀이는 아이의 기록이 아니다 */
-  onMathDone: (g, label, ok, clean) => {
-    if (demo.active) return;
-    mathAdd(g, label, ok, clean);
-    checkAchievements();
-  },
-  onHeroBorn: (hero) => recordHeroBorn(hero),
-});
-
 /* ---------- 도감 · 업적 ----------
  * 조건은 전부 값 비교라 아무 때나 다시 평가해도 싸다. 언제 부르는지가 전부다:
- * 용사 탄생 · 수학 풀이 · 웨이브 종료 · 레벨 업 · 게임 오버 · 승리.
+ * 용사 탄생 · 전술 시전 · 웨이브 종료 · 레벨 업 · 게임 오버 · 승리.
  * 데모(봇)가 딴 업적은 업적이 아니므로 데모 중엔 기록도 평가도 멈춘다. */
 function recordHeroBorn(hero) {
   if (demo.active || !hero) return;
@@ -103,7 +83,7 @@ function checkAchievements() {
   if (demo.active) return;
   const bestStored = Math.max(0, ...Object.keys(D.DIFFICULTIES).map(d => store.best(d)));
   const ctx = {
-    state, codex, mathLog,
+    state, codex,
     /* 진행 중엔 "치른 웨이브"(wave-1)도 인정 — 기록 갱신은 게임 오버 때라 늦다 */
     bestWave: Math.max(bestStored, state ? state.wave - 1 : 0),
     victories: store.victories,
@@ -140,7 +120,6 @@ function closetLock(axis, key) {
 function resetSession() {
   selBench = null;
   selHero = null;
-  flow.resetStreak();
   overHandled = false;
   sellMode = false;
   sellSel.clear();
@@ -537,12 +516,11 @@ function saveGame() {
     return;
   }
   const data = E.serialize(state);
-  data.grade = grade;                  // 문제 학년은 화면 설정이라 엔진 밖에서 얹는다
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `용사수학디펜스_${state.wave}웨이브_${D.DIFFICULTIES[state.difficulty].name}.json`;
+  a.download = `constellation-defense_${state.wave}wave_${D.DIFFICULTIES[state.difficulty].name}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   SFX.tap();
@@ -557,10 +535,6 @@ function loadGame(data) {
   }
   gameOverToken++;                     // 예약된 게임오버 연출이 불러온 판을 덮지 않게
   state = next;
-  if (Number.isFinite(data.grade) && data.grade >= 3 && data.grade <= 6) {
-    grade = data.grade;
-    ui.setGradeActive(grade);
-  }
   store.diff = state.difficulty;
   resetSession();
   ui.hideOver();
@@ -591,7 +565,6 @@ function flushAutosave() {
 function autoSave() {
   if (state.phase !== 'prep') return;
   const data = E.serialize(state);
-  data.grade = grade;
   data.savedAt = Date.now();
   pendingAutosave = data;
   idle(() => { flushAutosave(); flushRecords(); });
@@ -775,7 +748,6 @@ const handlers = {
     ui.setSoundLabels(isSfxMuted(), isMusicMuted());
     music.sync();
   },
-  onGrade(g) { grade = g; SFX.tap(); },
   onDiff(d) {
     if (!(state.phase === 'prep' && state.wave === 1)) return;
     store.diff = d;
@@ -843,7 +815,6 @@ const handlers = {
       ui.hideTooltip();
     }
   },
-  onHint: () => flow.hint(),
   onRecall() { doRecall(selHero); },
   onSell() {
     const r = E.sellHero(state, selHero);
@@ -945,7 +916,7 @@ const handlers = {
   },
   /* --- 도감 · 기록 --- */
   onBookOpen() {
-    ui.renderBook({ state, codex, mathLog, earned });
+    ui.renderBook({ state, codex, earned });
     ui.showBook();
     SFX.tap();
   },
@@ -977,9 +948,6 @@ const handlers = {
   },
   onShare() { ui.makeShareCard(state, store.best(state.difficulty)); },
   onDragStart, onDragMove, onDragEnd,
-  onMathSubmit: flow.submitMath,
-  onMathNext: flow.advanceMath,
-  onMathClose: flow.giveUpMath,
   onDemoToggle() { demo.toggle(); SFX.tap(); },
   onStoryClose: closeStory,
   onStoryOff() { store.storyOff = true; ui.toast('이야기를 끄었어요. 다시 보려면 새로고침 후 설정에서…', 'bad'); closeStory(); },
@@ -1070,12 +1038,6 @@ function cycleField(dir) {
   kbPad = null;
 }
 
-function setGradeKey(g) {
-  grade = g;
-  ui.setGradeActive(g);
-  SFX.tap();
-}
-
 function tryStartWave() {
   if (ui.isStoryOpen() || ui.isRevealOpen()) return;   // 연출 중에 웨이브가 몰래 시작되지 않게
   const quip = store.storyOff ? null : Story.waveQuip(state.wave);
@@ -1132,46 +1094,6 @@ document.addEventListener('keydown', (ev) => {
   if (ui.isBookOpen()) {
     if (key === 'Escape' || key === 'Enter' || lower === 'b') { ev.preventDefault(); ui.hideBook(); }
     return;
-  }
-
-  /* --- 수학 모달 --- */
-  if (ui.isMathOpen()) {
-    if (key === 'Escape') { ev.preventDefault(); flow.giveUpMath(); return; }
-    if (ui.isAnswered() && (key === 'Enter' || key === ' ')) {
-      ev.preventDefault();
-      /* 자동 진행을 기다리는 중이면 Enter는 "기다리지 말고 지금" 이라는 뜻이다 */
-      const canAdvance = flow.autoPending() || !ui.el.mNext.classList.contains('hidden');
-      if (canAdvance) flow.advanceMath();
-      else flow.closeMathAll();
-      return;
-    }
-    /* 아직 답을 안 냈는데 Enter가 여기까지 왔다 = 포커스가 입력창 밖에 있다는 뜻.
-     * (확인 버튼·힌트 버튼을 클릭했거나 모달 배경을 눌렀을 때 그렇게 된다)
-     * 예전엔 여기서 그냥 return 해서 "답을 썼는데 Enter가 안 먹는" 상태가 됐다.
-     * 입력창이 이벤트를 먼저 처리했다면 stopPropagation 때문에 여기 오지 않으므로 중복 제출도 없다.
-     * isComposing: 한글 IME 조합을 확정하는 Enter는 제출이 아니다. */
-    if (!ui.isAnswered() && key === 'Enter' && !ev.isComposing) {
-      ev.preventDefault();
-      flow.submitMath(ui.el.mInput.value);
-      ui.el.mInput.focus();
-      return;
-    }
-    /* 문제창은 효과음이 제일 많이 나는 화면이다 — 여기서 소리를 못 끄면 끌 방법이 없다.
-     * 입력창에 답을 쓰는 중에는 'm'이 글자일 수 있으니 입력이 비었을 때만 받는다. */
-    if (lower === 'm' && (document.activeElement !== ui.el.mInput || ui.el.mInput.value === '')) {
-      ev.preventDefault();
-      const off = toggleAll();
-      ui.setSoundLabels(isSfxMuted(), isMusicMuted());
-      ui.toast(off ? '🔇 소리를 모두 껐어요 (M)' : '🔊 소리를 다시 켰어요 (M)');
-      return;
-    }
-    if (lower === 'h' && !ui.isAnswered() && !ui.el.mHintBtn.disabled) {
-      if (document.activeElement !== ui.el.mInput || ui.el.mInput.value === '') {
-        ev.preventDefault();
-        ui.el.mHintBtn.click();
-      }
-    }
-    return;   // 나머지 키는 입력창으로
   }
 
   /* --- 옷장 모달 (이름 입력창의 키는 여기까지 안 온다 — Esc만 온다) --- */
@@ -1272,7 +1194,6 @@ document.addEventListener('keydown', (ev) => {
     case 'f': cycleField(1); return;
     case 'r': if (selHero != null && !ui.el.recallBtn.classList.contains('hidden')) ui.el.recallBtn.click(); return;
     case 'x': if (selHero != null) ui.el.sellBtn.click(); return;
-    case '3': case '4': case '5': case '6': setGradeKey(Number(lower)); return;
     case '7': ui.el.castleRows.querySelector('button[data-key="repair"]')?.click(); return;
     case '8': ui.el.castleRows.querySelector('button[data-key="fortify"]')?.click(); return;
     case '9': ui.el.castleRows.querySelector('button[data-key="tower"]')?.click(); return;
@@ -1283,7 +1204,7 @@ document.addEventListener('keydown', (ev) => {
 function isPaused() {
   /* 이야기는 준비 단계에만 뜨므로 멈출 게 없지만, 전설 연출은 전투 중에도 뜬다.
    * 별자리(스킬)·옷장·도감·승리 화면도 멈춘다 — 열어 놓고 고민할 시간을 준다 */
-  return ui.isMathOpen() || ui.isMetaOpen() || ui.isSkillOpen() || ui.isClosetOpen()
+  return ui.isMetaOpen() || ui.isSkillOpen() || ui.isClosetOpen()
     || ui.isRevealOpen() || ui.isBookOpen() || ui.isVictoryOpen() || state.phase === 'over';
 }
 
@@ -1326,9 +1247,7 @@ function frame(now) {
     }
   }
 
-  flow.tickTimer(realDt);      // 문제 제한 시간 — 전투가 멈춰 있어도 시계는 흐른다
-
-  /* 데모는 시뮬레이션이 멈춰 있어도 돌아야 문제창을 처리할 수 있다 */
+  /* 데모는 모달이 열려도 흐름을 관리해야 한다. */
   if (demo.active) demo.step(realDt);
 
   if (!isPaused()) {
@@ -1417,6 +1336,9 @@ tactics = createTacticFlow({
     ui.toast(`${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} 성좌 ${size}개 — ${['왼쪽','가운데','오른쪽'][lane]} 길 전술 발동!`, 'good');
     refreshAll();
   },
+  onMatch(type, lane, size) {
+    SFX.match(type, size);
+  },
   onPreview(type, lane, size) {
     SFX.tactic(type, size);
     renderer.tacticCast(state, null, type, lane, size);
@@ -1445,8 +1367,8 @@ window.addEventListener('pointerdown', () => { music.sync(); }, { once: true });
  * ② 3D 캔버스에 그리는 글자는 아예 폴백 폰트로 구워져 텍스처에 박힌다. */
 if (document.fonts && document.fonts.load) {
   Promise.all([
-    document.fonts.load('16px Jua', '용사 수학 디펜스'),
-    document.fonts.load('700 27px Gaegu', '0123456789 문제'),
+    document.fonts.load('16px Jua', 'Constellation Defense'),
+    document.fonts.load('700 27px Gaegu', 'CONSTELLATION'),
   ]).catch(() => {});
 }
 
@@ -1457,13 +1379,10 @@ demo.attach({
   getState: () => state,
   isStoryOpen: () => ui.isStoryOpen(),
   isRevealOpen: () => ui.isRevealOpen(),
-  isMathOpen: () => ui.isMathOpen(),
-  isAnswered: () => ui.isAnswered(),
-  getProblem: () => flow.modal.prob,
   closeStory,
   summon: doSummon,
   place(heroId, pad) { selBench = heroId; doPlace(pad); },
-  openCombine(action) { doCombineDirect(action); },
+  combine(action) { doCombineDirect(action); },
   castle(key) { handlers.onCastle(key); },
   spell: doSpell,
   ult: doUlt,
@@ -1471,30 +1390,20 @@ demo.attach({
   feast: doFeast,
   startWave: tryStartWave,
   newGame: () => newGame(store.diff),
-  typeAnswer(v) { ui.el.mInput.value = v; flow.submitMath(v); },
   comboLabel: (c) => (c.kind === 'rankup'
     ? `${D.CLASSES[c.cls].name} ${D.TIERS[c.resultTier].name}`
     : `${D.CLASSES[c.result].name}`),
   heroLabel: (h) => `${D.TIERS[h.tier].name} ${D.CLASSES[h.cls].name}`,
   onCaption: (text) => ui.setDemoCaption(text),
-  /* 프로필마다 푸는 학년이 다르다(초보 3 · 고수 6). 데모가 끝나면 사람이 고른 학년으로 되돌린다 */
-  onStart(profile, P) {
-    if (P && P.grade) {
-      if (gradeBeforeDemo == null) gradeBeforeDemo = grade;
-      grade = P.grade;
-      ui.setGradeActive(grade);
-    }
+  getTacticBoard: () => tactics ? tactics.getBoard() : [],
+  tacticSwap(from, to) { return tactics ? tactics.swap(from, to) : false; },
+  onStart(profile) {
     ui.setDemoMode(true, profile);
     setSellMode(false);
     deselectAll();
     ui.restoreTab();
   },
   onStop() {
-    if (gradeBeforeDemo != null) {
-      grade = gradeBeforeDemo;
-      gradeBeforeDemo = null;
-      ui.setGradeActive(grade);
-    }
     ui.setDemoMode(false);
     setSellMode(false);
     deselectAll();
@@ -1509,11 +1418,10 @@ if (urlParams.has('demo')) {
 /* 디버그 훅 (자동 검증/테스트용) */
 window.__game = {
   get state() { return state; },
-  get modal() { return flow.modal; },
-  E, D, renderer, ui, MathGen, SFX, demo,
+  E, D, renderer, ui, SFX, demo,
   env: { isMobile, decor: useDecor, quality: renderer.quality },
   sfxCore: { getAc, getMaster, isSfxMuted, isMusicMuted },
-  records: { codex, mathLog, earned },
+  records: { codex, earned },
   refresh: refreshAll,
   selectHero(id) { selHero = id; renderer.setSelectedHero(id); ui.renderHeroPanel(state, id); },
   gold(n) { state.gold += n; refreshAll(); },

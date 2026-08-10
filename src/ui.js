@@ -42,7 +42,6 @@ export function describeHero(hero, state, preview) {
   if (m.pierce > 1) rows.push(`🎯 <b>관통</b> ${m.pierce}명`);
   if (m.cleave) rows.push(`🌀 <b>회전베기</b>: 사거리 안 전부 타격`);
   if (m.healOnKill) rows.push(`💚 처치 시 성 회복 <b>+${m.healOnKill}</b>`);
-  if (hero.spark > 0) rows.push(`⚡ <b>성좌의 힘 +${Math.round(hero.spark * 100)}%</b>`);
 
   let ability = '';
   const MA = hero.tier >= 4 ? D.MYTHIC_ABILITIES[hero.cls] : null;
@@ -90,16 +89,14 @@ export class UI {
     [
       'bestWave', 'shards', 'metaBtn', 'castleText', 'castleFill', 'castleGhost',
       'scene3d', 'hitFlash', 'lowHpVignette', 'bossBanner', 'comboChip', 'waveInfo', 'remainN',
-      'waveBtn', 'coachChip', 'toasts', 'gold', 'waveNo', 'speedBtn', 
-      'grades', 'summonBtn', 'benchHint', 'bench', 'combineRows', 'sfxBtn', 'bgmBtn',
+      'waveBtn', 'coachChip', 'toasts', 'gold', 'waveNo', 'speedBtn',
+      'summonBtn', 'benchHint', 'bench', 'combineRows', 'sfxBtn', 'bgmBtn',
       'placeBar', 'placeBarText', 'placeBarCancel',
       'castleRows', 'heroPanel', 'hpTitle', 'hpInfo', 'recallBtn', 'sellBtn', 'moveHint',
-      'diffRow', 'mathModal', 'mTitle', 'mGrade', 'mProblem', 'mInput', 'mSubmit', 'mFeedback', 'mNext', 'mClose',
+      'diffRow',
       'storyModal', 'storyIcon', 'storyTitle', 'storyLines', 'storyNext', 'storyOff',
       'demoBtn', 'demoBar', 'demoCaption', 'demoExit',
       'revealModal', 'revealCard', 'revealTier', 'revealArt', 'revealName', 'revealDesc',
-      'mHintBtn', 'mHint', 'mDiff', 'mSteps', 'mStreak', 'mTimer', 'mTimerFill', 'mTimerText',
-      'mQuiz', 'mVert', 'mTries',
       'wavePreview', 'bossBar', 'bossBarFill', 'bossBarName', 'bossWarnBanner',
       'saveBtn', 'loadBtn', 'loadFile',
       'sellModeBtn', 'sellInfo', 'sellAllBtn', 'sellGoBtn',
@@ -225,33 +222,11 @@ export class UI {
       if (ev.key !== 'Escape') ev.stopPropagation();
       if (ev.key === 'Enter') h.onClosetSave();
     });
-    el.mSubmit.addEventListener('click', () => h.onMathSubmit(el.mInput.value));
-    el.mNext.addEventListener('click', h.onMathNext);
-    el.mClose.addEventListener('click', h.onMathClose);
-    el.mHintBtn.addEventListener('click', h.onHint);
     el.demoBtn.addEventListener('click', h.onDemoToggle);
     el.demoExit.addEventListener('click', h.onDemoToggle);
     el.storyNext.addEventListener('click', h.onStoryClose);
     el.storyOff.addEventListener('click', h.onStoryOff);
     el.revealModal.addEventListener('click', h.onRevealClose);
-    /* 모달 아무 데나 누르면 입력창으로 포커스를 되돌린다.
-     * 버튼이나 배경을 한 번 클릭하면 포커스가 거기 남아서, 답을 쓰고 Enter를 눌러도
-     * 입력창 핸들러가 안 돌던 문제가 있었다. */
-    el.mathModal.addEventListener('mousedown', (ev) => {
-      if (this._answered || ev.target.closest('button')) return;
-      setTimeout(() => el.mInput.focus(), 0);
-    });
-    el.mInput.addEventListener('keydown', (ev) => {
-      if (ev.key !== 'Enter') return;
-      ev.stopPropagation();   // 같은 Enter가 전역 핸들러로 흘러가 이중 동작하는 것 방지
-      if (!this._answered) h.onMathSubmit(el.mInput.value);
-    });
-    el.grades.querySelectorAll('button').forEach(b => {
-      b.addEventListener('click', () => {
-        h.onGrade(Number(b.dataset.g));
-        el.grades.querySelectorAll('button').forEach(v => v.classList.toggle('on', v === b));
-      });
-    });
     el.diffRow.querySelectorAll('button').forEach(b => {
       b.addEventListener('click', () => h.onDiff(b.dataset.d));
     });
@@ -425,8 +400,6 @@ export class UI {
         m.crit ? '<span class="bdg">💥</span>' : '',
         m.block ? '<span class="bdg">🛡️</span>' : '',
         m.splash ? '<span class="bdg">✹</span>' : '',
-        /* 빨리 푼 문제로 태어난 용사 — 카드에서 바로 알아보게 */
-        hero.spark > 0 ? '<span class="bdg spark" title="빠른 풀이 +' + Math.round(hero.spark * 100) + '%">⚡</span>' : '',
       ].join('');
       d.innerHTML =
         `<div class="em">${C.emoji}${badges ? `<span class="bdgs">${badges}</span>` : ''}</div>` +
@@ -483,14 +456,13 @@ export class UI {
     const combos = E.listCombos(state);
     /* 다른 탭을 보고 있어도 "지금 조합할 수 있다"를 놓치지 않게 점을 찍는다 */
     this.el.combineDot.classList.toggle('hidden',
-      this._tab === 'combine' || !combos.some(c => c.affordable && !c.locked));
+      this._tab === 'combine' || !combos.some(c => c.affordable));
     const byResult = new Map(combos.filter(c => c.kind === 'recipe').map(c => [c.result, c]));
     let html = '';
 
     /* 지금 당장 되는 것을 맨 위에 모은다 — 아이는 스크롤하지 않는다.
      * "확실히 알고, 되면 착착"의 핵심이라 규칙 안내보다도 위에 둔다. */
-    /* 포기했거나 세 번 틀린 조합은 "지금 바로"에서 빠진다 — 눌러도 안 되는 버튼을 위에 두면 안 된다 */
-    const ready = combos.filter(c => c.affordable && !c.locked);
+    const ready = combos.filter(c => c.affordable);
     if (ready.length) {
       html += `<div class="combine-now"><div class="now-title">⚡ 지금 바로 조합!</div>`;
       for (const c of ready) {
@@ -524,11 +496,6 @@ export class UI {
     const shortBadge = (cost) => state.gold >= cost ? ''
       : `<span class="gshort" title="골드가 💰${cost - state.gold} 모자라요 (필요 💰${cost} · 지금 💰${state.gold})">💰${cost - state.gold} 부족</span>`;
 
-    /* 조합 난이도 = 카드 3장의 한가운데. 누르기 전에 미리 보여 준다.
-     * 적응형 보정까지 얹어야 미리보기와 실제 관문이 어긋나지 않는다. */
-    const adapt = D.adaptOffset(state.mathWindow);
-    const lvBadge = () => '';
-
     /* ① 등급업 — 같은 용사 2명 */
     const rankups = combos.filter(c => c.kind === 'rankup');
     html += `<div class="combine-sub">⬆ 등급업 <span class="cnt">같은 용사·같은 등급 2명 (배치된 용사도 재료 OK)</span></div>`;
@@ -545,13 +512,12 @@ export class UI {
     }
     for (const c of rankups) {
       const C = D.CLASSES[c.cls];
-      html += `<div class="combine-row${c.locked ? ' locked' : c.affordable ? ' ready' : ' broke'}">
+      html += `<div class="combine-row${c.affordable ? ' ready' : ' broke'}">
         <span class="peek" data-cls="${c.cls}" data-rtier="${c.resultTier}">${C.emoji}</span> ${C.name}
         <span class="cnt" style="color:${D.TIERS[c.tier].color}">${D.TIERS[c.tier].name}×2</span>
-        ${lvBadge(c)}${shortBadge(c.cost)}
+        ${shortBadge(c.cost)}
         <button data-kind="rankup" data-cls="${c.cls}" data-tier="${c.tier}"
-          class="${c.locked || !c.affordable ? 'lack' : ''}" ${c.locked || !c.affordable ? 'disabled' : ''}
-          title="${c.locked ? '이번 웨이브엔 못 해요 — 웨이브를 치르면 다시 열려요' : ''}">${c.locked ? '🔒 이번 웨이브엔 못 해요' : `⚗ ${D.TIERS[c.resultTier].name} 💰${c.cost}`}</button>
+          class="${!c.affordable ? 'lack' : ''}" ${!c.affordable ? 'disabled' : ''}>⚗ ${D.TIERS[c.resultTier].name} 💰${c.cost}</button>
       </div>`;
     }
 
@@ -575,7 +541,7 @@ export class UI {
         if (st.state === 'ready' || st.state === 'gold') {
           /* 골드가 모자라면 얼마가 모자란지 적고 버튼을 잠근다 — 재료는 다 모았다는 표시(초록 재료)는 그대로다 */
           const broke = st.state === 'gold';
-          right = `${c ? lvBadge(c) : ''}${shortBadge(st.cost)}<button data-kind="recipe" data-result="${r.result}"
+          right = `${shortBadge(st.cost)}<button data-kind="recipe" data-result="${r.result}"
             class="${broke ? 'lack' : ''}" ${broke ? 'disabled' : ''}>⚗ ${D.TIERS[rtier].name} 💰${st.cost}</button>`;
         } else if (st.state === 'cap') {
           right = `<span class="cnt need">더 안 올라요 — 🌌 신화 조합으로</span>`;
@@ -854,7 +820,7 @@ export class UI {
     if (tab === 'heroes') html = this._bookHeroes(d);
     else if (tab === 'enemies') html = this._bookEnemies(d);
     else if (tab === 'ach') html = this._bookAch(d);
-    else html = this._bookMath(d);
+    else html = this._bookTactics(d);
     this.el.bookBody.innerHTML = html;
   }
 
@@ -926,8 +892,8 @@ export class UI {
     return html;
   }
 
-  _bookMath() {
-    return `<div class="mathsum">
+  _bookTactics() {
+    return `<div class="tactic-summary">
       <div class="msbox"><b>☄️</b><span>유성 성좌</span></div>
       <div class="msbox"><b>❄️</b><span>서리 성좌</span></div>
       <div class="msbox"><b>🛡️</b><span>수호 성좌</span></div>
@@ -1177,268 +1143,6 @@ export class UI {
   }
   hideStart() { this.el.startModal.classList.add('hidden'); }
   isStartOpen() { return !this.el.startModal.classList.contains('hidden'); }
-
-  /* ---------- 수학 모달 ---------- */
-  showMath(title, lv) {
-    this.el.mTitle.textContent = title;
-    this.setMathTone(lv);
-    this.el.mathModal.classList.remove('hidden');
-  }
-  /* 난이도가 창 전체의 분위기를 바꾼다 — 열리는 순간 "센 문제"임을 알아챈다.
-   * 난이도는 창이 열린 뒤에 뽑히므로 따로 부를 수 있게 떼어 놨다. */
-  setMathTone(lv) {
-    const card = this.el.mathModal.querySelector('.modal-card');
-    card.className = `modal-card lv${Math.max(1, Math.min(D.MAX_MATH_LV, lv || 1))}`;
-  }
-
-  /* ---------- 세로셈 칸 ----------
-   * 문제집의 계산 칸을 그대로 옮긴 것. 자리를 맞춰 쓰지 않으면 받아올림에서 틀리는데,
-   * 화면에서는 종이처럼 자리를 맞출 데가 없어서 큰 수가 나오면 손도 못 댄다.
-   * 처음부터 띄우면 답을 바로 아는 아이에게 방해가 되므로 **몇 초 지나야** 나온다.
-   *
-   * v: { op: '+'|'−'|'×', a, b }            두 항 (기존 형태)
-   *    { terms: [{v}, {v, op}, {v, op}] }   세 항 이상 — 한 판에 모아서 보여 준다
-   *
-   * ▸ 자리 맞추기 규칙 (여기가 이 함수의 전부다)
-   *   ① 부호는 **맨 왼쪽 제 칸**에 놓는다. 예전엔 "숫자 바로 왼쪽"에 놨는데,
-   *      136 × 6 처럼 두 수의 길이가 다르면 ×가 윗줄 3 밑에 박혀서
-   *      6이 십의 자리처럼 보였다 — 자리를 알려 주랬더니 자리를 헷갈리게 했다.
-   *   ② 소수는 **소수점 기준**으로 맞춘다. 오른쪽 끝으로 맞추면 8.41과 2.7의
-   *      소수점이 어긋난다. 정수부·소수부 폭을 따로 재서 점을 한 줄로 세운다.
-   *   ③ 받아올림 줄은 덧셈·뺄셈뿐 아니라 곱셈에도 준다. 곱셈이야말로 받아올림이 많다. */
-  _buildVert(v) {
-    const el = this.el.mVert;
-    el.textContent = '';
-    if (!v) return false;
-
-    /* 두 형태를 한 모양으로 정규화: [{sign, int, frac}] */
-    const raw = v.terms
-      ? v.terms.map((t, i) => ({ sign: i === 0 ? '' : (t.op || '+'), s: String(t.v) }))
-      : [{ sign: '', s: String(v.a) }, { sign: v.op, s: String(v.b) }];
-    const isMul = !v.terms && v.op === '×';
-    const rows = raw.map(r => {
-      const dot = r.s.indexOf('.');
-      return {
-        sign: r.sign,
-        int: dot < 0 ? r.s : r.s.slice(0, dot),
-        frac: dot < 0 ? '' : r.s.slice(dot + 1),
-      };
-    });
-
-    const intW = Math.max(...rows.map(r => r.int.length));
-    const fracW = Math.max(...rows.map(r => r.frac.length));
-    /* 정수부 폭: 곱셈은 부분곱·답이 자릿수 합만큼 길어진다. 덧셈·뺄셈은 받아올림 한 칸 */
-    const bodyInt = isMul
-      ? rows.reduce((a, r) => a + r.int.length, 0)
-      : intW + 1;
-    const SIGN = 1;                                  // 맨 왼쪽 부호 칸
-    const dotCol = SIGN + bodyInt;                   // 소수점이 놓이는 칸
-    const cols = SIGN + bodyInt + (fracW ? 1 + fracW : 0);
-
-    const grid = document.createElement('div');
-    grid.className = 'mv-grid';
-    grid.style.setProperty('--cols', String(cols));
-
-    /* 한 줄 그리기: 정수부는 소수점 왼쪽에 오른쪽 맞춤, 소수부는 오른쪽에 왼쪽 맞춤 */
-    const row = (r, cls = '') => {
-      const start = dotCol - r.int.length;
-      for (let i = 0; i < cols; i++) {
-        const c = document.createElement('div');
-        c.className = `mv-c ${cls}`;
-        if (i === 0 && r.sign) { c.textContent = r.sign; c.classList.add('mv-sign'); }
-        else if (fracW && i === dotCol) { if (r.int) { c.textContent = '.'; c.classList.add('mv-dot'); } }
-        else if (i >= start && i < dotCol) c.textContent = r.int[i - start];
-        else if (fracW && i > dotCol) {
-          const k = i - dotCol - 1;
-          if (k < r.frac.length) c.textContent = r.frac[k];
-        }
-        grid.append(c);
-      }
-    };
-    const rule = () => {
-      const r = document.createElement('div');
-      r.className = 'mv-rule';
-      grid.append(r);
-    };
-    const blanks = (cls) => row({ sign: '', int: '', frac: '' }, cls);
-
-    blanks('mv-carry');                    // 받아올림/받아내림 적는 줄 (곱셈에도 준다)
-    for (const r of rows) row(r);
-    rule();
-    if (isMul && rows[1].int.length > 1) {
-      /* 곱하는 수의 자릿수만큼 부분곱 줄, 그 아래 합계 줄 */
-      for (let i = 0; i < rows[1].int.length; i++) blanks('mv-blank');
-      rule();
-    }
-    blanks('mv-blank');
-
-    const title = document.createElement('div');
-    title.className = 'mv-title';
-    title.textContent = rows.length > 2
-      ? '✏️ 한 번에 세로로 더하고 빼 보세요'
-      : '✏️ 자리를 맞춰 계산해 보세요';
-    el.append(title, grid);
-    return true;
-  }
-  /* 몇 초 지나야 나온다 — 바로 아는 문제까지 칸으로 덮으면 방해가 된다 */
-  _armVert(v) {
-    clearTimeout(this._vertT);
-    this.el.mVert.classList.add('hidden');
-    if (!this._buildVert(v)) return;
-    this._vertT = setTimeout(() => {
-      if (this._answered) return;
-      this.el.mVert.classList.remove('hidden');
-      this.el.mVert.classList.remove('pop');
-      void this.el.mVert.offsetWidth;
-      this.el.mVert.classList.add('pop');
-    }, D.VERT_DELAY_MS);
-  }
-
-  /* 문제·힌트 안의 {a/b} 를 세로 분수로 그린다.
-   * "15 ÷ 3/6" 처럼 한 줄로 쓰면 15÷3÷6 으로도 읽혀서 아이가 헷갈린다.
-   * (문자열을 그대로 넣지 않고 DOM으로 조립한다 — innerHTML을 쓸 이유가 없다) */
-  _writeMath(el, text) {
-    el.textContent = '';
-    const re = /\{(-?\d+)\/(\d+)\}/g;
-    let last = 0, m;
-    while ((m = re.exec(text)) !== null) {
-      if (m.index > last) el.append(text.slice(last, m.index));
-      const f = document.createElement('span');
-      f.className = 'frac';
-      const n = document.createElement('b'); n.textContent = m[1];
-      const d = document.createElement('i'); d.textContent = m[2];
-      f.append(n, d);
-      el.append(f);
-      last = m.index + m[0].length;
-    }
-    if (last < text.length) el.append(text.slice(last));
-  }
-
-  /* o: { grade, lv, text, round, rounds, time, streak, reward } */
-  setProblem(o) {
-    const el = this.el;
-    const L = D.MATH_LEVELS[Math.max(1, Math.min(D.MAX_MATH_LV, o.lv))];
-    this._answered = false;
-    el.mGrade.textContent = `${o.grade}학년`;
-    el.mDiff.textContent = `${L.stars} ${L.name}${o.label ? ` · ${o.label}` : ''}`;
-    el.mDiff.style.background = L.color;
-    el.mSteps.classList.add('hidden');       // 한 관문 = 한 문제 (다단계 관문은 없앴다)
-    /* 틀렸을 때 재도전에 얼마가 드는지 — 답을 넣기 전에 알아야 판돈이 된다.
-     * 낼 수 없으면 붉게: "이번 한 번이 마지막"이라는 신호 */
-    if (o.retry) {
-      el.mTries.textContent = o.retry.afford
-        ? `🔁 틀리면 재도전 💰${o.retry.price}`
-        : `⚠ 틀리면 여기까지 (재도전 💰${o.retry.price} 부족)`;
-      el.mTries.classList.remove('hidden');
-      el.mTries.classList.toggle('last', !o.retry.afford);
-    } else {
-      el.mTries.classList.add('hidden');
-    }
-    el.mStreak.textContent = `🔥 ${o.streak}연승`;
-    el.mStreak.classList.toggle('hidden', !o.streak || o.streak < 2);
-    this._writeMath(el.mProblem, o.text);
-    /* 전술 문제는 판을 옮겨 적느라 길다(용사 네 명의 초당 피해 나열 등).
-     * 27px 그대로 두면 낮은 화면에서 입력칸이 밀려 나간다 — 길면 글자를 줄인다. */
-    const lines = String(o.text).split('\n').length;
-    el.mProblem.classList.toggle('long', lines >= 4 || o.text.length > 78);
-    el.mInput.value = '';
-    el.mInput.disabled = false;
-    el.mSubmit.disabled = false;
-    el.mFeedback.textContent = o.reward;
-    el.mFeedback.className = 'mfeedback';
-    el.mNext.classList.add('hidden');
-    el.mHint.classList.add('hidden');
-    el.mHint.textContent = '';
-    el.mHintBtn.disabled = false;
-    /* 힌트는 두 단계 — 첫 단계는 "풀이 방법", 둘째가 "정답 실마리".
-     * 어려운 문제일수록 값이 싸고, 두 번 틀리면 아예 공짜다 (mathgate.js) */
-    el.mHintBtn.textContent = o.freeHint
-      ? '💡 풀이 방법 보기 (무료! · H)'
-      : `💡 풀이 방법 보기 (💰${o.hintPrice} · H)`;
-    el.mHintBtn.classList.toggle('free', !!o.freeHint);
-    this.setTimer(o.time, o.time);
-    /* 문제가 바뀔 때마다 카드를 한 번 튕겨 준다 — 새 문제가 왔다는 신호.
-     * o.pop이 오면 난이도 배지도 같이 튕긴다 = "이번엔 이게 걸렸다"는 뿅. */
-    const bounce = (node) => {
-      node.classList.remove('pop');
-      void node.offsetWidth;
-      node.classList.add('pop');
-    };
-    bounce(el.mProblem);
-    if (o.pop) bounce(el.mDiff);
-    this._armVert(o.vert);
-    /* 포기에 대가가 따르는지에 따라 버튼 문구가 달라진다 — 누르기 전에 알아야 한다.
-     * 재도전에 이미 돈을 썼다면 그 액수까지 적는다: 끝까지 풀면 절반이 돌아오는데
-     * 지금 포기하면 전부 사라진다는 걸 버튼 위에서 보여 주는 게 가장 정직하다. */
-    const lost = o.giveUp && o.giveUp.lost;
-    el.mClose.textContent = !o.canGiveUp ? '닫기 (Esc)'
-      : (lost ? `🏳 포기 (💰${lost} 날아감)` : '🏳 포기 (Esc)');
-    el.mClose.classList.toggle('giveup', !!o.canGiveUp);
-    setTimeout(() => el.mInput.focus(), 30);
-  }
-  /* 남은 시간 바 — 매 프레임 호출되므로 바뀔 때만 DOM을 만진다 */
-  setTimer(left, max) {
-    const el = this.el;
-    const ratio = max > 0 ? Math.max(0, left / max) : 0;
-    el.mTimerFill.style.width = `${ratio * 100}%`;
-    const sec = Math.max(0, Math.ceil(left));
-    if (this._timerSec !== sec) {
-      this._timerSec = sec;
-      el.mTimerText.textContent = `⏳ ${sec}초`;
-    }
-    const warn = ratio <= D.TIME_WARN && ratio > 0;
-    if (this._timerWarn !== warn) {
-      this._timerWarn = warn;
-      el.mTimer.classList.toggle('warn', warn);
-    }
-  }
-  /* 힌트는 단계별로 쌓아서 보여 준다 — 산 것이 사라지면 안 된다.
-   * more: 아직 살 수 있는 단계가 남았는가 */
-  showHint(steps, next) {
-    const list = Array.isArray(steps) ? steps : [steps];
-    this._writeMath(this.el.mHint, list.map((t, i) => `💡 ${list.length > 1 ? `${i + 1}. ` : ''}${t}`).join('\n'));
-    this.el.mHint.classList.remove('hidden');
-    this.el.mHintBtn.disabled = !next;
-    if (!next) {
-      this.el.mHintBtn.textContent = '💡 힌트 다 봤어요';
-      this.el.mHintBtn.classList.remove('free');
-    } else {
-      /* 다음 단계가 무엇인지 밝힌다 — "정답 실마리"는 환급을 잃는 선택이라 알고 눌러야 한다 */
-      this.el.mHintBtn.textContent = next.free
-        ? '🔎 정답 실마리 (무료! · H)'
-        : `🔎 정답 실마리 (💰${next.price} · H)`;
-    }
-    this.el.mInput.focus();
-  }
-  mathFeedback(ok, text, nextLabel) {
-    const el = this.el;
-    this._answered = true;
-    clearTimeout(this._vertT);              // 답이 나온 뒤에 계산 칸이 뒤늦게 뜨지 않게
-    el.mTimer.classList.remove('warn');     // 답을 낸 순간 시계는 멈춘다
-    this._timerWarn = false;
-    el.mInput.disabled = true;
-    el.mSubmit.disabled = true;
-    el.mFeedback.textContent = text;
-    el.mFeedback.className = `mfeedback ${ok ? 'ok' : 'no'}`;
-    if (nextLabel) {
-      el.mNext.textContent = nextLabel;
-      el.mNext.classList.remove('hidden');
-    } else {
-      el.mNext.classList.add('hidden');
-    }
-  }
-  hideMath() {
-    clearTimeout(this._vertT);
-    this.el.mVert.classList.add('hidden');
-    this.el.mathModal.classList.add('hidden');
-  }
-  isMathOpen() { return !this.el.mathModal.classList.contains('hidden'); }
-  isAnswered() { return !!this._answered; }
-  setGradeActive(g) {
-    this.el.grades.querySelectorAll('button').forEach(b =>
-      b.classList.toggle('on', Number(b.dataset.g) === g));
-  }
-
   /* ---------- 게임 오버 ---------- */
   showOver(state) {
     this.el.overStats.innerHTML =
@@ -1497,8 +1201,8 @@ export class UI {
   }
   setLowHp(on) { this.el.lowHpVignette.classList.toggle('on', on); }
   coachChip() {
-    if (localStorage.getItem('mathdef_coach')) return;
-    localStorage.setItem('mathdef_coach', '1');
+    if (localStorage.getItem('constellation-defense.coach')) return;
+    localStorage.setItem('constellation-defense.coach', '1');
     const el = this.el.coachChip;
     el.classList.remove('hidden');
     setTimeout(() => el.classList.add('hidden'), 9000);
@@ -1526,17 +1230,16 @@ export class UI {
     g.fillText('🏰', 360, 150);
     g.fillStyle = '#ffd93d';
     g.font = 'bold 52px "Malgun Gothic", sans-serif';
-    g.fillText('용사 수학 디펜스', 360, 240);
+    g.fillText('CONSTELLATION DEFENSE', 360, 240);
     g.fillStyle = '#ffffff';
     g.font = 'bold 88px "Malgun Gothic", sans-serif';
     g.fillText(`${state.wave}웨이브 도달!`, 360, 400);
     g.font = '34px "Malgun Gothic", sans-serif';
     g.fillStyle = '#cfe3ff';
-    const rate = state.solved ? Math.round((state.correct / state.solved) * 100) : 0;
     const lines = [
       `난이도: ${D.DIFFICULTIES[state.difficulty].name}`,
       `물리친 몬스터 ${state.kills}마리`,
-      `수학 ${state.solved}문제 중 ${state.correct}개 정답 (${rate}%)`,
+      `별자리 전술 ${state.tacticCasts || 0}회 발동`,
       `최고 기록 ${best}웨이브`,
     ];
     lines.forEach((s, i) => g.fillText(s, 360, 520 + i * 60));
@@ -1544,7 +1247,7 @@ export class UI {
     g.fillStyle = '#8fb4e8';
     g.fillText(new Date().toLocaleDateString('ko-KR'), 360, 860);
     const a = document.createElement('a');
-    a.download = `수학디펜스_${state.wave}웨이브.png`;
+    a.download = `constellation-defense_${state.wave}wave.png`;
     a.href = c.toDataURL('image/png');
     a.click();
   }

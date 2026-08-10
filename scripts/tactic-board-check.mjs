@@ -28,6 +28,15 @@ check(Board.areNeighbors(0, 1), 'horizontal neighbors are accepted');
 check(Board.areNeighbors(0, 6), 'vertical neighbors are accepted');
 check(!Board.areNeighbors(0, 2), 'non-neighbors are rejected');
 
+const legalSource = Array.from({ length: 36 }, (_, index) => `cell-${index}`);
+legalSource[0] = 'flare'; legalSource[1] = 'tide'; legalSource[2] = 'flare'; legalSource[7] = 'flare';
+const legalMoves = Board.findLegalSwaps(legalSource);
+const legal = legalMoves.find(move => move.from === 1 && move.to === 7);
+check(!!legal, 'legal swaps include an adjacent swap that creates a match');
+check(legal && legal.groups.some(group => group.length === 3 && legal.cells[group[0]] === 'flare'),
+  'legal swap reports its matched type and group');
+check(legalSource[1] === 'tide' && legalSource[7] === 'flare', 'legal-swap search does not mutate its source board');
+
 const separate = Array.from({ length: 36 }, (_, index) => `cell-${index}`);
 [0, 1, 2].forEach(index => { separate[index] = 'flare'; });
 [9, 15, 21].forEach(index => { separate[index] = 'tide'; });

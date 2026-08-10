@@ -1,201 +1,209 @@
 /* =====================================================
- * 난이도 밸런스 봇
- * 실제 게임 엔진(src/engine.js)을 그대로 사용해
- * 가상 플레이어(초보/보통/고수)로 수백 판을 시뮬레이션한다.
+ * Constellation Defense 밸런스 봇
  *
- * 사용법:  node scripts/balance-bot.mjs [runs] [difficulty]
- *   예)    node scripts/balance-bot.mjs 200 normal
+ * 실제 엔진과 실제 3매치 보드 규칙을 함께 사용한다. 전술은 임의로 시전하지
+ * 않는다: 매번 현재 보드에서 유효한 인접 스왑을 찾고, 그 스왑이 만든 각 매치가
+ * Flare/Tide/Bloom으로 해당 방어로에 적용된다.
+ *
+ * 사용법: node scripts/balance-bot.mjs [runs] [difficulty] [profile] [check]
  * ===================================================== */
 import * as D from '../src/data.js';
 import * as E from '../src/engine.js';
-/* 판단 로직은 src/bot.js 하나뿐이다 — 브라우저 데모(src/demo.js)와 같은 것을 쓴다.
- * 여기서 다시 구현하면 "봇은 통과하는데 화면에선 다르게 노는" 상황이 생긴다. */
-import { PROFILES, mulberry32, placeAll, chooseCombo, castlePlan, wantsSummon, nextSkill, wantsStar, wantsUlt, wantsFeast } from '../src/bot.js';
-
-/* 어려운 문제가 걸리면 정답률이 떨어진다 — 이걸 모델링하지 않으면 센 문제가 공짜 돈이 된다.
- * (게임에서도 실제로 그렇다: 한 칸 위 문제는 수가 크고 단계가 하나 더 많다) */
-const ACC_PER_LV = 0.08;
-
-/* ---------- 가상 플레이어 프로필 ---------- */
-/* ---------- 준비 페이즈 정책 ----------
- * 봇은 한 번에 다 해치운다. 데모는 같은 정책을 하나씩 스트림으로 먹는다
- * (src/bot.js 의 nextPrepAction). 정책 자체는 한 곳에만 있다. */
-function prepActions(state, P) {
-  /* 0) 별지기 스킬 — 공짜 성장이라 제일 먼저 (데모와 같은 순서, bot.js SKILL_PLAN) */
-  for (let k = nextSkill(state); k; k = nextSkill(state)) {
-    if (!E.takeSkill(state, k).ok) break;
-  }
-  /* 1) 소환 */
-  while (wantsSummon(state, P)) {
-    if (!E.summon(state).ok) break;
-  }
-  /* 2) 조합 (수학 관문 + 골드) */
-  for (let round = 0; round < 6; round++) {
-    const pick = chooseCombo(state);
-    if (!pick || state.rng() >= P.combineChance) break;
-    /* 문제 룰렛 + 적응형 보정까지 그대로 태운다 — 게임에서 실제로 도는 규칙을 봇이 안 밟으면
-     * "봇은 통과하는데 사람은 다른 난이도를 푸는" 시뮬레이션이 된다.
-     * 센 문제는 환급이 크고 정답률이 낮다. */
-    const raw = D.mathLevel(pick.resultTier, pick.kind === 'recipe', !!D.CLASSES[pick.result].mythic);
-    const base = Math.max(1, Math.min(5, raw + D.adaptOffset(state.mathWindow)));
-    const lvs = D.cardLevels(base);
-    const ci = D.cardRoll(base, state.rng);      // 고르지 않는다 — 룰렛이 정한다
-    const lv = lvs[ci];
-    const acc = Math.max(0.05, P.acc - ACC_PER_LV * (lv - base));
-    /* 조합 관문: 한 관문 = 한 문제. 틀리면 **골드로 재도전을 산다**(게임과 같은 규칙).
-     * 조합 비용을 떼어 놓고도 낼 수 있을 때만 사고, 못 사면 그 조합이 잠긴다.
-     * 봇이 공짜로 재도전하면 시뮬은 통과하는데 사람은 골드가 말라 붙는 판이 된다. */
-    let passed = false, tries = 0, spent = 0;
-    for (;;) {
-      const ok = state.rng() < acc;
-      E.applyMathResult(state, ok);
-      /* 봇은 힌트를 안 사고 재도전마다 새 문제를 받으므로 "한 번에 맞힘" = 정답 여부 */
-      E.recordMathOutcome(state, ok);
-      if (ok) { passed = true; break; }
-      tries++;
-      const r = E.buyRetry(state, pick.cost, tries);
-      if (!r.ok) break;
-      spent += r.cost;
-    }
-    if (!passed) { E.lockCombo(state, E.comboKey(pick)); continue; }   // 잠기고 다음 후보로
-    const r = pick.kind === 'recipe'
-      ? E.combineRecipe(state, pick.result)
-      : E.combineRankUp(state, pick.cls, pick.tier);
-    if (r.ok && tries === 0) {
-      E.refundFirstTry(state, r.cost, P.grade, D.cardRefundMul(lv, base));
-      state.mathShards = (state.mathShards || 0) + D.cardShards(lv, base);
-      /* 빠른 풀이 보너스 — 봇은 시계를 안 보므로 "실력만큼 빨리 푼다"로 근사한다.
-       * 안 태우면 사람은 세지는데 시뮬은 안 세져서 기준선이 실제와 갈라진다. */
-      E.empowerHero(r.hero, D.speedPower(P.acc * 0.6));
-    } else if (r.ok) {
-      /* 늦게 맞힌 경우 — 작은 환급 + 재도전 골드 절반 반환 (mathgate.js).
-       * 이걸 안 태우면 시뮬 쪽만 골드가 마른다 */
-      E.refundPersist(state, r.cost, P.grade, D.cardRefundMul(lv, base), spent);
-      E.empowerHero(r.hero, D.speedPower(P.acc * 0.6) * D.PERSIST_POWER);
-    }
-  }
-  /* 3) 배치 */
-  placeAll(state, P.sloppy || 0);
-  /* 4) 성 관리 */
-  for (const key of castlePlan(state, P)) E.castleUpgrade(state, key);
-  /* 5) 잔치 — 남는 골드를 태운다 (판단은 bot.js) */
-  if (wantsFeast(state, P)) E.holdFeast(state);
-}
-
-/* ---------- 한 판 실행 ---------- */
-function playRun(profileName, difficulty, seed, waveCap = 40) {
-  const P = PROFILES[profileName];
-  const state = E.createGame({ rng: mulberry32(seed), difficulty });
-  /* 시작 용사 2명 (게임 본체와 동일) */
-  state.bench.push(E.makeHero(state, 'knight', 0));
-  state.bench.push(E.makeHero(state, 'archer', 0));
-
-  const castleLog = [];
-  let stalemate = false;
-  while (state.phase !== 'over' && state.wave <= waveCap && !stalemate) {
-    prepActions(state, P);
-    E.startWave(state);
-    let midTimer = 0, waveClock = 0;
-    while (state.phase === 'wave') {
-      E.tick(state, 0.05);
-      midTimer += 0.05;
-      waveClock += 0.05;
-      if (waveClock > 900) {   // 15분 넘게 안 끝나는 웨이브 = 교착
-        stalemate = true;
-        console.warn(`  ⚠ 교착 감지: seed=${seed} wave=${state.wave} 적=${state.enemies.length} 용사=${state.field.length}`);
-        break;
-      }
-      if (midTimer >= 2) {
-        midTimer = 0;
-        /* 별지기 마법 — 사람이 누르는 걸 봇도 눌러야 기준선이 실제 플레이와 같다 (판단은 bot.js) */
-        if (wantsUlt(state, P)) E.castUlt(state);
-        else if (wantsStar(state, P)) E.castStar(state);
-        if (P.midWave && state.gold >= D.SUMMON_COST && state.bench.length < D.BENCH_MAX) {
-          if (E.summon(state).ok) placeAll(state, P.sloppy || 0);
-        }
-      }
-    }
-    castleLog.push(state.castleHp);
-  }
-  return {
-    wave: Math.min(state.wave, waveCap + 1),
-    survived: state.wave > waveCap,
-    kills: state.kills,
-    castleLog,
-    solved: state.solved,
-  };
-}
-
-/* ---------- 통계 ---------- */
-const pct = (arr, p) => {
-  const s = [...arr].sort((a, b) => a - b);
-  return s[Math.min(s.length - 1, Math.floor(p * s.length))];
-};
-const avg = (arr) => arr.reduce((a, b) => a + b, 0) / arr.length;
-
-function runProfile(profileName, difficulty, runs) {
-  const waves = [], survived = [];
-  for (let i = 0; i < runs; i++) {
-    const r = playRun(profileName, difficulty, i * 7919 + 13);
-    waves.push(r.wave);
-    survived.push(r.survived ? 1 : 0);
-  }
-  return {
-    profile: profileName,
-    difficulty,
-    mean: avg(waves).toFixed(1),
-    p25: pct(waves, 0.25), p50: pct(waves, 0.5), p75: pct(waves, 0.75),
-    min: Math.min(...waves), max: Math.max(...waves),
-    survivedPct: (avg(survived) * 100).toFixed(0) + '%',
-  };
-}
-
-/* ---------- 메인 ---------- */
+import * as Bot from '../src/bot.js';
+import { createStableBoard, findLegalSwaps, findMatchGroups, laneForGroup, refillCells } from '../src/tactics/board.js';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
+function prepActions(state, profile) {
+  for (let key = Bot.nextSkill(state); key; key = Bot.nextSkill(state)) {
+    if (!E.takeSkill(state, key).ok) break;
+  }
+  while (Bot.wantsSummon(state, profile)) {
+    if (!E.summon(state).ok) break;
+  }
+  for (let round = 0; round < 6; round++) {
+    const combo = Bot.chooseCombo(state);
+    if (!combo || state.rng() >= profile.combineChance) break;
+    const result = combo.kind === 'recipe'
+      ? E.combineRecipe(state, combo.result)
+      : E.combineRankUp(state, combo.cls, combo.tier);
+    if (!result.ok) break;
+  }
+  Bot.placeAll(state, profile.sloppy || 0);
+  for (const key of Bot.castlePlan(state, profile)) E.castleUpgrade(state, key);
+  if (Bot.wantsFeast(state, profile)) E.holdFeast(state);
+}
+
+/* 화면 어댑터의 resolveQueue와 같은 순서다. 독립 매치는 타입·대상 방어로를
+ * 섞지 않고 각각 해소한 뒤, 보충 때문에 새 매치가 생기면 연쇄로 처리한다. */
+export const TACTIC_POLICIES = ['none', 'random', 'threat'];
+
+function lanePressure(state) {
+  return [0, 1, 2].map(route => (state.enemies || [])
+    .filter(enemy => !enemy.dead && enemy.route === route)
+    .reduce((sum, enemy) => sum + 1 + ((enemy.s || 0) / D.ROUTE_LENS[route]) * 2.5
+      + (enemy.boss ? 4 : enemy.midBoss ? 2 : 0), 0));
+}
+
+export function choosePolicySwap(policy, state, board, profile, rng, legalMoves = findLegalSwaps(board)) {
+  if (policy === 'none' || !legalMoves.length) return null;
+  if (policy === 'random') {
+    if (rng() > profile.tacticUse) return null;
+    return legalMoves[Math.floor(rng() * legalMoves.length)];
+  }
+  return Bot.chooseTacticSwap(state, board, profile, rng);
+}
+
+export function resolveTacticSwap(state, move, onCast = null) {
+  let cells = move.cells;
+  let groups = move.groups;
+  let casts = 0;
+  for (let cascade = 0; groups.length && cascade < 12; cascade++) {
+    for (const group of groups) {
+      const kind = cells[group[0]];
+      const route = laneForGroup(group);
+      const result = E.castTactic(state, route, kind, Math.min(5, group.length));
+      if (result.ok) casts++;
+      onCast?.({
+        cascade: cascade + 1,
+        kind,
+        route,
+        size: Math.min(5, group.length),
+        ok: result.ok,
+        reason: result.reason || null,
+      });
+      cells = refillCells(cells, group, state.rng);
+    }
+    groups = findMatchGroups(cells);
+  }
+  return { cells, casts };
+}
+
+export function playRun(profileName, difficulty, seed, options = {}) {
+  const waveCap = options.waveCap ?? 40;
+  const tacticPolicy = options.tacticPolicy ?? 'threat';
+  const trace = options.trace ? [] : null;
+  const profile = Bot.PROFILES[profileName];
+  const state = E.createGame({ rng: Bot.mulberry32(seed), difficulty });
+  state.bench.push(E.makeHero(state, 'knight', 0));
+  state.bench.push(E.makeHero(state, 'archer', 0));
+
+  let board = createStableBoard(state.rng);
+  let stalemate = false;
+  while (state.phase !== 'over' && state.wave <= waveCap && !stalemate) {
+    prepActions(state, profile);
+    E.startWave(state);
+    let actionTimer = 0;
+    let waveClock = 0;
+    while (state.phase === 'wave') {
+      E.tick(state, 0.05);
+      actionTimer += 0.05;
+      waveClock += 0.05;
+      if (waveClock > 900) { stalemate = true; break; }
+      /* 실제 보드 애니메이션과 플레이어 판단 간격을 반영한다. 매 틱마다 스왑하면
+       * 손이 없는 봇만 초당 수십 번 전술을 쓰게 되어 사람 플레이 기준선이 아니다. */
+      if (actionTimer < 6) continue;
+      actionTimer = 0;
+
+      const legalMoves = findLegalSwaps(board);
+      const decision = trace && {
+        wave: state.wave,
+        second: Number(waveClock.toFixed(1)),
+        policy: tacticPolicy,
+        castleHp: Math.round(state.castleHp),
+        lanePressure: lanePressure(state).map(value => Number(value.toFixed(2))),
+        legalSwaps: legalMoves.length,
+      };
+      const swap = choosePolicySwap(tacticPolicy, state, board, profile, state.rng, legalMoves);
+      if (swap) {
+        if (decision) {
+          decision.swap = { from: swap.from, to: swap.to };
+          decision.casts = [];
+        }
+        board = resolveTacticSwap(state, swap, cast => decision?.casts.push(cast)).cells;
+      }
+      if (decision) trace.push(decision);
+
+      if (Bot.wantsUlt(state, profile)) E.castUlt(state);
+      else if (Bot.wantsStar(state, profile)) E.castStar(state);
+
+      if (profile.midWave && Bot.wantsSummon(state, profile)) {
+        if (E.summon(state).ok) Bot.placeAll(state, profile.sloppy || 0);
+      }
+    }
+  }
+  return {
+    wave: Math.min(state.wave, waveCap + 1),
+    survived: state.wave > waveCap,
+    tactics: state.tacticCasts,
+    trace,
+  };
+}
+
+const percentile = (items, p) => {
+  const sorted = [...items].sort((a, b) => a - b);
+  return sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
+};
+const average = (items) => items.reduce((sum, item) => sum + item, 0) / items.length;
+
+export function runProfile(profile, difficulty, runs, options = {}) {
+  const waves = [];
+  const survived = [];
+  const tactics = [];
+  for (let index = 0; index < runs; index++) {
+    const result = playRun(profile, difficulty, index * 7919 + 13, options);
+    waves.push(result.wave);
+    survived.push(result.survived ? 1 : 0);
+    tactics.push(result.tactics);
+  }
+  return {
+    profile,
+    difficulty,
+    mean: average(waves).toFixed(1),
+    p25: percentile(waves, 0.25), p50: percentile(waves, 0.5), p75: percentile(waves, 0.75),
+    min: Math.min(...waves), max: Math.max(...waves),
+    survivedPct: `${(average(survived) * 100).toFixed(0)}%`,
+    tacticMean: average(tactics).toFixed(1),
+  };
+}
+
+const isMain = process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1];
+if (isMain) {
 const args = process.argv.slice(2);
 const checkMode = args.includes('check');
-const nums = args.filter(a => /^\d+$/.test(a));
-const runs = Number(nums[0]) || 150;
-const diffArg = args.find(a => ['easy', 'normal', 'hard'].includes(a));
-const diffs = diffArg ? [diffArg] : ['easy', 'normal', 'hard'];
-/* 프로필도 하나만 돌릴 수 있다 — 게이트가 판을 잘게 쪼개 돌리기 위해서다 */
-const profArg = args.find(a => Object.keys(PROFILES).includes(a));
-const profs = profArg ? [profArg] : Object.keys(PROFILES);
-
-console.log(`\n=== 용사 수학 디펜스 밸런스 봇 (판수: ${runs}${checkMode ? ', 기준선 검증 모드' : ''}) ===\n`);
+const runs = Number(args.find(arg => /^\d+$/.test(arg))) || 150;
+const difficultyArg = args.find(arg => ['easy', 'normal', 'hard'].includes(arg));
+const difficulties = difficultyArg ? [difficultyArg] : ['easy', 'normal', 'hard'];
+const profileArg = args.find(arg => Object.hasOwn(Bot.PROFILES, arg));
+const profiles = profileArg ? [profileArg] : Object.keys(Bot.PROFILES);
 
 let baseline = null;
 if (checkMode) {
-  const p = join(dirname(fileURLToPath(import.meta.url)), 'balance-baseline.json');
-  baseline = JSON.parse(readFileSync(p, 'utf8'));
+  const path = join(dirname(fileURLToPath(import.meta.url)), 'balance-baseline.json');
+  baseline = JSON.parse(readFileSync(path, 'utf8'));
 }
 
+console.log(`\n=== Constellation Defense 밸런스 봇 (판수: ${runs}${checkMode ? ', 기준선 검증' : ''}) ===\n`);
 let drift = false;
-for (const d of diffs) {
-  for (const p of profs) {
-    const r = runProfile(p, d, runs);
-    let flag = '';
-    if (baseline) {
-      const key = `${d}/${p}`;
-      const base = baseline.medians[key];
-      if (base != null && Math.abs(r.p50 - base) > baseline.tolerance) {
-        flag = `  ⚠ 기준선 이탈! (기준 중앙값 ${base}, 허용 ±${baseline.tolerance})`;
-        drift = true;
-      } else if (base != null) {
-        flag = `  ✓ 기준선 OK (${base}±${baseline.tolerance})`;
-      }
-    }
-    console.log(
-      `[${D.DIFFICULTIES[d].name}] ${r.profile}  평균 ${r.mean}웨이브` +
-      `  (p25 ${r.p25} / 중앙값 ${r.p50} / p75 ${r.p75})  범위 ${r.min}~${r.max}  40웨이브 생존 ${r.survivedPct}${flag}`
-    );
+for (const difficulty of difficulties) {
+  for (const profile of profiles) {
+    const result = runProfile(profile, difficulty, runs);
+    const baselineKey = `${difficulty}/${profile}`;
+    const expected = baseline && baseline.medians[baselineKey];
+    const outOfRange = expected != null && Math.abs(result.p50 - expected) > baseline.tolerance;
+    if (outOfRange) drift = true;
+    const check = expected == null ? '' : outOfRange
+      ? `  ⚠ 기준 중앙값 ${expected} ±${baseline.tolerance} 이탈`
+      : `  ✓ 기준 중앙값 ${expected} ±${baseline.tolerance}`;
+    console.log(`[${D.DIFFICULTIES[difficulty].name}] ${result.profile} 평균 ${result.mean}웨이브`
+      + ` (p25 ${result.p25} / 중앙 ${result.p50} / p75 ${result.p75}) 범위 ${result.min}~${result.max}`
+      + ` · 40웨이브 ${result.survivedPct} · 평균 전술 ${result.tacticMean}회${check}`);
   }
   console.log('');
 }
 if (checkMode) {
-  console.log(drift ? '❌ 밸런스가 기준선에서 벗어났습니다. 수치를 확인하세요.' : '✅ 모든 항목이 기준선 안에 있습니다.');
+  console.log(drift ? '❌ 밸런스가 기준선에서 벗어났습니다.' : '✅ 모든 항목이 기준선 안에 있습니다.');
   if (drift) process.exitCode = 1;
+}
 }

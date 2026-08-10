@@ -11,6 +11,7 @@
  * ===================================================== */
 import * as D from './data.js';
 import * as E from './engine.js';
+import { findLegalSwaps, laneForGroup } from './tactics/board.js';
 
 /* 결정적 난수 — 같은 시드는 같은 판을 만든다 */
 export function mulberry32(a) {
@@ -23,20 +24,19 @@ export function mulberry32(a) {
 }
 
 /* ---------- 가상 플레이어 프로필 ----------
- * acc            수학 정답률
- * grade          푸는 문제의 학년
  * combineChance  조합할 기회가 왔을 때 실제로 할 확률
  * reserve        소환에 쓰지 않고 남겨 두는 골드
  * useCastle      true=전부 / 'repairOnly'=수리만 / false=안 씀
  * midWave        전투 중에도 소환·배치하는가
  * sloppy         배치를 아무 데나 할 확률
  *
- * 문제 난이도는 프로필에 없다 — 이제 룰렛이 정한다(balance/mathgate.js의 cardRoll).
+ * tacticUse      전투 중 합법 전술 스왑을 시도할 확률
+ * tacticSloppy   더 낮은 기대값의 유효 스왑을 고를 확률
  */
 export const PROFILES = {
-  '초보': { acc: 0.45, grade: 3, combineChance: 0.15, reserve: 0,   useCastle: false,        midWave: false, sloppy: 0.5, spellUse: 0.3 },
-  '보통': { acc: 0.70, grade: 4, combineChance: 0.70, reserve: 50,  useCastle: 'repairOnly', midWave: false, sloppy: 0.3, spellUse: 0.6 },
-  '고수': { acc: 0.90, grade: 6, combineChance: 1.00, reserve: 100, useCastle: true,         midWave: true,  sloppy: 0,   spellUse: 0.95 },
+  '초보': { combineChance: 0.15, reserve: 0,   useCastle: false,        midWave: false, sloppy: 0.5, spellUse: 0.3, tacticUse: 0.32, tacticSloppy: 0.65 },
+  '보통': { combineChance: 0.70, reserve: 50,  useCastle: 'repairOnly', midWave: false, sloppy: 0.3, spellUse: 0.6, tacticUse: 0.68, tacticSloppy: 0.22 },
+  '고수': { combineChance: 1.00, reserve: 100, useCastle: true,         midWave: true,  sloppy: 0,   spellUse: 0.95, tacticUse: 0.96, tacticSloppy: 0.03 },
 };
 
 /* ---------- 배치 정책 ----------
@@ -120,14 +120,35 @@ export function wantsUlt(state, P) {
   return (boss || horde) && state.rng() < P.spellUse;
 }
 
-/* ---------- 수학 ----------
- * 봇은 문제를 만들지도 풀지도 않고 동전을 던진다(state.rng() < acc).
- * 데모는 진짜 문제창이 뜨므로 "무엇을 입력할지"가 필요하다.
- * 틀릴 때는 채점기가 확실히 오답으로 볼 만큼 벗어난 값을 낸다. */
-export function answerFor(prob, P, rng = Math.random) {
-  if (rng() < P.acc) return String(prob.answer);
-  const off = (1 + Math.floor(rng() * 9)) * (rng() < 0.5 ? -1 : 1);
-  return String(Math.round((Number(prob.answer) + off) * 1000) / 1000);
+/* ---------- 별자리 전술 ----------
+ * 후보는 순수 보드 규칙이 보장한 '유효한 인접 스왑'뿐이다. 적이 어느 길에서
+ * 성에 가까운지와 성 체력만 사용해 사람과 같은 공개 정보로 고른다. */
+function lanePressure(state, lane) {
+  return state.enemies
+    .filter(enemy => !enemy.dead && enemy.route === lane)
+    .reduce((sum, enemy) => sum + 1 + (enemy.s / D.ROUTE_LENS[lane]) * 2.5
+      + (enemy.boss ? 4 : enemy.midBoss ? 2 : 0), 0);
+}
+
+function groupScore(state, cells, group) {
+  const type = cells[group[0]];
+  const lane = laneForGroup(group);
+  const stars = Math.min(5, group.length);
+  const pressure = lanePressure(state, lane);
+  if (type === 'flare') return pressure * (D.TACTICS.flare.targetCount[stars] + stars * 0.5);
+  if (type === 'tide') return pressure * (1.4 + stars * 0.35);
+  const missingHp = state.castleMax - state.castleHp;
+  return pressure * (0.8 + stars * 0.2) + missingHp / 18;
+}
+
+export function chooseTacticSwap(state, cells, P, rng = state.rng || Math.random) {
+  if (!state || state.phase !== 'wave' || rng() > P.tacticUse) return null;
+  const moves = findLegalSwaps(cells);
+  if (!moves.length) return null;
+  if (rng() < (P.tacticSloppy || 0)) return moves[Math.floor(rng() * moves.length)];
+  return moves
+    .map(move => ({ move, score: move.groups.reduce((sum, group) => sum + groupScore(state, move.cells, group), 0) }))
+    .sort((a, b) => b.score - a.score || a.move.from - b.move.from || a.move.to - b.move.to)[0].move;
 }
 
 /* ---------- 준비 단계: 스트림 ----------

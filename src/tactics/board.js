@@ -78,6 +78,23 @@ export function swapCells(cells, a, b) {
   return next;
 }
 
+/* 사람이 할 수 있는 인접 스왑만 열거한다. 반환하는 cells와 groups는 해당 스왑의
+ * 결과이므로, 봇·테스트가 화면을 거치지 않고도 합법적인 전술 입력만 만들 수 있다. */
+export function findLegalSwaps(cells, size = BOARD_SIZE) {
+  const moves = [];
+  for (let row = 0; row < size; row++) for (let col = 0; col < size; col++) {
+    const from = cellIndex(row, col, size);
+    for (const [nextRow, nextCol] of [[row, col + 1], [row + 1, col]]) {
+      if (nextRow >= size || nextCol >= size) continue;
+      const to = cellIndex(nextRow, nextCol, size);
+      const swapped = swapCells(cells, from, to);
+      const groups = findMatchGroups(swapped, size);
+      if (groups.length) moves.push({ from, to, cells: swapped, groups });
+    }
+  }
+  return moves;
+}
+
 export function refillCells(cells, indices, random) {
   const next = [...cells];
   for (const index of indices) next[index] = randomStar(random);

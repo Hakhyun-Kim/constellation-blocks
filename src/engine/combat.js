@@ -650,8 +650,6 @@ function endWave(state, events) {
     c.hp = c.maxHp;
     events.push({ type: 'champWave', xp, perfect, revived, shard: perfect ? 1 : 0 });
   }
-  /* 포기·실패로 잠갔던 조합을 푼다 — 벌은 "이번엔 못 한다"까지지 영구 박탈이 아니다 */
-  if (state.mathLocked) state.mathLocked.clear();
   /* 서른 번째 아침 — 30웨이브를 버텨 냈다. 회차당 한 번만 울린다(웨이브는 되돌아가지 않으므로).
    * 엔진은 알리기만 한다: 별조각 지급·연출·다음 회차 시작은 main의 몫이다. */
   if (state.wave === D.VICTORY_WAVE) {

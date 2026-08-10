@@ -45,5 +45,6 @@ export function castTactic(state, route, kind, size = 3) {
       events.push({ type: 'tacticPush', fromX: from.x, fromY: from.y, x: enemy.x, y: enemy.y });
     }
   }
+  state.tacticCasts = (state.tacticCasts || 0) + 1;
   return { ok: true, events, targets: targets.length };
 }

@@ -4,7 +4,7 @@
  *   engine/state.js    상태 생성 · 저장/불러오기
  *   engine/champion.js 별지기 능력치/성장/스킬
  *   engine/roster.js   용사 소환/조합/배치/판매/잔치
- *   engine/economy.js  성 업그레이드 · 수학 환급/재도전/힌트
+ *   engine/economy.js  성 업그레이드
  *   engine/effects.js  피해 · 상태 이상 공통 규칙
  *   engine/combat.js   웨이브 생성 · 전투 틱 · 별지기 마법
  *   engine/tactics.js  퍼즐 입력을 모르는 방어선 전술 해소

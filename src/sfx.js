@@ -13,8 +13,28 @@ let sfxBus = null;      // 효과음 전용 (여기에만 살짝 공간감을 �
 let masterFilter = null; // 몰입/위기 상태 Dynamic Lowpass Flow
 
 /* 효과음과 배경음을 따로 끌 수 있다 — 배경음만 끄고 싶은 요구가 가장 흔하다 */
-let sfxMuted = localStorage.getItem('mathdef_mute_sfx') === '1';
-let musicMuted = localStorage.getItem('mathdef_mute_bgm') === '1';
+const AUDIO_KEY = 'constellation-defense.audio.';
+const LEGACY_AUDIO_KEY = 'mathdef_';
+
+function readAudioSetting(name) {
+  const current = `${AUDIO_KEY}${name}`;
+  const legacy = `${LEGACY_AUDIO_KEY}${name === 'sfx' ? 'mute_sfx' : 'mute_bgm'}`;
+  const value = localStorage.getItem(current);
+  if (value != null) return value === '1';
+
+  const legacyValue = localStorage.getItem(legacy);
+  if (legacyValue == null) return false;
+  localStorage.setItem(current, legacyValue);
+  localStorage.removeItem(legacy);
+  return legacyValue === '1';
+}
+
+function writeAudioSetting(name, muted) {
+  localStorage.setItem(`${AUDIO_KEY}${name}`, muted ? '1' : '0');
+}
+
+let sfxMuted = readAudioSetting('sfx');
+let musicMuted = readAudioSetting('music');
 let duckingFn = null;
 
 export function registerDucker(fn) {
@@ -207,20 +227,20 @@ export function forceMute() {
 
 export function toggleSfx() {
   sfxMuted = !sfxMuted;
-  localStorage.setItem('mathdef_mute_sfx', sfxMuted ? '1' : '0');
+  writeAudioSetting('sfx', sfxMuted);
   return sfxMuted;
 }
 export function toggleMusic() {
   musicMuted = !musicMuted;
-  localStorage.setItem('mathdef_mute_bgm', musicMuted ? '1' : '0');
+  writeAudioSetting('music', musicMuted);
   return musicMuted;
 }
 /* 전체 음소거 토글 (M키): 하나라도 켜져 있으면 둘 다 끈다 */
 export function toggleAll() {
   const off = !(sfxMuted && musicMuted);
   sfxMuted = off; musicMuted = off;
-  localStorage.setItem('mathdef_mute_sfx', off ? '1' : '0');
-  localStorage.setItem('mathdef_mute_bgm', off ? '1' : '0');
+  writeAudioSetting('sfx', off);
+  writeAudioSetting('music', off);
   return off;
 }
 export const isSfxMuted = () => sfxMuted;
@@ -239,6 +259,19 @@ function limit(key, ms) {
 export const SFX = {
   tap()        { flowTone([660, 780], 0, 0.05, 'sine', 0.06); },
 
+  /* 전술 효과가 실제 전장에 닿기 전의 짧은 확인음. 유효 매치를 먼저 귀로 알려 주고,
+   * 적이 없어 시전이 거부되더라도 "매치는 됐다"는 사실은 남긴다. */
+  match(kind, size = 3) {
+    if (limit(`match-${kind}`, 90)) return;
+    const boosted = size >= 5;
+    const big = size >= 4;
+    const notes = kind === 'flare' ? [740, 988]
+      : kind === 'tide' ? [660, 880] : [523, 698];
+    flowTone(boosted ? [...notes, notes[1] * 1.5] : notes, 0, boosted ? 0.16 : big ? 0.12 : 0.08,
+      kind === 'tide' ? 'sine' : 'triangle', boosted ? 0.085 : 0.055,
+      { filterSweep: kind === 'tide' ? [4400, 2400] : [1700, 5200] });
+  },
+
   summon(tier) {
     flowTone([330 + tier * 60, 660 + tier * 120], 0, 0.12, 'triangle', 0.09);
     if (tier >= 2) flowTone([880, 1100, 1320], 0.08, 0.16, 'triangle', 0.09, { filterSweep: [2000, 6000] });
@@ -254,57 +287,6 @@ export const SFX = {
   },
   place()      { flowTone([220, 140, 110], 0, 0.09, 'sine', 0.1); noise(0, 0.06, 0.07, 700, 0.6); },
   upgrade()    { flowTone([392, 523, 659, 784], 0, 0.2, 'square', 0.07, { filterSweep: [2000, 6000] }); },
-
-  correct() {   /* 메이저 펜타토닉 음계 플로우 */
-    flowTone([523, 659, 784, 1047, 1319], 0, 0.22, 'triangle', 0.08, { filterSweep: [3000, 8000] });
-  },
-  tactic(kind, size = 3) {
-    const big = size >= 4;
-    if (kind === 'flare') {
-      triggerDuck(big ? 0.28 : 0.16, 0.28);
-      flowTone(big ? [880, 1320, 1760] : [784, 1175], 0, big ? 0.24 : 0.16, 'square', 0.075, { filterSweep: [1800, 6200] });
-      noise(big ? 0.16 : 0.1, big ? 0.18 : 0.1, big ? 0.075 : 0.045, 700, 0.5);
-    } else if (kind === 'tide') {
-      flowTone(big ? [1047, 784, 523] : [880, 660, 523], 0, big ? 0.32 : 0.22, 'sine', 0.075, { filterSweep: [6200, 1500] });
-      noise(0.08, big ? 0.2 : 0.13, 0.035, 5000, 0.35);
-    } else {
-      flowTone(big ? [523, 659, 784, 1047] : [523, 659, 784], 0, big ? 0.3 : 0.2, 'triangle', 0.075, { filterSweep: [1800, 5800] });
-      tone(220, 0, big ? 0.3 : 0.2, 'sine', 0.045, 330);
-    }
-  },
-  wrong() {     /* 부드러운 하강 멜로디 플로우 */
-    flowTone([330, 293, 262, 220], 0, 0.3, 'sine', 0.08);
-  },
-
-  /* --- 제한 시간 연출: 긴장은 주되 무섭지는 않게 --- */
-  challenge(lv) {
-    const f = [0, 660, 620, 560, 480, 400][Math.max(1, Math.min(5, lv))];
-    flowTone([f, f * 1.5], 0, 0.14, 'triangle', 0.07);
-    if (lv >= 3) flowTone([f * 1.5, f * 1.8], 0.12, 0.16, 'triangle', 0.06);
-    if (lv >= 5) { /* 극한: 심장 쿵 + 종소리 */
-      flowTone([140, 90, 60], 0, 0.45, 'sine', 0.12);
-      flowTone([784, 1047, 1319, 1568], 0.2, 0.35, 'triangle', 0.07, { filterSweep: [1500, 6000] });
-      noise(0.2, 0.5, 0.04, 3200, 0.4);
-    }
-  },
-  /* 째깍: 마지막 10초부터 1초마다, 3초 남으면 더 날카롭게 */
-  tick(urgent) {
-    flowTone([urgent ? 1500 : 1050, urgent ? 1800 : 1200], 0, 0.04, 'square', urgent ? 0.055 : 0.03, { cutoff: 5000 });
-  },
-  timeOut() {
-    flowTone([280, 180, 90], 0, 0.45, 'sawtooth', 0.1, { filterSweep: [2000, 400] });
-    noise(0, 0.35, 0.07, 420, 0.5);
-  },
-  /* 단계 통과(신화 관문 1단계) */
-  stageClear() {
-    flowTone([659, 784, 880, 1047], 0, 0.2, 'square', 0.07, { filterSweep: [2000, 6000] });
-  },
-  /* 연승이 쌓일수록 높아지는 축포 스케일 플로우 */
-  streak(n) {
-    const base = 660 * Math.pow(1.12, Math.min(5, n));
-    flowTone([base, base * 1.25, base * 1.5, base * 1.8], 0, 0.22, 'triangle', 0.07, { vibratoFreq: 10, vibratoDepth: 20 });
-  },
-
   /* --- 전투음: x(필드 좌표)를 받아 좌우로 벌리고, 매번 피치를 살짝 흔든다 --- */
   shoot(x)     { if (limit('shoot', 55)) return; const p = panOf(x); flowTone([880, 520, 440], 0, 0.05, 'triangle', 0.035, { pan: p, vary: 55, cutoff: 4200 }); },
   orb(x)       { if (limit('orb', 80)) return; const p = panOf(x); flowTone([520, 390, 260], 0, 0.1, 'sine', 0.045, { pan: p, vary: 45 }); },
