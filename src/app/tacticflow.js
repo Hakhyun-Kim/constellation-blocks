@@ -71,6 +71,17 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onMa
     card.querySelector('.tactic-beam')?.remove();
   }
 
+  /* 표현 콜백(SFX·렌더러·토스트)은 전술 규칙 바깥에 있다. 어느 하나가 실패해도
+   * 보드가 resolving 상태에 남아 입력이 멎으면 안 된다. */
+  function recoverResolution(token) {
+    if (token !== generation) return;
+    resolving = false;
+    selected = null;
+    clearVisuals();
+    draw();
+    status.textContent = '별자리를 다시 정렬했어요. 다른 별을 바꿔 보세요.';
+  }
+
   function showBeam(hit, lane, type) {
     const matchedCells = hit.map(index => board.querySelector(`button[data-i="${index}"]`)).filter(Boolean);
     const target = card.querySelector(`.tactic-routes span[data-route="${lane}"]`);
@@ -175,22 +186,33 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onMa
     const type = cells[hit[0]];
     const lane = laneForGroup(hit, BOARD_SIZE, 3);
     const size = Math.min(5, hit.length);
-    status.textContent = `${ROUTE_LABEL[lane]} 길 · ${LABEL[type]} ${size >= 5 ? '별똥별 준비!' : size === 4 ? '강화 준비!' : '연결!'}`;
-    showMatch(hit, type, lane, size);
-    onMatch?.(type, lane, size);
+    try {
+      status.textContent = `${ROUTE_LABEL[lane]} 길 · ${LABEL[type]} ${size >= 5 ? '별똥별 준비!' : size === 4 ? '강화 준비!' : '연결!'}`;
+      showMatch(hit, type, lane, size);
+      onMatch?.(type, lane, size);
+    } catch (error) {
+      console.error('Tactic match presentation failed', error);
+      recoverResolution(token);
+      return;
+    }
     later(() => {
-      if (token !== generation) return;
-      const result = resolveTactic(lane, type, size);
-      cells = refillCells(cells, hit, random);
-      clearVisuals();
-      if (result.ok) {
-        status.textContent = `${ROUTE_LABEL[lane]} 길 · ${LABEL[type]} ${size >= 5 ? '별똥별!' : size === 4 ? '강화!' : '발동!'}`;
-        onCast(result, type, lane, size);
-      } else {
-        status.textContent = '별자리는 이어졌지만 그 길에 적이 없어요.';
+      try {
+        if (token !== generation) return;
+        const result = resolveTactic(lane, type, size);
+        cells = refillCells(cells, hit, random);
+        clearVisuals();
+        if (result.ok) {
+          status.textContent = `${ROUTE_LABEL[lane]} 길 · ${LABEL[type]} ${size >= 5 ? '별똥별!' : size === 4 ? '강화!' : '발동!'}`;
+          onCast(result, type, lane, size);
+        } else {
+          status.textContent = '별자리는 이어졌지만 그 길에 적이 없어요.';
+        }
+        draw();
+        later(() => resolveQueue(queue, token), 45);
+      } catch (error) {
+        console.error('Tactic resolution failed', error);
+        recoverResolution(token);
       }
-      draw();
-      later(() => resolveQueue(queue, token), 45);
     }, 210);
   }
 
