@@ -96,7 +96,7 @@ export class UI {
       'diffRow',
       'storyModal', 'storyIcon', 'storyTitle', 'storyLines', 'storyNext', 'storyOff',
       'demoBtn', 'spectateBtn', 'demoBar', 'demoCaption', 'demoDetail', 'demoExit',
-      'revealModal', 'revealCard', 'revealTier', 'revealArt', 'revealName', 'revealDesc',
+      'revealModal', 'revealCard', 'summonReveal', 'revealTier', 'revealArt', 'revealName', 'revealDesc',
       'wavePreview', 'bossBar', 'bossBarFill', 'bossBarName', 'bossWarnBanner',
       'saveBtn', 'loadBtn', 'loadFile',
       'sellModeBtn', 'sellInfo', 'sellAllBtn', 'sellGoBtn',
@@ -1189,7 +1189,7 @@ export class UI {
   /* ---------- 소환/조합 연출 ---------- */
   summonReveal(hero, tier) {
     const C = D.CLASSES[hero.cls], T = D.TIERS[tier];
-    const el = this.el.revealCard;
+    const el = this.el.summonReveal;
     el.className = `reveal t${tier}`;
     el.innerHTML =
       `<div class="rv-em">${C.emoji}</div>` +
