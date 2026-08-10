@@ -1201,18 +1201,19 @@ export class UI {
     clearTimeout(this._revealT);
     this._revealT = setTimeout(() => { el.classList.add('hidden'); el.classList.remove('pop'); },
       tier >= 3 ? 1800 : tier >= 2 ? 1500 : 900);
-    if (tier >= 2) this.flashScreen(tier >= 4 ? 'mythic' : tier === 3 ? 'legend' : 'hero');
+    if (tier >= 2) this.flashAccent(tier >= 4 ? 'mythic' : tier === 3 ? 'legend' : 'hero');
   }
 
-  flashCombine(tier) { this.flashScreen(tier >= 4 ? 'mythic' : tier === 3 ? 'legend' : 'hero'); }
+  flashCombine(tier) { this.flashAccent(tier >= 4 ? 'mythic' : tier === 3 ? 'legend' : 'hero'); }
 
-  flashScreen(kind) {
+  /* 전체 화면을 번쩍이지 않는다. 발동 중심의 작은 빛만 짧게 표시한다. */
+  flashAccent(kind) {
     const el = this.el.rarityFlash;
     el.className = kind;
     void el.offsetWidth;
     el.classList.add('on');
     clearTimeout(this._flashT);
-    this._flashT = setTimeout(() => el.classList.remove('on'), 900);
+    this._flashT = setTimeout(() => el.classList.remove('on'), 380);
   }
 
   /* ---------- 연출 ---------- */

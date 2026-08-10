@@ -145,26 +145,36 @@ body {
 
 #hitFlash {
   position: absolute;
-  inset: 0;
+  width: min(34%, 180px);
+  height: 84px;
+  left: 50%;
+  top: 18px;
+  transform: translateX(-50%);
+  border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(255, 40, 40, 0.55) 100%);
+  background: radial-gradient(ellipse at center, rgba(255, 205, 185, 0.42) 0%, rgba(255, 58, 58, 0.18) 42%, transparent 74%);
   opacity: 0;
   z-index: 5;
 }
-#hitFlash.on { animation: hitflash 0.5s ease-out; }
-@keyframes hitflash { 0% { opacity: 1; } 100% { opacity: 0; } }
+#hitFlash.on { animation: hitflash 0.28s ease-out; }
+@keyframes hitflash { 0% { opacity: 0.8; transform: translateX(-50%) scale(0.82); } 100% { opacity: 0; transform: translateX(-50%) scale(1.1); } }
 
 #lowHpVignette {
   position: absolute;
-  inset: 0;
+  width: min(38%, 210px);
+  height: 74px;
+  left: 50%;
+  top: 14px;
+  transform: translateX(-50%);
+  border-radius: 50%;
   pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 30, 30, 0.4) 100%);
+  background: radial-gradient(ellipse at center, rgba(255, 54, 54, 0.3) 0%, transparent 72%);
   opacity: 0;
   transition: opacity 0.4s;
   z-index: 4;
 }
 #lowHpVignette.on { animation: lowhp 1s ease-in-out infinite; }
-@keyframes lowhp { 0%, 100% { opacity: 0.25; } 50% { opacity: 0.75; } }
+@keyframes lowhp { 0%, 100% { opacity: 0.16; transform: translateX(-50%) scale(0.94); } 50% { opacity: 0.42; transform: translateX(-50%) scale(1.04); } }
 
 #bossBanner {
   position: absolute;
@@ -216,28 +226,30 @@ body {
 }
 @keyframes warnblink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
 
-/* 보스 전투 분위기: 화면 가장자리 붉은 기운 */
+/* 보스 분위기는 배너 주변의 작은 기운만 쓴다. 전장을 덮거나 반복 점멸하지 않는다. */
 #bossVignette {
   position: absolute;
-  inset: 0;
+  width: min(46%, 260px);
+  height: 120px;
+  left: 50%;
+  top: 13%;
+  transform: translateX(-50%);
+  border-radius: 50%;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.6s;
   z-index: 3;
-  background: radial-gradient(ellipse at center, transparent 42%, rgba(120, 20, 40, 0.5) 100%);
+  background: radial-gradient(ellipse at center, rgba(120, 20, 40, 0.3), transparent 72%);
 }
-.stage.boss-mid #bossVignette { opacity: 0.55; }
+.stage.boss-mid #bossVignette { opacity: 0.32; }
 .stage.boss-great #bossVignette {
-  opacity: 1;
-  background: radial-gradient(ellipse at center, transparent 36%, rgba(150, 10, 10, 0.62) 100%);
-  animation: bosspulse 1.7s ease-in-out infinite;
+  opacity: 0.46;
+  background: radial-gradient(ellipse at center, rgba(150, 10, 10, 0.44), transparent 72%);
 }
 .stage.warning #bossVignette {
-  opacity: 1;
-  background: radial-gradient(ellipse at center, transparent 45%, rgba(255, 120, 0, 0.5) 100%);
-  animation: warnblink 0.65s ease-in-out infinite;
+  opacity: 0.5;
+  background: radial-gradient(ellipse at center, rgba(255, 120, 0, 0.38), transparent 72%);
 }
-@keyframes bosspulse { 0%, 100% { opacity: 0.7; } 50% { opacity: 1; } }
 
 #comboChip {
   position: absolute;
@@ -649,18 +661,23 @@ button { font-family: inherit; }
 }
 .grades button.on { border-color: #2478e0; background: #e3f0ff; color: #1a5cb0; }
 
-/* ===== 소환 공개 카드 / 등급 플래시 ===== */
+/* ===== 소환 공개 카드 / 등급 국소 강조 ===== */
 #rarityFlash {
   position: absolute;
-  inset: 0;
+  width: min(46%, 260px);
+  height: 160px;
+  left: 50%;
+  top: 43%;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
   pointer-events: none;
   opacity: 0;
   z-index: 7;
 }
-#rarityFlash.on { animation: rarityflash 0.9s ease-out; }
-#rarityFlash.hero { background: radial-gradient(ellipse at center, rgba(168, 85, 247, 0.5) 0%, transparent 70%); }
-#rarityFlash.legend { background: radial-gradient(ellipse at center, rgba(255, 217, 61, 0.62) 0%, transparent 72%); }
-@keyframes rarityflash { 0% { opacity: 1; } 100% { opacity: 0; } }
+#rarityFlash.on { animation: rarityaccent 0.38s ease-out; }
+#rarityFlash.hero { background: radial-gradient(ellipse at center, rgba(168, 85, 247, 0.28) 0%, transparent 72%); }
+#rarityFlash.legend { background: radial-gradient(ellipse at center, rgba(255, 217, 61, 0.34) 0%, transparent 72%); }
+@keyframes rarityaccent { 0% { opacity: 0.78; transform: translate(-50%, -50%) scale(0.74); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.12); } }
 
 .reveal {
   position: absolute;
@@ -1350,7 +1367,7 @@ button { font-family: inherit; }
   from { box-shadow: 0 0 32px rgba(255, 77, 157, 0.7); }
   to   { box-shadow: 0 0 68px rgba(255, 77, 157, 1); }
 }
-#rarityFlash.mythic { background: radial-gradient(ellipse at center, rgba(255, 77, 157, 0.68) 0%, transparent 74%); }
+#rarityFlash.mythic { background: radial-gradient(ellipse at center, rgba(255, 77, 157, 0.38) 0%, transparent 74%); }
 .prob.t4 { background: var(--t4); }
 
 /* 신화 조합 섹션 */

@@ -291,7 +291,7 @@ function doUlt() {
     return;
   }
   SFX.ultimate();
-  ui.flashScreen('mythic');
+  ui.flashAccent('mythic');
   renderer.onEvents(state, r.events);
   handleEvents(r.events);
   refreshAll();
@@ -661,7 +661,7 @@ function handleEvents(events) {
         setTimeout(() => playStory('w30', () => {
           if (state.phase === 'over') return;      // 그 사이 함락됐다면(있을 수 없지만) 겹치지 않게
           SFX.shard();
-          ui.flashScreen('mythic');
+          ui.flashAccent('mythic');
           renderer.celebrate(0xffd93d, true);
           ui.showVictory({ loop: vLoop, shards: vShards, state });
           ui.updateHud(state, store.shards, store.best(state.difficulty));
