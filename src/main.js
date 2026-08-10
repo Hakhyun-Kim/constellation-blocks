@@ -15,11 +15,13 @@ import {
   codex, earned, codexAddHero, codexAddKill, flushRecords, markDirty,
 } from './app/store.js';
 import { createTacticFlow } from './app/tacticflow.js';
+import { createTacticFeedback } from './app/tacticfeedback.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
 
 /* ---------- 초기화 ---------- */
 const ui = new UI();
+const tacticFeedback = createTacticFeedback();
 /* URL로 강제 지정 가능: ?gfx=high|lite|min (min은 테스트/초저사양용) */
 const urlParams = new URLSearchParams(location.search);
 const urlGfx = urlParams.get('gfx');
@@ -141,6 +143,7 @@ function newGame(difficulty, opts = {}) {
   gameOverToken++;                 // 게임오버 연출 예약이 새 판을 덮지 않게
   state = E.createGame({ difficulty, metaLevels: store.meta });
   if (tactics) tactics.reset();
+  tacticFeedback.reset();
   giveStarters();
   resetSession();
   refreshAll();
@@ -156,6 +159,7 @@ function startTrial() {
   if (!state || state.phase === 'over') return;
   gameOverToken++;
   state = E.nextLoop(state);
+  tacticFeedback.reset();
   giveStarters();
   resetSession();
   ui.hideVictory();
@@ -535,6 +539,7 @@ function loadGame(data) {
   }
   gameOverToken++;                     // 예약된 게임오버 연출이 불러온 판을 덮지 않게
   state = next;
+  tacticFeedback.reset();
   store.diff = state.difficulty;
   resetSession();
   ui.hideOver();
@@ -1333,15 +1338,18 @@ tactics = createTacticFlow({
     renderer.tacticCast(state, result, type, lane, size);
     renderer.onEvents(state, result.events);
     handleEvents(result.events);
+    tacticFeedback.showCast(result, type, lane, size);
     ui.toast(`${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} 성좌 ${size}개 — ${['왼쪽','가운데','오른쪽'][lane]} 길 전술 발동!`, 'good');
     refreshAll();
   },
   onMatch(type, lane, size) {
     SFX.match(type, size);
+    tacticFeedback.announceMatch(type, lane, size);
   },
   onPreview(type, lane, size) {
     SFX.tactic(type, size);
     renderer.tacticCast(state, null, type, lane, size);
+    tacticFeedback.showPreview(type, lane, size);
     ui.toast(`✨ 테스트 연출 · ${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} ${size}개`, 'good');
   },
 });

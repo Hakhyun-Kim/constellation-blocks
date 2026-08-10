@@ -264,6 +264,40 @@ body {
 #comboChip.pop { animation: combopop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
 @keyframes combopop { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
 
+/* 3매치의 결과를 전장에도 고정한다. 보드의 빛줄기만으로는 시선이 전장으로
+ * 돌아왔을 때 무슨 일이 일어났는지 놓치기 쉬워, 주문·대상 길·결과를 한 칩에 묶는다. */
+.tactic-impact {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 164px;
+  padding: 6px 10px 6px 7px;
+  border: 2px solid #ffcf83;
+  border-radius: 13px;
+  color: #fff;
+  background: rgba(61, 32, 71, 0.84);
+  box-shadow: 0 4px 14px rgba(21, 14, 38, 0.34), inset 0 0 16px rgba(255, 231, 165, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-10px) scale(.9);
+}
+.tactic-impact.show { animation: tactic-impact-in .18s cubic-bezier(.18, 1.5, .4, 1) both, tactic-impact-out .25s ease-in forwards 1.4s; }
+.tactic-impact-icon { display: grid; place-items: center; width: 33px; height: 33px; border-radius: 10px; font-size: 22px; background: linear-gradient(135deg, #ffae68, #d9574f); box-shadow: 0 0 13px #ffb15e; }
+.tactic-impact-copy { display: grid; gap: 1px; line-height: 1.05; }
+.tactic-impact-copy b { font-size: 14px; letter-spacing: -.3px; }
+.tactic-impact-copy small { color: #ffe8c4; font-size: 10px; font-weight: 800; }
+.tactic-impact[data-kind="tide"] { border-color: #9feaff; background: rgba(23, 57, 100, .84); }
+.tactic-impact[data-kind="tide"] .tactic-impact-icon { background: linear-gradient(135deg, #bdf7ff, #4b91dc); box-shadow: 0 0 13px #70dfff; }
+.tactic-impact[data-kind="bloom"] { border-color: #b8ffac; background: rgba(28, 83, 62, .84); }
+.tactic-impact[data-kind="bloom"] .tactic-impact-icon { background: linear-gradient(135deg, #dbffc3, #54ad77); box-shadow: 0 0 13px #99ee90; }
+.tactic-impact.preview { opacity: .82; }
+@keyframes tactic-impact-in { 0% { opacity: 0; transform: translateY(-12px) scale(.78); } 65% { opacity: 1; transform: translateY(1px) scale(1.07); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes tactic-impact-out { to { opacity: 0; transform: translateY(-7px) scale(.96); } }
+
 #waveInfo {
   position: absolute;
   top: 10px;
@@ -1876,6 +1910,9 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 
 /* 좁은 화면: 별자리 세로로, 칩은 컴팩트하게 */
 @media (max-width: 720px) {
+  .tactic-impact { top: 8px; right: 8px; min-width: 142px; padding: 5px 8px 5px 6px; }
+  .tactic-impact-icon { width: 29px; height: 29px; font-size: 19px; }
+  .tactic-impact-copy b { font-size: 12px; }
   #skillCols { grid-template-columns: 1fr; }
   #champChip { gap: 6px; padding: 5px 6px; bottom: 8px; left: 8px; }
   #champFace { width: 36px; height: 36px; font-size: 22px; }

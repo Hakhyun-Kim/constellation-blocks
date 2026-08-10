@@ -761,7 +761,9 @@ export class Renderer3D {
       const z3 = ev.y != null ? wz(ev.y) : 0;
       switch (ev.type) {
         case 'enemyHit': {
-          if (ev.kind === 'burn') {
+          if (ev.tactic === 'flare') {
+            /* Flare는 starfall의 착탄 프레임에서 피해 숫자·충격파를 낸다. */
+          } else if (ev.kind === 'burn') {
             if (Math.random() < 0.4) this.showNumber(x3, 1.7, z3, `${ev.dmg}`, '#ff9a3d', 0.72);
           } else if (ev.kind === 'slow') {
             /* 0 피해 숫자는 "아무 일도 없었다"로 읽힌다. 서리 전술의 결과를 말로도 고정한다. */
@@ -924,7 +926,9 @@ export class Renderer3D {
           break;
         }
         case 'starfall':
-          this._starfall(x3, z3);
+          this._starfall(x3, z3, 0, ev.tactic === 'flare'
+            ? { tactic: 'flare', dmg: ev.dmg, stars: ev.stars, lethal: ev.lethal }
+            : null);
           break;
         case 'starAuto':
           if (this.champView) this.showBubble(this.champView.pos.x, this.champView.pos.y, '별똥별은 아껴 두면 녹슬어요!', 2.2);

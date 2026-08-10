@@ -272,6 +272,25 @@ export const SFX = {
       { filterSweep: kind === 'tide' ? [4400, 2400] : [1700, 5200] });
   },
 
+  /* 매치 확인음 뒤 실제 전장이 받는 주문의 도착음. match()와 분리해야
+   * "맞췄다"와 "효과가 적용됐다"가 서로 다른 순간으로 읽힌다. */
+  tactic(kind, size = 3) {
+    if (limit(`tactic-${kind}`, 120)) return;
+    const bonus = size >= 5 ? 2 : size === 4 ? 1 : 0;
+    const amp = 0.07 + bonus * 0.018;
+    triggerDuck(0.20 + bonus * 0.06, 0.28 + bonus * 0.06);
+    if (kind === 'flare') {
+      flowTone([220, 440, 880], 0, 0.18, 'sawtooth', amp, { filterSweep: [600, 4600] });
+      noise(0.12, 0.18 + bonus * 0.04, amp, 520, 0.48);
+    } else if (kind === 'tide') {
+      flowTone([740, 520, 330], 0, 0.28, 'sine', amp, { filterSweep: [5200, 1100] });
+      noise(0.06, 0.2, amp * 0.62, 2600, 0.26);
+    } else {
+      flowTone([392, 523, 784], 0, 0.26, 'triangle', amp, { filterSweep: [1100, 4200] });
+      tone(1047, 0.09, 0.23, 'sine', amp * 0.72);
+    }
+  },
+
   summon(tier) {
     flowTone([330 + tier * 60, 660 + tier * 120], 0, 0.12, 'triangle', 0.09);
     if (tier >= 2) flowTone([880, 1100, 1320], 0.08, 0.16, 'triangle', 0.09, { filterSweep: [2000, 6000] });

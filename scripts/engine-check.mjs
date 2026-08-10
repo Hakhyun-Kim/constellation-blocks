@@ -348,6 +348,8 @@ function tacticState(route = 0, count = 1) {
   const fr = E.castTactic(flare, 0, 'flare', 3);
   const hpAfter = flare.enemies.reduce((sum, e) => sum + e.hp, 0);
   ok('전술: Flare가 피해·별똥별 이벤트를 낸다', fr.ok && fr.events.filter(e => e.type === 'starfall').length === 3 && hpAfter < hpBefore);
+  ok('전술: Flare 별똥별이 착탄 피해 표식을 낸다', fr.events.filter(e => e.type === 'starfall')
+    .every(e => e.tactic === 'flare' && e.dmg > 0 && [3, 4, 5].includes(e.stars)));
   ok('전술: 성공한 시전만 전술 기록에 남는다', flare.tacticCasts === 1);
 
   const flare4 = tacticState(0, 6);

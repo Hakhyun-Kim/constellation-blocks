@@ -23,8 +23,12 @@ export function castTactic(state, route, kind, size = 3) {
   if (kind === 'flare') {
     const count = rule.targetCount[stars];
     for (const enemy of targets.slice(0, count)) {
-      events.push({ type: 'starfall', x: enemy.x, y: enemy.y, radius: rule.impactRadius[stars] });
-      damageEnemy(state, enemy, Math.round((rule.baseDamage + state.wave * rule.waveDamage) * power), events, 'star');
+      const dmg = Math.round((rule.baseDamage + state.wave * rule.waveDamage) * power);
+      events.push({
+        type: 'starfall', x: enemy.x, y: enemy.y, radius: rule.impactRadius[stars],
+        tactic: 'flare', stars, dmg, lethal: enemy.hp <= dmg,
+      });
+      damageEnemy(state, enemy, dmg, events, 'star', 0, { tactic: 'flare' });
     }
   } else if (kind === 'tide') {
     const slow = rule.slow[stars];

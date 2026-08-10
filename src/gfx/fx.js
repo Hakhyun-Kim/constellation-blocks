@@ -193,7 +193,7 @@ export const fxMethods = {
   },
 
   /* ---------- 별똥별 (하늘에서 떨어지는 별) ---------- */
-  _starfall(x3, z3, delay = 0) {
+  _starfall(x3, z3, delay = 0, impact = null) {
     if (!this.stars) this.stars = [];
     let s = this.stars.find(v => !v.live);
     if (!s) {
@@ -206,7 +206,7 @@ export const fxMethods = {
         mesh.add(core, halo);
         mesh.visible = false;
         this.scene.add(mesh);
-        s = { mesh, live: false, t: 0, dur: 0.36, from: new THREE.Vector3(), to: new THREE.Vector3() };
+        s = { mesh, live: false, t: 0, dur: 0.36, from: new THREE.Vector3(), to: new THREE.Vector3(), impact: null };
         this.stars.push(s);
       }
     }
@@ -217,7 +217,20 @@ export const fxMethods = {
     s.dur = 0.23 + Math.random() * 0.07;
     s.from.set(x3 + 2.6, 10.5, z3 + 1.8);
     s.to.set(x3, 0.25, z3);
+    s.impact = impact;
     s.mesh.visible = false;
+  },
+
+  /* Flare만은 피해 숫자를 판정 순간이 아니라 유성이 닿는 프레임에 낸다.
+   * "보드에서 맞췄다 → 하늘에서 날아온다 → 적이 맞고 숫자가 뜬다"가 한 문장으로 읽힌다. */
+  _tacticFlareImpact(x3, z3, impact) {
+    const bonus = impact.stars >= 5 ? 2 : impact.stars === 4 ? 1 : 0;
+    this._shockRing(x3, z3, 1.55 + bonus * 0.32, 0xffa253, 0.42 + bonus * 0.05);
+    this.burst(x3, 0.85, z3, 0xffad5c, 18 + bonus * 9, 4.8 + bonus, { grav: 3.2, ttl: 0.42 });
+    this.burst(x3, 1.04, z3, 0xffffff, 9 + bonus * 4, 3.1, { grav: 1.6, ttl: 0.3, size: 0.75 });
+    this.showNumber(x3, 2.08, z3, `☄ -${impact.dmg}`, '#ffe5a4', 1.2 + bonus * 0.15);
+    if (impact.lethal) this.showNumber(x3, 2.82, z3, '격파!', '#fff0b3', 0.86 + bonus * 0.08);
+    this.addShake(0.06 + bonus * 0.025);
   },
 
   _updateStars(dt) {
@@ -241,6 +254,8 @@ export const fxMethods = {
         this._shockRing(s.to.x, s.to.z, 1.1, 0xfff3b0, 0.3);
         this.burst(s.to.x, 0.7, s.to.z, 0xffd97a, 16, 4.8, { grav: 4, ttl: 0.38 });
         this.burst(s.to.x, 0.9, s.to.z, 0xffffff, 8, 3, { ttl: 0.34 });
+        if (s.impact?.tactic === 'flare') this._tacticFlareImpact(s.to.x, s.to.z, s.impact);
+        s.impact = null;
         this.addShake(0.15);
       }
     }

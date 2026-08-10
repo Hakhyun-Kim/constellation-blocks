@@ -7,10 +7,10 @@
 import * as D from '../data.js';
 import { champKillXp, gainChampXp, chargeUlt } from './champion.js';
 
-export function damageEnemy(state, enemy, dmg, events, kind = 'hit', healOnKill = 0) {
+export function damageEnemy(state, enemy, dmg, events, kind = 'hit', healOnKill = 0, visual = null) {
   if (enemy.dead) return;
   enemy.hp -= dmg;
-  events.push({ type: 'enemyHit', x: enemy.x, y: enemy.y - enemy.size / 2, dmg, kind });
+  events.push({ type: 'enemyHit', x: enemy.x, y: enemy.y - enemy.size / 2, dmg, kind, ...(visual || {}) });
   if (enemy.hp > 0) return;
 
   enemy.dead = true;

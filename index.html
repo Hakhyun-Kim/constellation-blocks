@@ -51,6 +51,11 @@
         <div class="bossbar-track"><div id="bossBarFill"></div></div>
       </div>
       <div id="comboChip" class="hidden"></div>
+      <!-- 3매치 결과가 전장에 도착했음을 알리는 전술 피드백. 실제 피해 숫자는 3D 착탄 지점에서 따로 뜬다. -->
+      <div id="tacticImpact" class="tactic-impact" aria-live="polite" aria-atomic="true">
+        <span id="tacticImpactIcon" class="tactic-impact-icon">☄️</span>
+        <span class="tactic-impact-copy"><b id="tacticImpactTitle">유성 폭격!</b><small id="tacticImpactDetail">왼쪽 길</small></span>
+      </div>
       <!-- 별지기 칩: 초상 · 레벨 · 체력/경험치 · 마법 버튼 -->
       <div id="champChip">
         <button id="champFace" title="옷장 열기 — 이름과 모습을 바꿔요!">🌠</button>
