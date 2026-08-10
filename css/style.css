@@ -1526,12 +1526,13 @@ button { font-family: inherit; }
   .castlebar-wrap { order: 2; }
   .stage         { order: 3; }
   #placeBar      { order: 4; }
-  #benchCard     { order: 5; }
-  #statCard      { order: 6; }
-  .tabs          { order: 7; }
-  .tabbody       { order: 8; }
-  .under-row     { order: 9; }
-  #helpBox       { order: 10; }
+  #tacticCard    { order: 5; }
+  #benchCard     { order: 6; }
+  #statCard      { order: 7; }
+  .tabs          { order: 8; }
+  .tabbody       { order: 9; }
+  .under-row     { order: 10; }
+  #helpBox       { order: 11; }
 }
 /* 세로가 짧은 노트북: 두 열은 유지하고 전장만 더 납작하게 (넓은 건 안 잘린다) */
 @media (min-width: 1081px) and (max-height: 660px) {
@@ -2217,7 +2218,13 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 }
 .loopchip.hidden { display: none; }
 
-/* ===== Constellation Defense — 전장은 그대로, 전술판만 오른쪽에 심는다 ===== */
+/* ===== Constellation Defense — 전장 바로 아래의 전술판 ===== */
+.left > #tacticCard {
+  width: min(100%, 500px);
+  flex: 0 0 auto;
+  align-self: center;
+  margin: 8px auto 0;
+}
 .tactic-card { position: relative; overflow: hidden; padding: 10px 12px 11px; background: linear-gradient(145deg, #f7f4ff, #eff6ff); border: 1px solid #c9c5e9; }
 .tactic-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tactic-head h2 { margin: 0; font-size: 16px; color: #403279; }
@@ -2257,7 +2264,7 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 @keyframes tacticroute { 0% { filter: brightness(.8); } 55% { filter: brightness(1.45); } 100% { filter: brightness(1); } }
 @keyframes tacticbeam { 0% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(0); } 22% { opacity: 1; } 76% { opacity: 1; transform: rotate(var(--beam-angle)) scaleX(1); } 100% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(1.08); } }
 @keyframes tacticboardflash { 0% { transform: scale(.985); filter: brightness(.9); } 62% { transform: scale(1.012); filter: brightness(1.12); } 100% { transform: scale(1); filter: brightness(1); } }
-@media (max-width: 720px) { .tactic-card { order: -1; } .tactic-star { font-size: 23px; } }
+@media (max-width: 720px) { .tactic-star { font-size: 23px; } }
 
 /* 옷장 잠금 */
 .clopt.locked {
