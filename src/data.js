@@ -1,7 +1,7 @@
 /* =====================================================
  * 게임 데이터 / 밸런스 정의 — 배럴(barrel)
  *
- * 실제 내용은 src/balance/ 아래 8개 파일로 나뉘어 있다.
+ * 실제 내용은 src/balance/ 아래 파일로 나뉘어 있다.
  * 이 파일은 경로와 이름을 그대로 유지하기 위한 재수출 지점일 뿐이다.
  *
  * ▸ 왜 이 파일이 남아 있나
@@ -16,6 +16,7 @@
  *   enemies.js  몬스터·보스·난이도 곡선                   ★ 성장 곡선의 축
  *   castle.js   성·포탑
  *   economy.js  골드·조합 비용·메타 진행                  ★ 성장 곡선의 축
+ *   tactics.js  3매치가 방어선에 적용하는 전술 수치
  *   mathgate.js 수학 관문 규칙 (문제 자체는 src/mathgen/) ★ 성인판 재설계 대상
  * ===================================================== */
 
@@ -24,6 +25,7 @@ export * from './balance/heroes.js';
 export * from './balance/enemies.js';
 export * from './balance/castle.js';
 export * from './balance/economy.js';
+export * from './balance/tactics.js';
 export * from './balance/mathgate.js';
 export * from './balance/champion.js';
 export * from './balance/achievements.js';

@@ -1405,15 +1405,22 @@ newGame(store.diff, { holdStory: !!bootSave });
 /* 전술판은 웨이브 동안만 손을 받는다. 이벤트는 기존 렌더러와 사운드 경로로
  * 흘려 보내므로, 새 퍼즐도 원래 전장의 별똥별·피격·회복 연출을 똑같이 쓴다. */
 tactics = createTacticFlow({
-  getState: () => state,
+  getPhase: () => state.phase,
+  random: () => state.rng(),
+  resolveTactic: (lane, type, size) => E.castTactic(state, lane, type, size),
   toast: (msg, tone) => ui.toast(msg, tone),
   onCast(result, type, lane, size) {
-    if (type === 'flare') SFX.starfall(D.FIELD_W * ((lane + 1) / 4));
-    else SFX.correct();
+    SFX.tactic(type, size);
+    renderer.tacticCast(state, result, type, lane, size);
     renderer.onEvents(state, result.events);
     handleEvents(result.events);
     ui.toast(`${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} 성좌 ${size}개 — ${['왼쪽','가운데','오른쪽'][lane]} 길 전술 발동!`, 'good');
     refreshAll();
+  },
+  onPreview(type, lane, size) {
+    SFX.tactic(type, size);
+    renderer.tacticCast(state, null, type, lane, size);
+    ui.toast(`✨ 테스트 연출 · ${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} ${size}개`, 'good');
   },
 });
 if (bootSave) ui.showStart(bootSave);
@@ -1512,4 +1519,6 @@ window.__game = {
   gold(n) { state.gold += n; refreshAll(); },
   jump(w) { state.wave = w; refreshAll(); },
   hurt(n) { state.castleHp = Math.max(0, state.castleHp - n); if (state.castleHp <= 0) { state.phase = 'over'; state.shardsEarned = D.shardReward(state.wave, state.bossKills); onGameOver(); } },
+  /* 규칙·상태는 바꾸지 않는 시각 연출 훅. 예: __game.previewTactic('tide', 1, 5) */
+  previewTactic(kind = 'flare', lane = 1, size = 3) { return tactics.preview(kind, lane, size); },
 };

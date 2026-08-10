@@ -12,7 +12,8 @@
     "balance:check": "node scripts/balance-check.mjs 60",
     "math:check": "node scripts/math-check.mjs 3000",
     "engine:check": "node scripts/engine-check.mjs",
-    "check": "npm run engine:check && npm run build"
+    "tactics:check": "node scripts/tactic-board-check.mjs",
+    "check": "npm run engine:check && npm run tactics:check && npm run build"
   },
   "dependencies": {
     "three": "^0.166.0"

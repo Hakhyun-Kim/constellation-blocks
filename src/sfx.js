@@ -258,6 +258,20 @@ export const SFX = {
   correct() {   /* 메이저 펜타토닉 음계 플로우 */
     flowTone([523, 659, 784, 1047, 1319], 0, 0.22, 'triangle', 0.08, { filterSweep: [3000, 8000] });
   },
+  tactic(kind, size = 3) {
+    const big = size >= 4;
+    if (kind === 'flare') {
+      triggerDuck(big ? 0.28 : 0.16, 0.28);
+      flowTone(big ? [880, 1320, 1760] : [784, 1175], 0, big ? 0.24 : 0.16, 'square', 0.075, { filterSweep: [1800, 6200] });
+      noise(big ? 0.16 : 0.1, big ? 0.18 : 0.1, big ? 0.075 : 0.045, 700, 0.5);
+    } else if (kind === 'tide') {
+      flowTone(big ? [1047, 784, 523] : [880, 660, 523], 0, big ? 0.32 : 0.22, 'sine', 0.075, { filterSweep: [6200, 1500] });
+      noise(0.08, big ? 0.2 : 0.13, 0.035, 5000, 0.35);
+    } else {
+      flowTone(big ? [523, 659, 784, 1047] : [523, 659, 784], 0, big ? 0.3 : 0.2, 'triangle', 0.075, { filterSweep: [1800, 5800] });
+      tone(220, 0, big ? 0.3 : 0.2, 'sine', 0.045, 330);
+    }
+  },
   wrong() {     /* 부드러운 하강 멜로디 플로우 */
     flowTone([330, 293, 262, 220], 0, 0.3, 'sine', 0.08);
   },

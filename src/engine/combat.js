@@ -6,6 +6,7 @@
 import * as D from '../data.js';
 import { champStats, champKillXp, gainChampXp, chargeUlt } from './champion.js';
 import { heroMods } from './roster.js';
+import { damageEnemy, applyBurn, applySlow, applyStun } from './effects.js';
 
 /* ---------- 웨이브 생성 ---------- */
 function pickWeighted(state, mix) {
@@ -135,59 +136,6 @@ function spawnEnemy(state, type, events, presetRoute) {
   events.push({ type: 'spawn', etype: type, x: e.x, y: e.y, boss: e.boss, midBoss: e.midBoss });
   if (e.boss) events.push({ type: 'bossSpawn', tier: 'great', name: E.name, emoji: E.emoji });
   else if (e.midBoss) events.push({ type: 'bossSpawn', tier: 'mid', name: E.name, emoji: E.emoji });
-}
-
-/* ---------- 전투 ---------- */
-function damageEnemy(state, e, dmg, events, kind = 'hit', healOnKill = 0) {
-  if (e.dead) return;
-  e.hp -= dmg;
-  events.push({ type: 'enemyHit', x: e.x, y: e.y - e.size / 2, dmg, kind });
-  if (e.hp <= 0) {
-    e.dead = true;
-    state.kills++;
-    if (e.boss) state.bossKills++;
-    if (e.midBoss) state.midBossKills++;
-    state.combo.count++;
-    state.combo.timer = D.COMBO.window;
-    const mul = state.combo.count >= D.COMBO.x3At ? 3 : state.combo.count >= D.COMBO.x2At ? 2 : 1;
-    const gold = e.gold * mul;
-    state.gold += gold;
-    state.goldEarned += gold;
-    events.push({
-      type: 'kill', x: e.x, y: e.y, gold, etype: e.type,
-      boss: e.boss, midBoss: e.midBoss, name: e.name,
-      combo: state.combo.count, mul,
-    });
-    /* 성기사: 처치 시 성 회복 */
-    if (healOnKill > 0 && state.castleHp < state.castleMax) {
-      state.castleHp = Math.min(state.castleMax, state.castleHp + healOnKill);
-      events.push({ type: 'castleHeal', amount: healOnKill, x: e.x, y: e.y });
-    }
-    /* 별지기 — 모든 처치가 경험치와 은하수 충전이 된다 (직접 처치 보너스는 champStrike가 얹는다) */
-    if (state.champ) {
-      gainChampXp(state, champKillXp(e), events);
-      chargeUlt(state,
-        e.boss ? D.ULT.boss : e.midBoss ? D.ULT.mid : e.elite ? D.ULT.elite : D.ULT.kill, events);
-    }
-  }
-}
-
-function applyBurn(e, dmg, ratio) {
-  e.burn = { dps: Math.max(1, Math.round(dmg * ratio)), t: D.BURN_DUR };
-}
-function applySlow(e, s) {
-  if (e.slowT > 0) e.slowMul = Math.min(e.slowMul, s.mul);
-  else e.slowMul = s.mul;
-  e.slowT = Math.max(e.slowT, s.dur);
-}
-
-/* 방패 장벽: 적을 완전히 멈춘다 (보스는 강하게 저항, 직후 잠시 면역) */
-function applyStun(e, dur) {
-  if (e.stunImmuneT > 0) return false;
-  const d = dur * ((e.boss || e.midBoss) ? D.STUN_BOSS_MUL : 1);
-  e.stunT = d;
-  e.stunImmuneT = d + D.STUN_IMMUNE;
-  return true;
 }
 
 function firstInRange(state, x, y, range) {
@@ -473,45 +421,6 @@ export function castUlt(state) {
     if (!e.dead) applySlow(e, D.ULT.slow);
   }
   return { ok: true, events };
-}
-
-/* 전술판은 화면 바깥의 미니게임이 아니라 전장의 다른 조준 방식이다.
- * route 번호가 곧 3매치 보드의 세 구역과 대응하므로, 퍼즐에서 고른 열이
- * 정확히 그 길의 적에게 닿는다. 엔진이 결과 이벤트를 만들고 렌더러는 기존
- * 별똥별·피격·회복 연출을 그대로 재사용한다. */
-export function castTactic(state, route, kind, size = 3) {
-  if (state.phase !== 'wave') return { ok: false, reason: 'phase' };
-  const targets = state.enemies.filter(e => !e.dead && e.route === route)
-    .sort((a, b) => (b.s / D.ROUTE_LENS[b.route]) - (a.s / D.ROUTE_LENS[a.route]));
-  if (!targets.length) return { ok: false, reason: 'none' };
-  const events = [];
-  const power = size >= 5 ? 1.9 : size === 4 ? 1.35 : 1;
-  if (kind === 'flare') {
-    const count = size >= 5 ? targets.length : size === 4 ? 5 : 3;
-    for (const e of targets.slice(0, count)) {
-      events.push({ type: 'starfall', x: e.x, y: e.y, radius: size >= 4 ? 64 : 38 });
-      damageEnemy(state, e, Math.round((46 + state.wave * 8) * power), events, 'star');
-    }
-  } else if (kind === 'tide') {
-    const slow = { mul: size >= 5 ? 0.18 : size === 4 ? 0.35 : 0.52, dur: size >= 5 ? 4.5 : 2.7 };
-    for (const e of targets) {
-      applySlow(e, slow);
-      events.push({ type: 'enemyHit', x: e.x, y: e.y - e.size / 2, dmg: 0, kind: 'slow' });
-    }
-  } else if (kind === 'bloom') {
-    const amount = Math.round((5 + size * 2) * power);
-    state.castleHp = Math.min(state.castleMax, state.castleHp + amount);
-    const near = targets[0];
-    events.push({ type: 'castleHeal', amount, x: near.x, y: near.y });
-    /* 수호 별은 피해를 없애기보다 길을 잠깐 벌어 준다. 회복만 하면 적이 없는
-     * 길에서 허무해지므로, 같은 길 앞줄을 가볍게 밀어내 전술감도 남긴다. */
-    for (const e of targets.slice(0, size >= 4 ? 4 : 2)) {
-      e.s = Math.max(0, e.s - (size >= 5 ? 100 : 48));
-      const p = D.routePoint(e.route, e.s);
-      e.x = p.x; e.y = p.y;
-    }
-  }
-  return { ok: true, events, targets: targets.length };
 }
 
 function updateTower(state, dt, events) {

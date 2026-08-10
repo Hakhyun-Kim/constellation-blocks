@@ -763,6 +763,10 @@ export class Renderer3D {
         case 'enemyHit': {
           if (ev.kind === 'burn') {
             if (Math.random() < 0.4) this.showNumber(x3, 1.7, z3, `${ev.dmg}`, '#ff9a3d', 0.72);
+          } else if (ev.kind === 'slow') {
+            /* 0 피해 숫자는 "아무 일도 없었다"로 읽힌다. 서리 전술의 결과를 말로도 고정한다. */
+            this.showNumber(x3, 2.0, z3, '❄ 감속!', '#b9f5ff', 0.82);
+            this.burst(x3, 0.9, z3, 0x9fdcff, 5, 1.8, { grav: -0.8, ttl: 0.45, size: 0.65 });
           } else if (ev.kind === 'crit') {
             /* 치명타는 크고 노랗게 — 근접의 쾌감 */
             this.showNumber(x3, 2.0, z3, `${ev.dmg}!`, '#ffd93d', 1.35);
@@ -771,6 +775,14 @@ export class Renderer3D {
           } else {
             this.showNumber(x3, 1.8, z3, `${ev.dmg}`, '#ffffff', ev.dmg >= 100 ? 1.15 : 0.85);
           }
+          break;
+        }
+        case 'tacticPush': {
+          const fromX = wx(ev.fromX), fromZ = wz(ev.fromY);
+          this._shockRing(fromX, fromZ, 0.72, 0x8dff9e, 0.32);
+          this.burst(fromX, 0.8, fromZ, 0xb8ffad, 8, 2.3, { grav: 1.2, ttl: 0.38 });
+          this.burst(x3, 0.55, z3, 0x71d993, 5, 1.4, { grav: -0.7, ttl: 0.42 });
+          this.showNumber(x3, 1.65, z3, '↩ 밀침', '#baffad', 0.76);
           break;
         }
         case 'block': {

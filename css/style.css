@@ -2218,22 +2218,42 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 .loopchip.hidden { display: none; }
 
 /* ===== Constellation Defense — 전장은 그대로, 전술판만 오른쪽에 심는다 ===== */
-.tactic-card { padding: 10px 12px 11px; background: linear-gradient(145deg, #f7f4ff, #eff6ff); border: 1px solid #c9c5e9; }
+.tactic-card { position: relative; overflow: hidden; padding: 10px 12px 11px; background: linear-gradient(145deg, #f7f4ff, #eff6ff); border: 1px solid #c9c5e9; }
 .tactic-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .tactic-head h2 { margin: 0; font-size: 16px; color: #403279; }
 .tactic-head span { display: block; margin-top: 2px; color: #7a7899; font-size: 11px; }
 .tactic-lanes { display: flex; gap: 3px; color: #7652b8; font-size: 15px; }
 .tactic-lanes b { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 8px; background: #e5d9ff; }
 .tactic-routes { display: grid; grid-template-columns: repeat(3, 1fr); margin: 8px 0 3px; text-align: center; color: #77739a; font-size: 10px; font-weight: 800; }
-.tactic-board { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; padding: 5px; border-radius: 11px; background: linear-gradient(135deg, #2a2255, #151938); box-shadow: inset 0 2px 6px #07071d77; }
-.tactic-star { min-width: 0; aspect-ratio: 1; border: 1px solid #ffffff55; border-radius: 8px; cursor: pointer; font-size: clamp(15px, 2.1vw, 23px); line-height: 1; transition: transform .13s, filter .13s, outline .13s; background: #4d4185; }
+.tactic-routes span { position: relative; z-index: 3; border-radius: 7px; transition: color .15s, background .15s, box-shadow .15s, transform .15s; }
+.tactic-routes span.active { color: #fff; transform: translateY(-1px) scale(1.06); text-shadow: 0 1px 2px #161530; animation: tacticroute .42s ease-out both; }
+.tactic-routes span.active.flare { background: #d66656; box-shadow: 0 0 13px #f4a159; }
+.tactic-routes span.active.tide { background: #4e84c5; box-shadow: 0 0 13px #8de6ff; }
+.tactic-routes span.active.bloom { background: #4c9b72; box-shadow: 0 0 13px #aef58f; }
+.tactic-board { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; padding: 5px; border-radius: 11px; background: linear-gradient(135deg, #2a2255, #151938); box-shadow: inset 0 2px 6px #07071d77; }
+.tactic-board.casting { box-shadow: inset 0 2px 6px #07071d77, 0 0 18px var(--tactic-glow, #d8b4ff); }
+.tactic-star { position: relative; z-index: 2; min-width: 0; aspect-ratio: 1; border: 1px solid #ffffff55; border-radius: 8px; cursor: pointer; font-size: clamp(15px, 2.1vw, 23px); line-height: 1; transition: transform .13s, filter .13s, outline .13s; background: #4d4185; }
 .tactic-star:hover { transform: translateY(-2px); filter: brightness(1.15); }
 .tactic-star.picked { outline: 3px solid #ffe985; transform: scale(.9); z-index: 1; }
 .tactic-star.flare { background: radial-gradient(circle at 40% 33%, #ffe4a3, #ee8b5e 46%, #9e4767); }
 .tactic-star.tide { background: radial-gradient(circle at 40% 33%, #d7f8ff, #78bce8 46%, #4f6eb6); }
 .tactic-star.bloom { background: radial-gradient(circle at 40% 33%, #e6ffd0, #8bd582 46%, #518f7c); }
+.tactic-star.matched { z-index: 4; border-color: #fff; animation: tacticmatch .32s cubic-bezier(.18, 1.55, .42, 1) both; }
+.tactic-star.matched.flare { box-shadow: 0 0 0 2px #ffe4a3, 0 0 20px 7px #f48559; }
+.tactic-star.matched.tide { box-shadow: 0 0 0 2px #e7fbff, 0 0 20px 7px #6bd9ff; }
+.tactic-star.matched.bloom { box-shadow: 0 0 0 2px #edffcf, 0 0 20px 7px #89e98c; }
+.tactic-star.matched.jackpot { animation-duration: .4s; }
+.tactic-beam { position: absolute; z-index: 5; height: 4px; border-radius: 99px; opacity: 0; pointer-events: none; transform-origin: left center; transform: rotate(var(--beam-angle)) scaleX(0); }
+.tactic-beam.run { animation: tacticbeam .34s cubic-bezier(.1, .8, .3, 1) both; }
+.tactic-beam.flare { background: linear-gradient(90deg, #fff4b0, #ff824f); box-shadow: 0 0 6px #fff2a6, 0 0 16px #ff7650; }
+.tactic-beam.tide { background: linear-gradient(90deg, #ecffff, #64cfff); box-shadow: 0 0 6px #e5ffff, 0 0 16px #5abcf9; }
+.tactic-beam.bloom { background: linear-gradient(90deg, #efffcf, #76d98e); box-shadow: 0 0 6px #efffcf, 0 0 16px #6ddf89; }
+.tactic-beam::after { content: ''; position: absolute; right: -4px; top: 50%; width: 10px; height: 10px; border-radius: 50%; background: #fff; transform: translateY(-50%); box-shadow: 0 0 10px 4px currentColor; }
 .tactic-key { display: flex; justify-content: space-around; margin-top: 7px; color: #615e85; font-size: 10.5px; font-weight: 700; }
 .tactic-status { margin-top: 6px; min-height: 18px; border-radius: 7px; padding: 4px 7px; background: #e7e8f8; color: #59567a; text-align: center; font-size: 10.5px; font-weight: 700; }
+@keyframes tacticmatch { 0% { transform: scale(.76); filter: brightness(1); } 58% { transform: scale(1.25); filter: brightness(1.7); } 100% { transform: scale(1.08); filter: brightness(1.35); } }
+@keyframes tacticroute { 0% { filter: brightness(.8); } 55% { filter: brightness(1.45); } 100% { filter: brightness(1); } }
+@keyframes tacticbeam { 0% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(0); } 22% { opacity: 1; } 76% { opacity: 1; transform: rotate(var(--beam-angle)) scaleX(1); } 100% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(1.08); } }
 @media (max-width: 720px) { .tactic-card { order: -1; } .tactic-star { font-size: 23px; } }
 
 /* 옷장 잠금 */

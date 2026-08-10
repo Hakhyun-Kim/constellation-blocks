@@ -329,7 +329,55 @@ function padIndexSane(st, label) {
   ok('준비 단계 마법 잠금', !r.ok && r.reason === 'phase');
 }
 
-/* ---------- ⑦ 잔치: 랜덤 승급 · 준비마다 한 번 · 저장해도 리롤 불가 ---------- */
+/* ---------- ⑦ 별자리 전술: 효과별 결과와 잭팟 보정 ---------- */
+function tacticState(route = 0, count = 1) {
+  const st = fresh();
+  E.startWave(st);
+  /* 웨이브 난수에 기대지 않고, 원하는 길에 실제 스폰 경로로 적을 만든다. */
+  st.spawnQueue = Array.from({ length: count }, () => ({ t: 0, type: 'goblin', route }));
+  E.tick(st, 0.001);
+  return st;
+}
+{
+  const prep = fresh();
+  const locked = E.castTactic(prep, 0, 'flare', 3);
+  ok('전술: 준비 단계 잠금', !locked.ok && locked.reason === 'phase');
+
+  const flare = tacticState(0, 6);
+  const hpBefore = flare.enemies.reduce((sum, e) => sum + e.hp, 0);
+  const fr = E.castTactic(flare, 0, 'flare', 3);
+  const hpAfter = flare.enemies.reduce((sum, e) => sum + e.hp, 0);
+  ok('전술: Flare가 피해·별똥별 이벤트를 낸다', fr.ok && fr.events.filter(e => e.type === 'starfall').length === 3 && hpAfter < hpBefore);
+
+  const flare4 = tacticState(0, 6);
+  const flare5 = tacticState(0, 6);
+  const f4 = E.castTactic(flare4, 0, 'flare', 4);
+  const f5 = E.castTactic(flare5, 0, 'flare', 5);
+  ok('전술: 4매치는 Flare 대상을 다섯까지 넓힌다', f4.ok && f4.events.filter(e => e.type === 'starfall').length === 5);
+  ok('전술: 5매치는 Flare 대상을 전부 넓힌다', f5.ok && f5.events.filter(e => e.type === 'starfall').length === 6);
+
+  const tide = tacticState(1, 2);
+  const tr = E.castTactic(tide, 1, 'tide', 5);
+  ok('전술: Tide가 전 적을 강하게 감속한다', tr.ok && tide.enemies.every(e => e.slowMul === 0.18 && e.slowT === 4.5));
+
+  const bloom = tacticState(2, 2);
+  bloom.castleHp = bloom.castleMax - 30;
+  for (const e of bloom.enemies) {
+    e.s = 160;
+    const p = D.routePoint(e.route, e.s);
+    e.x = p.x; e.y = p.y;
+  }
+  const beforeS = bloom.enemies.map(e => e.s);
+  const br = E.castTactic(bloom, 2, 'bloom', 4);
+  ok('전술: Bloom이 성을 회복하고 적을 밀어낸다', br.ok && bloom.castleHp > bloom.castleMax - 30
+    && bloom.enemies.every((e, i) => e.s < beforeS[i]) && br.events.filter(e => e.type === 'tacticPush').length === 2);
+
+  const empty = tacticState(0, 1);
+  const none = E.castTactic(empty, 1, 'tide', 3);
+  ok('전술: 적 없는 길은 상태를 바꾸지 않고 거부한다', !none.ok && none.reason === 'none');
+}
+
+/* ---------- ⑧ 잔치: 랜덤 승급 · 준비마다 한 번 · 저장해도 리롤 불가 ---------- */
 {
   const st = fresh();
   put(st, 'knight', 0, 0);
@@ -358,7 +406,7 @@ function padIndexSane(st, label) {
   ok('잔치: 전원 신화면 없다', !r3.ok && r3.reason === 'none');
 }
 
-/* ---------- ⑧ 서른 번째 아침 · 별의 시련 (회차) ---------- */
+/* ---------- ⑨ 서른 번째 아침 · 별의 시련 (회차) ---------- */
 {
   /* 30웨이브를 클리어하면 victory 이벤트가 정확히 한 번 나온다 */
   const st = fresh();

@@ -212,7 +212,9 @@ export const fxMethods = {
     }
     s.live = true;
     s.t = -delay;
-    s.dur = 0.32 + Math.random() * 0.1;
+    /* 전술 유성은 보드 판정 뒤의 타격 보상이다. 오래 떠 있으면 조작 리듬이 끊겨
+     * 낙하·착탄을 약 30% 빠르게 맞춘다. */
+    s.dur = 0.23 + Math.random() * 0.07;
     s.from.set(x3 + 2.6, 10.5, z3 + 1.8);
     s.to.set(x3, 0.25, z3);
     s.mesh.visible = false;
@@ -235,10 +237,10 @@ export const fxMethods = {
       if (k >= 1) {
         s.live = false;
         s.mesh.visible = false;
-        this._shockRing(s.to.x, s.to.z, 1.9, 0xffd97a, 0.5);
-        this._shockRing(s.to.x, s.to.z, 1.1, 0xfff3b0, 0.4);
-        this.burst(s.to.x, 0.7, s.to.z, 0xffd97a, 16, 4.2, { grav: 4 });
-        this.burst(s.to.x, 0.9, s.to.z, 0xffffff, 8, 2.6);
+        this._shockRing(s.to.x, s.to.z, 1.9, 0xffd97a, 0.38);
+        this._shockRing(s.to.x, s.to.z, 1.1, 0xfff3b0, 0.3);
+        this.burst(s.to.x, 0.7, s.to.z, 0xffd97a, 16, 4.8, { grav: 4, ttl: 0.38 });
+        this.burst(s.to.x, 0.9, s.to.z, 0xffffff, 8, 3, { ttl: 0.34 });
         this.addShake(0.15);
       }
     }
@@ -314,6 +316,41 @@ export const fxMethods = {
     this.burst(x, 1.0, z, col, 26 + tier * 12, 4 + tier, { grav: 3 });
     this.burst(x, 1.8, z, 0xffffff, 14, 2.6, { grav: 1 });
     this.addShake(tier === 3 ? 0.4 : 0.22);
+  },
+
+  /* 별자리 전술은 엔진 이벤트의 공통 피격 연출 위에 "어떤 주문을 썼는지"를 한 번 더
+   * 읽히게 한다. 전투 규칙은 건드리지 않고, 결과 이벤트의 좌표만 시각적으로 묶는다. */
+  tacticCast(state, result, kind, route, size = 3) {
+    const events = result?.events || [];
+    const mark = events.find(ev => ev.type === 'starfall' || ev.type === 'enemyHit'
+      || ev.type === 'castleHeal' || ev.type === 'tacticPush');
+    const logical = mark ? { x: mark.x, y: mark.y } : D.routePoint(route, D.ROUTE_LENS[route] * 0.52);
+    const x = wx(logical.x), z = wz(logical.y);
+    const jackpot = size >= 5 ? 2 : size === 4 ? 1 : 0;
+
+    if (kind === 'flare') {
+      this._shockRing(x, z, 1.35 + jackpot * 0.55, 0xff9a62, 0.34 + jackpot * 0.08);
+      this.burst(x, 1.1, z, 0xffa05d, 16 + jackpot * 14, 4.6 + jackpot, { grav: 2.1, ttl: 0.38 });
+      if (jackpot) this._lightPillar(x, z, jackpot + 1);
+      this.showNumber(x, 2.55, z, size >= 5 ? '☄ 별똥별!' : size === 4 ? '☄ 노바!' : '☄ 유성!', '#ffe1a5', 1 + jackpot * 0.18);
+      this.addShake(0.12 + jackpot * 0.12);
+    } else if (kind === 'tide') {
+      const targets = (state?.enemies || []).filter(e => !e.dead && e.route === route).slice(0, 6);
+      for (const e of targets) {
+        const tx = wx(e.x), tz = wz(e.y);
+        this._shockRing(tx, tz, 0.72 + jackpot * 0.12, 0x8de8ff, 0.4 + jackpot * 0.06);
+        this.burst(tx, 0.72, tz, 0xc8f9ff, 5 + jackpot * 3, 2.2, { grav: -0.8, ttl: 0.4, size: 0.65 });
+      }
+      this._shockRing(x, z, 1.6 + jackpot * 0.45, 0x65cfff, 0.42 + jackpot * 0.08);
+      this.showNumber(x, 2.45, z, size >= 5 ? '❄ 빙결 폭풍!' : size === 4 ? '❄ 서리 폭발!' : '❄ 서리 결계!', '#dcfbff', 1 + jackpot * 0.16);
+    } else if (kind === 'bloom') {
+      const cx = wx(D.CASTLE_POS.x), cz = wz(D.CASTLE_POS.y);
+      this._shockRing(cx, cz, 2.2 + jackpot * 0.45, 0x88ed97, 0.48 + jackpot * 0.08, 0.32);
+      this.burst(cx, 1.55, cz, 0x9cff9d, 15 + jackpot * 12, 2.7, { grav: -1.1, ttl: 0.5 });
+      this._shockRing(x, z, 1.25 + jackpot * 0.35, 0xbaffad, 0.38);
+      this.showNumber(cx, 3.1, cz, size >= 5 ? '🛡 별의 수호!' : size === 4 ? '🛡 수호 폭발!' : '🛡 수호 성좌!', '#c9ffb6', 1 + jackpot * 0.16);
+      this.bloomPulse = Math.max(this.bloomPulse || 0, 0.58 + jackpot * 0.22);
+    }
   },
 
   /* 위로 솟는 빛기둥 (즉석 생성 후 자동 제거) */

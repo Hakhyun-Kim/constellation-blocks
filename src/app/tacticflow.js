@@ -1,71 +1,214 @@
 /* =====================================================
- * 별자리 전술판 — 실시간 3매치가 곧 전장 조준이다.
- * 보드는 UI가 갖되, 실제 피해·감속·회복은 순수 엔진 castTactic으로만 낸다.
- * 저장/불러오기로 퍼즐을 리롤하지 못하게 게임 난수(state.rng)를 쓴다.
+ * 전술 보드 화면 어댑터
+ *
+ * 여기에는 DOM, 선택, 애니메이션 취소만 둔다. 3매치 규칙은 tactics/board.js,
+ * 방어 효과는 주입받은 resolveTactic()이 담당하므로 어느 한쪽도 다른 쪽을
+ * import하거나 상태 구조를 알 필요가 없다.
  * ===================================================== */
-import * as E from '../engine.js';
+import {
+  BOARD_SIZE,
+  STAR_TYPES,
+  areNeighbors,
+  cellIndex,
+  createStableBoard,
+  findMatchGroups,
+  laneForGroup,
+  refillCells,
+  swapCells,
+} from '../tactics/board.js';
 
-const N = 6;
-const TYPES = ['flare', 'tide', 'bloom'];
-const ICON = { flare: '☄️', tide: '❄️', bloom: '🛡️' };
-const LABEL = { flare: '유성 포격', tide: '서리 결계', bloom: '수호 성좌' };
+const ICON = { flare: '✦', tide: '✧', bloom: '❋' };
+const LABEL = { flare: '유성 폭격', tide: '서리 결계', bloom: '수호 회복' };
+const ROUTE_LABEL = ['왼쪽', '가운데', '오른쪽'];
 
-export function createTacticFlow({ getState, onCast, toast }) {
+export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onPreview, toast }) {
   const board = document.getElementById('tacticBoard');
   const status = document.getElementById('tacticStatus');
+  const card = board.closest('.tactic-card');
   let cells = [];
   let selected = null;
-  const pick = () => TYPES[Math.floor(getState().rng() * TYPES.length)];
-  const ix = (r, c) => r * N + c;
+  let resolving = false;
+  let generation = 0;
+  const timers = new Set();
+  const ix = (row, col) => cellIndex(row, col, BOARD_SIZE);
 
-  function groups() {
-    const hit = new Set();
-    for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
-      const type = cells[ix(r, c)]; let h = [ix(r, c)], v = [ix(r, c)];
-      for (let x = c + 1; x < N && cells[ix(r, x)] === type; x++) h.push(ix(r, x));
-      for (let y = r + 1; y < N && cells[ix(y, c)] === type; y++) v.push(ix(y, c));
-      if (h.length >= 3) h.forEach(i => hit.add(i));
-      if (v.length >= 3) v.forEach(i => hit.add(i));
-    }
-    return [...hit];
+  const later = (fn, ms) => {
+    const id = setTimeout(() => { timers.delete(id); fn(); }, ms);
+    timers.add(id);
+    return id;
+  };
+
+  function cancelPending() {
+    generation++;
+    for (const id of timers) clearTimeout(id);
+    timers.clear();
+    resolving = false;
   }
+
   function make() {
-    cells = Array.from({ length: N * N }, pick);
-    while (groups().length) cells = Array.from({ length: N * N }, pick);
+    cells = createStableBoard(random, BOARD_SIZE);
     draw();
   }
+
   function draw() {
-    board.innerHTML = cells.map((type, i) => `<button class="tactic-star ${type}${selected === i ? ' picked' : ''}" data-i="${i}" aria-label="${LABEL[type]}">${ICON[type]}</button>`).join('');
-    board.querySelectorAll('button').forEach(b => b.addEventListener('click', () => choose(Number(b.dataset.i))));
+    board.innerHTML = cells.map((type, index) =>
+      `<button class="tactic-star ${type}${selected === index ? ' picked' : ''}" data-i="${index}" aria-label="${LABEL[type]}">${ICON[type]}</button>`
+    ).join('');
+    board.querySelectorAll('button').forEach(button =>
+      button.addEventListener('click', () => choose(Number(button.dataset.i)))
+    );
   }
-  function laneOf(hit) {
-    const avg = hit.reduce((s, i) => s + (i % N), 0) / hit.length;
-    return Math.min(2, Math.floor(avg / 2));
+
+  function clearVisuals() {
+    board.classList.remove('casting');
+    board.style.removeProperty('--tactic-glow');
+    card.querySelectorAll('.tactic-routes span.active').forEach(element =>
+      element.classList.remove('active', ...STAR_TYPES)
+    );
+    card.querySelector('.tactic-beam')?.remove();
   }
-  function choose(i) {
-    const state = getState();
-    if (state.phase !== 'wave') { toast('전술판은 웨이브가 시작되면 깨어나요 — 지금은 진형을 준비해요.'); return; }
-    if (selected == null) { selected = i; draw(); return; }
-    const a = selected; selected = null;
-    const ar = Math.floor(a / N), ac = a % N, br = Math.floor(i / N), bc = i % N;
-    if (Math.abs(ar - br) + Math.abs(ac - bc) !== 1) { selected = i; draw(); return; }
-    [cells[a], cells[i]] = [cells[i], cells[a]];
-    const hit = groups();
-    if (!hit.length) { [cells[a], cells[i]] = [cells[i], cells[a]]; status.textContent = '별자리가 이어지지 않아요 — 이웃한 별을 다시 바꿔 보세요.'; draw(); return; }
-    resolve(hit);
+
+  function showBeam(hit, lane, type) {
+    const matchedCells = hit.map(index => board.querySelector(`button[data-i="${index}"]`)).filter(Boolean);
+    const target = card.querySelector(`.tactic-routes span[data-route="${lane}"]`);
+    if (!matchedCells.length || !target) return;
+
+    const cardRect = card.getBoundingClientRect();
+    const targetRect = target.getBoundingClientRect();
+    const from = matchedCells.reduce((sum, element) => {
+      const rect = element.getBoundingClientRect();
+      sum.x += rect.left + rect.width / 2;
+      sum.y += rect.top + rect.height / 2;
+      return sum;
+    }, { x: 0, y: 0 });
+    from.x /= matchedCells.length;
+    from.y /= matchedCells.length;
+    const to = { x: targetRect.left + targetRect.width / 2, y: targetRect.top + targetRect.height / 2 };
+    const dx = to.x - from.x;
+    const dy = to.y - from.y;
+    const beam = document.createElement('div');
+    beam.className = `tactic-beam ${type}`;
+    beam.style.left = `${from.x - cardRect.left}px`;
+    beam.style.top = `${from.y - cardRect.top}px`;
+    beam.style.width = `${Math.hypot(dx, dy)}px`;
+    beam.style.setProperty('--beam-angle', `${Math.atan2(dy, dx)}rad`);
+    card.appendChild(beam);
+    void beam.offsetWidth;
+    beam.classList.add('run');
+    target.classList.add('active', type);
   }
-  function resolve(hit) {
-    const type = cells[hit[0]], lane = laneOf(hit), size = Math.min(5, hit.length);
-    const result = E.castTactic(getState(), lane, type, size);
-    hit.forEach(i => { cells[i] = pick(); });
-    if (result.ok) {
-      status.textContent = `${['왼쪽', '가운데', '오른쪽'][lane]} 길 · ${LABEL[type]} ${size >= 5 ? '별똥별!' : size === 4 ? '폭발!' : '발동!'}`;
-      onCast(result, type, lane, size);
-    } else status.textContent = '그 길엔 아직 적이 없어요 — 다른 성좌를 준비하세요.';
+
+  function showMatch(hit, type, lane, size) {
+    clearVisuals();
+    board.classList.add('casting');
+    board.style.setProperty('--tactic-glow', type === 'flare' ? '#ff8b62' : type === 'tide' ? '#71dcff' : '#8eea94');
+    hit.forEach(index => {
+      const element = board.querySelector(`button[data-i="${index}"]`);
+      if (element) element.classList.add('matched', type, ...(size >= 4 ? ['jackpot'] : []));
+    });
+    showBeam(hit, lane, type);
+  }
+
+  function choose(index) {
+    if (resolving) return;
+    if (getPhase() !== 'wave') {
+      toast('전술 보드는 웨이브 중에만 사용할 수 있어요.', 'warn');
+      return;
+    }
+    if (selected == null) {
+      selected = index;
+      draw();
+      return;
+    }
+
+    const first = selected;
+    selected = null;
+    if (!areNeighbors(first, index, BOARD_SIZE)) {
+      selected = index;
+      draw();
+      return;
+    }
+
+    const swapped = swapCells(cells, first, index);
+    const matches = findMatchGroups(swapped, BOARD_SIZE);
+    if (!matches.length) {
+      status.textContent = '별자리가 이어지지 않았어요. 다른 별을 바꿔 보세요.';
+      draw();
+      return;
+    }
+    cells = swapped;
+    resolveQueue(matches);
+  }
+
+  function resolveQueue(queue, token = generation) {
+    if (token !== generation) return;
+    const hit = queue.shift();
+    if (!hit) {
+      resolving = false;
+      selected = null;
+      clearVisuals();
+      draw();
+      later(() => {
+        if (token !== generation) return;
+        const cascade = findMatchGroups(cells, BOARD_SIZE);
+        if (cascade.length) resolveQueue(cascade, token);
+      }, 130);
+      return;
+    }
+
+    resolving = true;
+    const type = cells[hit[0]];
+    const lane = laneForGroup(hit, BOARD_SIZE, 3);
+    const size = Math.min(5, hit.length);
+    status.textContent = `${ROUTE_LABEL[lane]} 길 · ${LABEL[type]} ${size >= 5 ? '별똥별 준비!' : size === 4 ? '강화 준비!' : '연결!'}`;
+    showMatch(hit, type, lane, size);
+    later(() => {
+      if (token !== generation) return;
+      const result = resolveTactic(lane, type, size);
+      cells = refillCells(cells, hit, random);
+      clearVisuals();
+      if (result.ok) {
+        status.textContent = `${ROUTE_LABEL[lane]} 길 · ${LABEL[type]} ${size >= 5 ? '별똥별!' : size === 4 ? '강화!' : '발동!'}`;
+        onCast(result, type, lane, size);
+      } else {
+        status.textContent = '별자리는 이어졌지만 그 길에 적이 없어요.';
+      }
+      draw();
+      later(() => resolveQueue(queue, token), 45);
+    }, 300);
+  }
+
+  function reset() {
+    cancelPending();
+    selected = null;
+    clearVisuals();
+    make();
+  }
+
+  function preview(type = 'flare', lane = 1, size = 3) {
+    if (!STAR_TYPES.includes(type) || resolving) return false;
+    const safeLane = Math.max(0, Math.min(2, Math.round(lane)));
+    const safeSize = Math.max(3, Math.min(5, Math.round(size)));
+    const hit = Array.from({ length: safeSize }, (_, row) => ix(row, safeLane * 2));
+    const originalCells = cells;
+    const token = generation;
+    resolving = true;
+    cells = [...cells];
+    hit.forEach(index => { cells[index] = type; });
     draw();
-    /* 연쇄는 새 입력 없이도 하나의 전술적 보상이다. */
-    setTimeout(() => { const chain = groups(); if (chain.length) resolve(chain); }, 220);
+    status.textContent = `테스트 · ${ROUTE_LABEL[safeLane]} 길 ${LABEL[type]} ${safeSize}개`;
+    showMatch(hit, type, safeLane, safeSize);
+    later(() => {
+      if (token !== generation) return;
+      cells = originalCells;
+      clearVisuals();
+      resolving = false;
+      draw();
+      onPreview?.(type, safeLane, safeSize);
+    }, 340);
+    return true;
   }
+
   make();
-  return { reset: make };
+  return { reset, preview };
 }
