@@ -25,6 +25,15 @@ export function journeyChoices(state) {
   return current.next.map(journeyNode).filter(Boolean);
 }
 
+/* UI·봇 모두 "이 노드의 몇 번째 방어인가"를 같은 순수 상태에서 읽는다. */
+export function journeyBattleProgress(state) {
+  const node = journeyNode(state?.journey?.activeBattle);
+  if (!node || (node.kind !== 'battle' && node.kind !== 'boss')) return null;
+  const total = Math.max(1, Math.round(node.waves || 1));
+  const step = Math.max(1, Math.min(total, Math.round(state.journey.wavesInBattle || 0) + 1));
+  return { node, step, total };
+}
+
 const markVisited = (journey, id) => {
   if (!journey.visited.includes(id)) journey.visited.push(id);
 };

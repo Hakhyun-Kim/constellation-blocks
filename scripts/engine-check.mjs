@@ -52,7 +52,11 @@ const put = (st, cls, tier, pad) => {
   const battle = E.travelJourney(st, 'meadow');
   const begun = E.prepareJourneyBattle(st);
   ok('journey: a battle node opens a prepared defense', battle.ok && battle.type === 'battle' && begun.ok && st.phase === 'prep' && st.wave === 1);
+  const firstDefense = E.journeyBattleProgress(st);
+  ok('journey: battle progress exposes 1/2 to the UI', firstDefense?.node.id === 'meadow' && firstDefense.step === 1 && firstDefense.total === 2);
   E.completeJourneyWave(st);
+  const secondDefense = E.journeyBattleProgress(st);
+  ok('journey: battle progress advances to 2/2 after one clear', secondDefense?.step === 2 && secondDefense.total === 2);
   const complete = E.completeJourneyWave(st);
   ok('journey: short defense returns to the map', complete.complete && st.phase === 'journey' && st.journey.cleared.includes('meadow'));
   const town = E.travelJourney(st, 'town');

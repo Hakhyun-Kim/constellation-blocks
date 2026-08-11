@@ -91,7 +91,7 @@ export class UI {
     [
       'bestWave', 'shards', 'metaBtn', 'castleText', 'castleFill', 'castleGhost',
       'scene3d', 'hitFlash', 'lowHpVignette', 'bossBanner', 'comboChip', 'waveInfo', 'remainN',
-      'waveBtn', 'coachChip', 'toasts', 'gold', 'waveNo', 'speedBtn',
+      'waveBtn', 'coachChip', 'toasts', 'gold', 'waveNo', 'waveLabel', 'speedBtn',
       'summonBtn', 'benchHint', 'bench', 'combineRows', 'sfxBtn', 'bgmBtn',
       'placeBar', 'placeBarText', 'placeBarCancel',
       'castleRows', 'heroPanel', 'hpTitle', 'hpInfo', 'recallBtn', 'sellBtn', 'moveHint',
@@ -188,7 +188,7 @@ export class UI {
     } else {
       const items = choices.map((node) => {
         const info = D.JOURNEY_KIND[node.kind];
-        const suffix = node.waves ? ` · ${node.waves}웨이브` : node.gold ? ` · 보급 +${node.gold}` : '';
+        const suffix = node.waves ? ` · 방어 1/${node.waves}` : node.gold ? ` · 보급 +${node.gold}` : '';
         return `<button class="journey-choice-card" data-travel="${node.id}"><span style="color:${info.color}">${node.icon}</span><div><b>${node.name}</b><p>${node.text}</p></div><em>${info.label}${suffix}</em></button>`;
       }).join('');
       action = `<div class="journey-action-title"><b>${current?.icon || '✦'} ${current?.name || '별길'}</b><span>${current?.text || ''}</span></div><div class="journey-offers">${items || '<p class="journey-quiet">이 별길은 아직 조용합니다.</p>'}</div>`;
@@ -394,7 +394,9 @@ export class UI {
   updateHud(state, shards, best) {
     const el = this.el;
     el.gold.textContent = state.gold;
-    el.waveNo.textContent = state.wave;
+    const journeyProgress = E.journeyBattleProgress(state);
+    el.waveNo.textContent = journeyProgress ? `${journeyProgress.step}/${journeyProgress.total}` : state.wave;
+    el.waveLabel.textContent = journeyProgress ? '방어' : '웨이브';
     /* 별의 시련 회차 — 1회차(첫 여정)에는 조용히 숨긴다 */
     const loop = state.loop || 0;
     if (this._loopN !== loop) {
@@ -423,15 +425,19 @@ export class UI {
 
   setWaveUI(state) {
     const el = this.el;
+    const journeyProgress = E.journeyBattleProgress(state);
+    const stageLabel = journeyProgress
+      ? `${journeyProgress.node.name} · 방어 ${journeyProgress.step}/${journeyProgress.total}`
+      : `${state.wave}웨이브`;
     if (state.phase === 'prep') {
-      el.waveBtn.textContent = `▶ ${state.wave}웨이브 시작!${D.isBossWave(state.wave) ? ' 🐉' : ''} (Space)`;
+      el.waveBtn.textContent = `▶ ${stageLabel} 시작!${journeyProgress?.node.kind === 'boss' || D.isBossWave(state.wave) ? ' 🐉' : ''} (Space)`;
       el.waveBtn.classList.remove('hidden');
       el.waveInfo.classList.add('hidden');
     } else if (state.phase === 'wave') {
       el.waveBtn.classList.add('hidden');
       el.wavePreview.classList.add('hidden');
       el.waveInfo.classList.remove('hidden');
-      el.remainN.textContent = `남은 몬스터 ${E.remainingEnemies(state)}`;
+      el.remainN.textContent = `${stageLabel} · 남은 몬스터 ${E.remainingEnemies(state)}`;
     } else {
       el.waveBtn.classList.add('hidden');
       el.wavePreview.classList.add('hidden');
@@ -893,7 +899,9 @@ export class UI {
     const warn = press > 0
       ? `<span class="wchip myth" title="신화 용사 ${press}명 — 몬스터 체력 +${Math.round((D.mythicHpMul(press) - 1) * 100)}% · 골드 +${Math.round((D.mythicGoldMul(press) - 1) * 100)}%">🌌 체력 +${Math.round((D.mythicHpMul(press) - 1) * 100)}% · 💰 +${Math.round((D.mythicGoldMul(press) - 1) * 100)}%</span>`
       : '';
-    el.innerHTML = `<span class="wlabel">다음 웨이브</span>${chips}${warn}`;
+    const progress = E.journeyBattleProgress(state);
+    const label = progress ? `${progress.node.name} · 방어 ${progress.step}/${progress.total}` : '다음 웨이브';
+    el.innerHTML = `<span class="wlabel">${label}</span>${chips}${warn}`;
     el.classList.remove('hidden');
   }
 

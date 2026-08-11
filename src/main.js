@@ -641,7 +641,9 @@ function handleEvents(events) {
         break;
       case 'waveEnd':
         SFX.waveClear();
-        ui.toast(`🎉 ${ev.wave}웨이브 클리어! 보너스 💰${ev.bonus}`, 'good');
+        ui.toast(ev.journey
+          ? `🎉 ${ev.journey.name} · 방어 ${ev.journey.step}/${ev.journey.total} 완료! 보너스 💰${ev.bonus}`
+          : `🎉 ${ev.wave}웨이브 클리어! 보너스 💰${ev.bonus}`, 'good');
         autoSave();                      // 매 웨이브가 이어하기 지점이 된다
         checkAchievements();
         refreshAll();
@@ -653,7 +655,7 @@ function handleEvents(events) {
         break;
       case 'journeyReturn':
         SFX.waveClear();
-        ui.toast(`✦ ${ev.name}의 방어를 마치고 별자리 원정으로 돌아왔습니다.`, 'good');
+        ui.toast(`✦ ${ev.name} · 방어 ${ev.total}/${ev.total} 완료! 다음 별길을 선택하세요.`, 'good');
         autoSave();
         refreshAll();
         break;
@@ -758,7 +760,7 @@ const handlers = {
     if (result.type === 'battle') {
       const prepared = E.prepareJourneyBattle(state);
       if (!prepared.ok) return;
-      ui.toast(`⚔ ${result.node.name} · ${result.node.waves}웨이브 방어를 준비하세요.`, 'good');
+      ui.toast(`⚔ ${result.node.name} · 방어 1/${result.node.waves}를 준비하세요.`, 'good');
     } else if (result.type === 'recruit') {
       ui.toast(`✦ ${result.node.name}에서 함께할 영웅을 고르세요.`, 'good');
     } else {

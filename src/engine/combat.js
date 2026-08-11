@@ -9,7 +9,7 @@ import { heroMods } from './roster.js';
 import { grantSquadWaveXp } from './squad.js';
 import { damageEnemy, applyBurn, applySlow, applyStun } from './effects.js';
 import { createResonance, resonanceDamageMul } from './resonance.js';
-import { completeJourneyWave } from './journey.js';
+import { completeJourneyWave, journeyBattleProgress } from './journey.js';
 
 /* ---------- 웨이브 생성 ---------- */
 function pickWeighted(state, mix) {
@@ -631,11 +631,20 @@ function gameOver(state, events) {
 
 function endWave(state, events) {
   const bonus = D.WAVE_BONUS(state.wave);
+  const journeyProgress = journeyBattleProgress(state);
   state.gold += bonus;
   state.goldEarned += bonus;
   state.combo.count = 0;
   state.combo.timer = 0;
-  events.push({ type: 'waveEnd', wave: state.wave, bonus });
+  events.push({
+    type: 'waveEnd', wave: state.wave, bonus,
+    journey: journeyProgress && {
+      nodeId: journeyProgress.node.id,
+      name: journeyProgress.node.name,
+      step: journeyProgress.step,
+      total: journeyProgress.total,
+    },
+  });
   /* 별지기 — 쓰러졌어도 다음 준비 단계엔 다시 일어난다.
    * 클리어 보너스 경험치, 성이 무피해였으면(완벽 방어) 더 크게 + 별조각 1. */
   const c = state.champ;
@@ -664,7 +673,7 @@ function endWave(state, events) {
     state.resonance = createResonance(state.wave);
     if (progress.complete) {
       state.pendingWave = null;
-      events.push({ type: 'journeyReturn', node: progress.node.id, name: progress.node.name });
+      events.push({ type: 'journeyReturn', node: progress.node.id, name: progress.node.name, total: progress.node.waves });
       if (progress.chapterComplete) events.push({ type: 'chapterComplete', chapter: state.journey.chapter });
       return;
     }
