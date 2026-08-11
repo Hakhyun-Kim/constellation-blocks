@@ -96,7 +96,21 @@ export function playRun(profileName, difficulty, seed, options = {}) {
 
   let board = createStableBoard(state.rng);
   let stalemate = false;
-  while (state.phase !== 'over' && state.wave <= waveCap && !stalemate) {
+  while (state.phase !== 'over' && state.wave <= waveCap && !state.journey?.complete && !stalemate) {
+    /* 지도 선택과 영입도 실제 플레이와 같은 순수 엔진 명령으로 처리한다. */
+    if (state.phase === 'journey') {
+      if (state.journey?.pendingRecruit) {
+        const key = Bot.nextJourneyRecruit(state);
+        if (!key || !E.recruitJourneyHero(state, key).ok) { stalemate = true; break; }
+      } else {
+        const node = Bot.nextJourneyNode(state);
+        if (!node) { stalemate = true; break; }
+        const move = E.travelJourney(state, node.id);
+        if (!move.ok) { stalemate = true; break; }
+        if (move.type === 'battle' && !E.prepareJourneyBattle(state).ok) { stalemate = true; break; }
+      }
+      continue;
+    }
     prepActions(state, profile);
     E.startWave(state);
     let actionTimer = 0;
@@ -140,7 +154,7 @@ export function playRun(profileName, difficulty, seed, options = {}) {
   }
   return {
     wave: Math.min(state.wave, waveCap + 1),
-    survived: state.wave > waveCap,
+    survived: state.journey?.complete || state.wave > waveCap,
     tactics: state.tacticCasts,
     trace,
   };
@@ -203,7 +217,7 @@ for (const difficulty of difficulties) {
       : `  ✓ 기준 중앙값 ${expected} ±${baseline.tolerance}`;
     console.log(`[${D.DIFFICULTIES[difficulty].name}] ${result.profile} 평균 ${result.mean}웨이브`
       + ` (p25 ${result.p25} / 중앙 ${result.p50} / p75 ${result.p75}) 범위 ${result.min}~${result.max}`
-      + ` · 40웨이브 ${result.survivedPct} · 평균 전술 ${result.tacticMean}회${check}`);
+      + ` · 첫 원정 완수 ${result.survivedPct} · 평균 전술 ${result.tacticMean}회${check}`);
   }
   console.log('');
 }

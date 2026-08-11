@@ -3,6 +3,7 @@ import * as D from '../data.js';
 export function createSquadHero(state, spec) {
   const hero = {
     id: state.nextId++,
+    heroKey: spec.key || spec.cls,
     cls: spec.cls,
     name: spec.name || D.CLASSES[spec.cls].name,
     tier: 0,

@@ -9,6 +9,7 @@ import { heroMods } from './roster.js';
 import { grantSquadWaveXp } from './squad.js';
 import { damageEnemy, applyBurn, applySlow, applyStun } from './effects.js';
 import { createResonance, resonanceDamageMul } from './resonance.js';
+import { completeJourneyWave } from './journey.js';
 
 /* ---------- 웨이브 생성 ---------- */
 function pickWeighted(state, mix) {
@@ -656,6 +657,20 @@ function endWave(state, events) {
     c.maxHp = champStats(state).maxHp;
     c.hp = c.maxHp;
     events.push({ type: 'champWave', xp, perfect, revived, shard: perfect ? 1 : 0 });
+  }
+  if (state.journey?.activeBattle) {
+    const progress = completeJourneyWave(state);
+    state.wave++;
+    state.resonance = createResonance(state.wave);
+    if (progress.complete) {
+      state.pendingWave = null;
+      events.push({ type: 'journeyReturn', node: progress.node.id, name: progress.node.name });
+      if (progress.chapterComplete) events.push({ type: 'chapterComplete', chapter: state.journey.chapter });
+      return;
+    }
+    state.phase = 'prep';
+    state.pendingWave = buildWave(state);
+    return;
   }
   /* 서른 번째 아침 — 30웨이브를 버텨 냈다. 회차당 한 번만 울린다(웨이브는 되돌아가지 않으므로).
    * 엔진은 알리기만 한다: 별조각 지급·연출·다음 회차 시작은 main의 몫이다. */

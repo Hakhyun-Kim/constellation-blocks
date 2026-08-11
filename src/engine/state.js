@@ -7,6 +7,7 @@ import { makeHero, padOccupant, placeHero } from './roster.js';
 import { createSquadHero, refreshHeroDamage } from './squad.js';
 import { buildWave } from './combat.js';
 import { createResonance, restoreResonance } from './resonance.js';
+import { beginJourneyBattle, createJourney, restoreJourney, serializeJourney } from './journey.js';
 
 const riFor = (rng) => (a, b) => Math.floor(rng() * (b - a + 1)) + a;
 const pickFor = (rng) => (arr) => arr[Math.floor(rng() * arr.length)];
@@ -26,7 +27,7 @@ export function createGame(opts = {}) {
     loop: Math.max(0, Math.min(99, Math.round(opts.loop || 0))),
     dmgMul: D.META_UPGRADES.heroDmg.apply(meta.heroDmg),
 
-    phase: 'prep',
+    phase: opts.fixedSquad !== false && opts.journey !== false ? 'journey' : 'prep',
     gold: D.META_UPGRADES.startGold.apply(meta.startGold),
     wave: 1,
     castleHp: castleMax, castleMax,
@@ -36,6 +37,7 @@ export function createGame(opts = {}) {
     nextId: 1,
     bench: [], field: [],
     squad: opts.fixedSquad !== false,
+    journey: opts.fixedSquad !== false && opts.journey !== false ? createJourney() : null,
     enemies: [], projectiles: [],
     spawnQueue: [], waveT: 0,
     pendingWave: null,
@@ -55,18 +57,25 @@ export function createGame(opts = {}) {
   };
   /* 별지기 — 길을 순찰하는 메인 캐릭터. 은하수 충전 배율은 메타에서만 오므로 한 번만 계산 */
   state.champUltMul = D.champUltMul(meta.champUlt);
-  state.champ = {
-    level: 1, xp: 0, sp: 0, skills: {},
-    x: D.CHAMP_HOME.x, y: D.CHAMP_HOME.y,
-    hp: 1, maxHp: 1,
-    ko: false, cd: 0, spellCd: 0, spellReadyT: 0, ult: 0,
-    targetId: null, holdT: 0, hurtAcc: 0, moving: false,
-    dirX: 0, dirY: 1,
-  };
-  state.champ.maxHp = champStats(state).maxHp;
-  state.champ.hp = state.champ.maxHp;
+  state.champ = null;
+  if (!state.squad) {
+    state.champ = {
+      level: 1, xp: 0, sp: 0, skills: {},
+      x: D.CHAMP_HOME.x, y: D.CHAMP_HOME.y,
+      hp: 1, maxHp: 1,
+      ko: false, cd: 0, spellCd: 0, spellReadyT: 0, ult: 0,
+      targetId: null, holdT: 0, hurtAcc: 0, moving: false,
+      dirX: 0, dirY: 1,
+    };
+    state.champ.maxHp = champStats(state).maxHp;
+    state.champ.hp = state.champ.maxHp;
+  }
   if (state.squad) {
-    for (const spec of D.SQUAD) {
+    const partyKeys = [...new Set(Array.isArray(opts.partyKeys) ? opts.partyKeys : D.STARTING_SQUAD_KEYS)]
+      .slice(0, D.SQUAD_MAX);
+    for (const key of partyKeys) {
+      const spec = D.squadSpec(key);
+      if (!spec) continue;
       const hero = createSquadHero(state, spec);
       hero.padIndex = spec.pad;
       hero.x = D.PADS[spec.pad].x;
@@ -90,6 +99,8 @@ export function nextLoop(state) {
     rng: state.rng === Math.random ? undefined : state.rng,
     loop: (state.loop || 0) + 1,
     fixedSquad: state.squad === true,
+    journey: state.journey != null,
+    partyKeys: state.field.map((hero) => hero.heroKey),
   });
   const c = state.champ, n = next.champ;
   if (c && n) {
@@ -101,13 +112,13 @@ export function nextLoop(state) {
     n.hp = n.maxHp;
   }
   for (const hero of next.field) {
-    const previous = state.field.find((entry) => entry.cls === hero.cls);
+    const previous = state.field.find((entry) => entry.heroKey === hero.heroKey);
     if (!previous) continue;
     hero.level = previous.level;
     hero.xp = previous.xp;
     hero.sp = previous.sp;
     hero.skills = { ...previous.skills };
-    refreshHeroDamage(n, hero);
+    refreshHeroDamage(next, hero);
   }
   next.seenStory = new Set(state.seenStory || []);
   next.revealed = new Set(state.revealed || []);
@@ -119,7 +130,7 @@ export function nextLoop(state) {
  * 객체 그래프라 직렬화가 잘 깨지고, 전투 도중 복원을 허용하면 반쯤 이긴
  * 웨이브를 저장해 두고 골드만 불리는 꼼수가 생긴다. 그래서 웨이브 진행은
  * 담지 않고, 불러오면 그 웨이브의 준비 단계에서 다시 시작한다. */
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 const SAVE_STATS = [
   'kills', 'bossKills', 'midBossKills', 'summons', 'combos', 'goldEarned',
   'specialsMade', 'mythicsMade', 'tacticCasts', 'resonanceCasts',
@@ -128,7 +139,7 @@ const SAVE_STATS = [
 
 export function serialize(state) {
   const hero = (h) => state.squad ? ({
-    cls: h.cls, name: h.name, pad: h.padIndex,
+    heroKey: h.heroKey, cls: h.cls, name: h.name, pad: h.padIndex,
     level: h.level, xp: Math.round(h.xp || 0), sp: h.sp || 0, skills: { ...(h.skills || {}) },
   }) : ({ cls: h.cls, tier: h.tier, pad: h.padIndex });
   const stats = {};
@@ -146,6 +157,7 @@ export function serialize(state) {
     castleMax: state.castleMax,
     castle: { ...state.castle },
     squad: state.squad === true,
+    journey: serializeJourney(state.journey),
     bench: state.squad ? [] : state.bench.map(hero),
     field: state.field.map(hero),
     /* 별지기 — 위치·체력은 준비 단계마다 리셋되니 성장만 담는다 */
@@ -171,7 +183,19 @@ export function deserialize(data, opts = {}) {
     (Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : dflt);
   const difficulty = D.DIFFICULTIES[data.difficulty] ? data.difficulty : 'normal';
   const meta = (data.meta && typeof data.meta === 'object') ? data.meta : {};
-  const state = createGame({ difficulty, metaLevels: meta, rng: opts.rng, loop: data.loop, fixedSquad: data.squad === true || opts.fixedSquad === true });
+  const requestedSquad = data.squad === true || opts.fixedSquad === true;
+  const partyKeys = requestedSquad && Array.isArray(data.field)
+    ? data.field.map((record) => {
+      if (typeof record?.heroKey === 'string') return record.heroKey;
+      return D.SQUAD.find((spec) => spec.cls === record?.cls)?.key;
+    }).filter(Boolean)
+    : undefined;
+  const state = createGame({
+    difficulty, metaLevels: meta, rng: opts.rng, loop: data.loop,
+    fixedSquad: requestedSquad,
+    journey: data.journey != null || opts.journey === true,
+    partyKeys,
+  });
 
   state.wave = clamp(data.wave, 1, 999, 1);
   restoreResonance(state, data.resonance);
@@ -183,13 +207,13 @@ export function deserialize(data, opts = {}) {
   state.castleHp = clamp(data.castleHp, 1, state.castleMax, state.castleMax);
 
   if (state.squad) {
-    const savedByClass = new Map(data.field
-      .filter((record) => record && D.SQUAD.some((spec) => spec.cls === record.cls))
-      .map((record) => [record.cls, record]));
+    const savedByKey = new Map(data.field
+      .filter((record) => record && D.SQUAD.some((spec) => spec.key === record.heroKey || spec.cls === record.cls))
+      .map((record) => [record.heroKey || D.SQUAD.find((spec) => spec.cls === record.cls)?.key, record]));
     const usedPads = new Set();
     for (const hero of state.field) hero.padIndex = -1;
     for (const hero of state.field) {
-      const record = savedByClass.get(hero.cls);
+      const record = savedByKey.get(hero.heroKey);
       if (record) {
         hero.name = typeof record.name === 'string' ? record.name.slice(0, 16) : hero.name;
         hero.level = clamp(record.level, 1, D.HERO_XP.maxLevel, 1);
@@ -205,7 +229,7 @@ export function deserialize(data, opts = {}) {
         }
         refreshHeroDamage(state, hero);
       }
-      const defaultPad = D.SQUAD.find((spec) => spec.cls === hero.cls)?.pad ?? -1;
+      const defaultPad = D.squadSpec(hero.heroKey)?.pad ?? -1;
       const savedPad = Number.isInteger(record?.pad) ? record.pad : defaultPad;
       const pad = savedPad >= 0 && savedPad < D.PADS.length && !usedPads.has(savedPad)
         ? savedPad
@@ -255,6 +279,17 @@ export function deserialize(data, opts = {}) {
   state.revealed = new Set(strings(data.revealed));
   const stats = (data.stats && typeof data.stats === 'object') ? data.stats : {};
   for (const k of SAVE_STATS) state[k] = clamp(stats[k], 0, 1e9, 0);
+  if (state.journey) {
+    state.journey = restoreJourney(data.journey);
+    state.phase = state.journey.activeBattle ? 'prep' : 'journey';
+  }
   state.pendingWave = buildWave(state);
   return state;
+}
+
+export function prepareJourneyBattle(state) {
+  const result = beginJourneyBattle(state);
+  if (!result.ok) return result;
+  state.pendingWave = buildWave(state);
+  return result;
 }

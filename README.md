@@ -2,7 +2,7 @@
 
 **A real-time match-3 tactics defense game.**
 
-Constellation Defense is a 3D kingdom-defense game built around a fixed four-hero squad. Every run begins with Arin the knight, Doyun the guard, Sera the archer, and Yuna the mage already defending the castle. They gain experience from combat and choose specializations as they level up, while Luna, the Star Warden, remains directly playable.
+Constellation Defense is a 3D kingdom-defense game framed as a compact constellation expedition. Every run begins with Arin the knight and Luna the constellation mage. The player follows an authored star-map, clears short defense encounters, and chooses which towns and companions to pursue. Doyun, Sera, and Yuna can join the party; a party holds up to five heroes and each hero gains experience and specializations.
 
 During battle, swap neighboring stars on the 6×6 board. Each match targets the matching road:
 
@@ -11,9 +11,9 @@ During battle, swap neighboring stars on the 6×6 board. Each match targets the 
 - **Bloom** restores the citadel and pushes danger back.
 - Four- and five-star constellations create stronger tactical moments.
 
-The player’s choices are deliberately focused: position the four heroes, select their specializations and castle upgrades between waves, then react with tactical swaps during the fight. Random summoning, duplicate heroes, rank combinations, and rarity collection are not part of the current game.
+The player’s choices are deliberately focused: choose a route and companions on the expedition, position the recruited heroes, select their specializations and castle upgrades between battles, then react with tactical swaps during the fight. Random summoning, duplicate heroes, rank combinations, and rarity collection are not part of the current game.
 
-The redesign decision and verification gates are recorded in [docs/design/hero-squad-redesign.md](docs/design/hero-squad-redesign.md).
+The redesign decisions and verification gates are recorded in [docs/design/journey-campaign-redesign.md](docs/design/journey-campaign-redesign.md).
 
 ## Play
 

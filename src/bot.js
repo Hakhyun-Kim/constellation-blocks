@@ -132,6 +132,33 @@ export function wantsUlt(state, P) {
   return (boss || horde) && state.rng() < P.spellUse;
 }
 
+/* 지도에서도 사람과 봇이 같은 공개 정보만 사용한다. 영입 가능한 동료가
+ * 있는 길을 먼저 택하고, 그 다음 보급과 전투를 고른다. */
+const JOURNEY_KIND_PRIORITY = {
+  town: 0,
+  recruit: 0,
+  treasure: 1,
+  camp: 2,
+  battle: 3,
+  boss: 4,
+};
+
+export function nextJourneyNode(state) {
+  const choices = E.journeyChoices(state);
+  return [...choices].sort((a, b) =>
+    (JOURNEY_KIND_PRIORITY[a.kind] ?? 9) - (JOURNEY_KIND_PRIORITY[b.kind] ?? 9)
+    || a.id.localeCompare(b.id))[0] || null;
+}
+
+export function nextJourneyRecruit(state) {
+  const node = E.journeyNode(state?.journey?.pendingRecruit);
+  if (!node?.offers) return null;
+  const owned = new Set(state.field.map((hero) => hero.heroKey));
+  return node.offers
+    .filter((key) => !owned.has(key))
+    .sort((a, b) => (a === 'doyun' ? -1 : b === 'doyun' ? 1 : 0))[0] || null;
+}
+
 /* ---------- 별자리 전술 ----------
  * 후보는 순수 보드 규칙이 보장한 '유효한 인접 스왑'뿐이다. 적이 어느 길에서
  * 성에 가까운지와 성 체력만 사용해 사람과 같은 공개 정보로 고른다. */

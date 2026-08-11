@@ -1,17 +1,17 @@
 {
-  "comment": "Fixed-squad baseline: the bot uses only permanent hero growth, placement, castle upgrades, and real Flare/Tide/Bloom swaps. It has no summon, combination, or hidden information action.",
+  "comment": "Journey baseline: the bot follows only reachable public map links, recruits an offered hero, uses permanent hero growth and castle upgrades, and resolves real Flare/Tide/Bloom swaps. It has no summon, combination, or hidden-information action.",
   "date": "2026-08-11",
   "runs": 60,
-  "tolerance": 5,
+  "tolerance": 1,
   "medians": {
-    "easy/초보": 23,
-    "easy/보통": 25,
-    "easy/고수": 30,
-    "normal/초보": 20,
-    "normal/보통": 23,
-    "normal/고수": 25,
-    "hard/초보": 19,
-    "hard/보통": 20,
-    "hard/고수": 22
+    "easy/초보": 12,
+    "easy/보통": 12,
+    "easy/고수": 12,
+    "normal/초보": 10,
+    "normal/보통": 12,
+    "normal/고수": 12,
+    "hard/초보": 7,
+    "hard/보통": 12,
+    "hard/고수": 12
   }
 }

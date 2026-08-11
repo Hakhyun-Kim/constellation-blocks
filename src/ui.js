@@ -130,10 +130,88 @@ export class UI {
     this._tabBefore = null;
     this.el.summonBtn.classList.add('hidden');
     this.el.helpBox.innerHTML = `
-      <p>🛡️ <b>영웅단</b> 네 영웅은 처음부터 성을 지킵니다. 영웅 카드를 눌러 선택한 뒤 빈 발판이나 다른 영웅을 눌러 위치를 옮기거나 교환하세요.</p>
+      <p>🛡️ <b>영웅단</b> 아린과 루나로 시작해 원정 중 동료를 영입합니다. 영웅 카드를 눌러 선택한 뒤 빈 발판이나 다른 영웅을 눌러 위치를 옮기거나 교환하세요.</p>
       <p>✦ <b>성장</b> 처치와 웨이브 완료로 영웅 경험치를 얻습니다. 레벨업 포인트가 생기면 <b>영웅 성장</b> 탭에서 그 영웅의 전문화를 고르세요. <b>S</b> 키로 바로 열 수 있어요.</p>
       <p>☄️ <b>별자리 전술</b> 전투 중 6×6 보드에서 이웃 별을 바꾸세요. Flare는 공격, Tide는 감속, Bloom은 회복·후퇴를 맡고, 맞춘 열이 대상 길을 정합니다.</p>
-      <p>🌠 <b>루나</b>는 직접 조작하는 별지기예요. <b>A</b> 별똥별, <b>E</b> 은하수, <b>V</b> 별지기 스킬을 사용합니다. <b>D</b>는 밸런스 봇 관전, <b>B</b>는 기록, <b>7~9</b>는 성 강화입니다.</p>`;
+      <p>🌠 <b>루나</b>는 영웅단의 별자리 마도사예요. 별도 단축키 대신 3매치 Flare·Tide·Bloom 전술과 함께 길을 지킵니다. <b>D</b>는 밸런스 봇 관전, <b>B</b>는 기록, <b>7~9</b>는 성 강화입니다.</p>`;
+    document.body.insertAdjacentHTML('beforeend', `
+      <section id="journeyModal" class="journey-modal hidden" aria-live="polite">
+        <div id="journeyBody" class="journey-shell"></div>
+      </section>`);
+    this.el.journeyModal = $('journeyModal');
+    this.el.journeyBody = $('journeyBody');
+  }
+
+  renderJourney(state) {
+    const journey = state?.journey;
+    if (!journey) { this.el.journeyModal.classList.add('hidden'); return; }
+    const nodes = D.JOURNEY_CHAPTER.nodes;
+    const byId = new Map(nodes.map((node) => [node.id, node]));
+    const current = byId.get(journey.current);
+    const choices = E.journeyChoices(state);
+    const choiceIds = new Set(choices.map((node) => node.id));
+    const pending = E.journeyNode(journey.pendingRecruit);
+    const party = state.field.map((hero) => {
+      const C = D.CLASSES[hero.cls];
+      return `<span class="journey-party"><i>${C.emoji}</i><b>${hero.name}</b><small>Lv ${hero.level}</small></span>`;
+    }).join('');
+    const paths = nodes.flatMap((node) => node.next.map((id) => {
+      const to = byId.get(id);
+      if (!to) return '';
+      const live = node.id === journey.current && choiceIds.has(id);
+      const seen = journey.visited.includes(node.id) && journey.visited.includes(id);
+      const mx = (node.x + to.x) / 2;
+      const my = (node.y + to.y) / 2 - (node.y === to.y ? 2 : 5);
+      return `<path d="M ${node.x} ${node.y} Q ${mx} ${my} ${to.x} ${to.y}" class="journey-path${live ? ' live' : ''}${seen ? ' seen' : ''}"/>`;
+    })).join('');
+    const pins = nodes.map((node) => {
+      const info = D.JOURNEY_KIND[node.kind];
+      const isCurrent = node.id === journey.current;
+      const classes = `journey-node${isCurrent ? ' current' : ''}${choiceIds.has(node.id) ? ' choice' : ''}${journey.visited.includes(node.id) ? ' visited' : ''}${journey.cleared.includes(node.id) ? ' cleared' : ''}`;
+      return `<button class="${classes}" style="--x:${node.x}%;--y:${node.y}%;--node:${info.color}" data-travel="${node.id}" ${choiceIds.has(node.id) ? '' : 'disabled'}>
+        <span class="journey-node-icon">${node.icon}</span><b>${node.name}</b><small>${info.label}</small>
+      </button>`;
+    }).join('');
+    let action = '';
+    if (journey.complete) {
+      action = `<div class="journey-choice-card win"><span>✦</span><div><b>첫 원정을 완수했습니다</b><p>새 장과 별의 시련은 다음 목적지에서 이어집니다.</p></div></div>`;
+    } else if (pending) {
+      const offers = pending.offers.map((key) => {
+        const spec = D.squadSpec(key);
+        const C = D.CLASSES[spec.cls];
+        const owned = state.field.some((hero) => hero.heroKey === key);
+        return `<button class="journey-choice-card recruit" data-recruit="${key}" ${owned ? 'disabled' : ''}>
+          <span class="journey-offer-icon">${C.emoji}</span><div><b>${spec.name} · ${spec.role}</b><p>${owned ? '이미 함께하고 있습니다.' : '함께 원정에 합류합니다.'}</p></div><em>${owned ? '합류' : '영입'}</em>
+        </button>`;
+      }).join('');
+      action = `<div class="journey-action-title"><b>${pending.icon} ${pending.name}</b><span>${pending.text}</span></div><div class="journey-offers">${offers}</div>`;
+    } else {
+      const items = choices.map((node) => {
+        const info = D.JOURNEY_KIND[node.kind];
+        const suffix = node.waves ? ` · ${node.waves}웨이브` : node.gold ? ` · 보급 +${node.gold}` : '';
+        return `<button class="journey-choice-card" data-travel="${node.id}"><span style="color:${info.color}">${node.icon}</span><div><b>${node.name}</b><p>${node.text}</p></div><em>${info.label}${suffix}</em></button>`;
+      }).join('');
+      action = `<div class="journey-action-title"><b>${current?.icon || '✦'} ${current?.name || '별길'}</b><span>${current?.text || ''}</span></div><div class="journey-offers">${items || '<p class="journey-quiet">이 별길은 아직 조용합니다.</p>'}</div>`;
+    }
+    this.el.journeyBody.innerHTML = `
+      <header class="journey-header">
+        <div><span class="journey-kicker">CONSTELLATION EXPEDITION · CHAPTER 01</span><h1>${D.JOURNEY_CHAPTER.title}</h1><p>${D.JOURNEY_CHAPTER.subtitle}</p></div>
+        <div class="journey-resources"><span>🏰 ${Math.ceil(state.castleHp)}/${state.castleMax}</span><span>💰 ${state.gold}</span><span>✦ ${state.field.length}/${D.SQUAD_MAX}</span></div>
+      </header>
+      <div class="journey-party-row">${party}</div>
+      <div class="journey-map-wrap">
+        <div class="journey-moon"></div><div class="journey-ridge ridge-far"></div><div class="journey-ridge ridge-near"></div>
+        <div class="journey-haze haze-a"></div><div class="journey-haze haze-b"></div>
+        <svg class="journey-lines" viewBox="0 0 100 100" preserveAspectRatio="none">${paths}</svg>
+        <div class="journey-constellation">${pins}</div>
+        <div class="journey-map-caption">현재 위치에서 이어진 별길만 선택할 수 있습니다.</div>
+      </div>
+      <footer class="journey-actions">${action}</footer>`;
+    this.el.journeyBody.querySelectorAll('[data-travel]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onJourneyTravel(button.dataset.travel)));
+    this.el.journeyBody.querySelectorAll('[data-recruit]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onJourneyRecruit(button.dataset.recruit)));
+    this.el.journeyModal.classList.toggle('hidden', state.phase !== 'journey');
   }
 
   /* ---------- 오른쪽 패널 탭 ----------
@@ -881,6 +959,7 @@ export class UI {
     this.el.metaShards.textContent = shards;
     let html = '';
     for (const [key, M] of Object.entries(D.META_UPGRADES)) {
+      if (M.legacy) continue;
       const lv = levels[key] || 0;
       const maxed = lv >= M.max;
       const cost = M.cost(lv);
@@ -950,13 +1029,13 @@ export class UI {
   _bookSquad(d) {
     const heroes = d.state.field;
     let html = `<div class="book-progress">수호 영웅단 <b>${heroes.length}</b> / ${D.SQUAD.length}
-      <span class="cnt">네 영웅은 전투를 거치며 레벨과 전문화를 이어 갑니다.</span></div>`;
+      <span class="cnt">원정대는 전투를 거치며 레벨과 전문화를 이어 갑니다.</span></div>`;
     for (const spec of D.SQUAD) {
-      const hero = heroes.find((entry) => entry.cls === spec.cls);
+      const hero = heroes.find((entry) => entry.heroKey === spec.key);
       const C = D.CLASSES[spec.cls];
-      const skills = Object.values(D.HERO_SKILLS)
-        .filter((skill) => skill.cls === spec.cls && (hero?.skills?.[skill.key] || 0) > 0)
-        .map((skill) => `${skill.name} ${hero.skills[skill.key]}`)
+      const skills = Object.entries(D.HERO_SKILLS)
+        .filter(([key, skill]) => skill.cls === spec.cls && (hero?.skills?.[key] || 0) > 0)
+        .map(([key, skill]) => `${skill.name} ${hero.skills[key]}`)
         .join(' · ');
       html += `<div class="book-row${hero ? '' : ' unknown'}">
         <span class="bkemoji">${C.emoji}</span>
@@ -1033,7 +1112,7 @@ export class UI {
       `🌊 <b>30웨이브</b>를 지켜냈어요! (${D.DIFFICULTIES[state.difficulty].name}${run > 1 ? ` · ${run}회차` : ''})<br>
        👾 물리친 몬스터 <b>${state.kills}</b> · ✦ 영웅단 최고 레벨 <b>${Math.max(...state.field.map((hero) => hero.level || 1))}</b> ·
        🌌 전술판으로 길을 지키며 별의 시련을 이어가요<br>
-       🌠 별지기 <b>Lv ${state.champ ? state.champ.level : 1}</b> — 다음 여정에도 그대로 함께해요`;
+       ✦ 원정대는 다음 여정에서도 성장과 전문화를 유지합니다`;
     el.victoryShards.textContent = `✨ 별조각 +${shards} 획득!`;
     el.victoryTrialBtn.textContent = `🌟 별의 시련 — ${run + 1}회차 도전!`;
     el.victoryModal.classList.remove('hidden');

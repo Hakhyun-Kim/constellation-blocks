@@ -151,7 +151,7 @@ function newGame(difficulty, opts = {}) {
   ui.hideOver();
   music.setWave(1);
   /* 이어하기 메뉴를 띄울 때는 프롤로그를 잠시 미룬다 — 메뉴 위에 이야기가 겹치면 안 된다 */
-  if (!opts.holdStory) playStory('prologue', () => playStory('champIntro'));
+  if (!opts.holdStory) playStory('prologue');
 }
 
 /* ---------- 별의 시련 — 승리 후 다음 회차 ----------
@@ -206,6 +206,7 @@ function refreshAll() {
   ui.updateHud(state, store.shards, store.best(state.difficulty));
   ui.setWaveUI(state);
   ui.renderWavePreview(state, E.waveSummary(state));
+  ui.renderJourney(state);
 }
 
 /* ---------- 막간 이야기 ----------
@@ -269,6 +270,7 @@ function closeReveal() {
 /* ---------- 별지기 액션 ----------
  * 마법은 별지기의 것 — 쓰러져 있으면 못 쓴다. 실패 이유는 반드시 말해 준다. */
 function doSpell() {
+  if (!state.champ) return;
   const r = E.castStar(state);
   if (!r.ok) {
     if (r.reason === 'phase') ui.toast('☄️ 별똥별은 전투 중에만! 웨이브를 시작해 보세요', 'bad');
@@ -283,6 +285,7 @@ function doSpell() {
   refreshAll();
 }
 function doUlt() {
+  if (!state.champ) return;
   const r = E.castUlt(state);
   if (!r.ok) {
     if (r.reason === 'phase') ui.toast('🌌 은하수는 전투 중에만 쏟아부을 수 있어요', 'bad');
@@ -298,6 +301,7 @@ function doUlt() {
   refreshAll();
 }
 function openSkills() {
+  if (!state.champ) return;
   if (state.phase === 'over') return;
   ui.renderSkills(state);
   ui.showSkills();
@@ -538,7 +542,7 @@ function saveGame() {
 }
 
 function loadGame(data) {
-  const next = data ? E.deserialize(data, { fixedSquad: true }) : null;
+  const next = data ? E.deserialize(data, { fixedSquad: true, journey: true }) : null;
   if (!next) {
     ui.toast('😢 저장 파일을 읽을 수 없어요 — 이 게임에서 저장한 파일이 맞는지 확인해 주세요', 'bad');
     return false;
@@ -574,7 +578,7 @@ function flushAutosave() {
   pendingAutosave = null;
 }
 function autoSave() {
-  if (state.phase !== 'prep') return;
+  if (state.phase !== 'prep' && state.phase !== 'journey') return;
   const data = E.serialize(state);
   data.savedAt = Date.now();
   pendingAutosave = data;
@@ -642,10 +646,21 @@ function handleEvents(events) {
         checkAchievements();
         refreshAll();
         /* 클리어 토스트/효과음과 겹치지 않게 살짝 늦춘다. 준비 단계라 시뮬레이션 손실은 없다 */
-        if (!hasVictory) {
+        if (!hasVictory && !state.journey) {
           const key = Story.beatForWave(ev.wave);
           if (key) setTimeout(() => playStory(key), 700);
         }
+        break;
+      case 'journeyReturn':
+        SFX.waveClear();
+        ui.toast(`✦ ${ev.name}의 방어를 마치고 별자리 원정으로 돌아왔습니다.`, 'good');
+        autoSave();
+        refreshAll();
+        break;
+      case 'chapterComplete':
+        SFX.shard();
+        ui.toast('✦ 여명의 성도를 지켜냈습니다! 첫 원정이 완수되었습니다.', 'good');
+        refreshAll();
         break;
       case 'gameOver': onGameOver(); break;
 
@@ -736,6 +751,31 @@ function onGameOver() {
 /* ---------- UI 바인딩 ---------- */
 const handlers = {
   onWaveStart() { tryStartWave(); },
+  onJourneyTravel(id) {
+    const result = E.travelJourney(state, id);
+    if (!result.ok) return;
+    SFX.tap();
+    if (result.type === 'battle') {
+      const prepared = E.prepareJourneyBattle(state);
+      if (!prepared.ok) return;
+      ui.toast(`⚔ ${result.node.name} · ${result.node.waves}웨이브 방어를 준비하세요.`, 'good');
+    } else if (result.type === 'recruit') {
+      ui.toast(`✦ ${result.node.name}에서 함께할 영웅을 고르세요.`, 'good');
+    } else {
+      ui.toast(`✧ 보급 확보 · 골드 +${result.gold} · 성 내구도 +${result.heal}`, 'good');
+    }
+    refreshAll();
+    autoSave();
+  },
+  onJourneyRecruit(key) {
+    const result = E.recruitJourneyHero(state, key);
+    if (!result.ok) return;
+    SFX.upgrade();
+    renderer.burst((result.hero.x - D.FIELD_W / 2) / 36, .5, (result.hero.y - D.FIELD_H / 2) / 36, 0xd8b4ff, 12, 2);
+    ui.toast(`✦ ${result.hero.name}이(가) 영웅단에 합류했습니다!`, 'good');
+    refreshAll();
+    autoSave();
+  },
   onSummon: doSummon,
   onCombine(action) { doCombineDirect(action); },
   /* 조합 재료가 모자랄 때 "그 용사 뽑으러 가기" — 소환은 무작위라 약속은 못 하지만,
@@ -920,12 +960,12 @@ const handlers = {
     ui.hideStart();
     SFX.tap();
     /* 자동 저장이 깨져 있으면 이미 준비된 새 게임을 그대로 진행한다 */
-    if (!loadGame(store.autosave)) playStory('prologue', () => playStory('champIntro'));
+    if (!loadGame(store.autosave)) playStory('prologue');
   },
   onStartNew() {
     ui.hideStart();
     SFX.tap();
-    playStory('prologue', () => playStory('champIntro'));   // 새 게임은 boot에서 이미 만들어져 있다
+    playStory('prologue');   // 새 게임은 boot에서 이미 만들어져 있다
   },
   onCastle(key) {
     const r = E.castleUpgrade(state, key);
@@ -965,6 +1005,7 @@ const handlers = {
   },
   onMetaBuy(key) {
     const M = D.META_UPGRADES[key];
+    if (!M || M.legacy) return;
     const levels = store.meta;
     const lv = levels[key] || 0;
     if (lv >= M.max) return;
@@ -1198,9 +1239,9 @@ document.addEventListener('keydown', (ev) => {
       return;
   }
   switch (lower) {
-    case 'a': doSpell(); return;
-    case 'e': doUlt(); return;
-    case 'v': openSkills(); return;
+    case 'a': if (state.champ) doSpell(); return;
+    case 'e': if (state.champ) doUlt(); return;
+    case 'v': if (state.champ) openSkills(); return;
     case 'b': handlers.onBookOpen(); return;
     case 's': ui.showTab('squad'); return;
     case 'c': {
@@ -1429,6 +1470,8 @@ demo.attach({
   skill(key) { handlers.onSkillPick(key); },
   heroSkill(heroId, key) { handlers.onHeroSkill(heroId, key); },
   feast: doFeast,
+  journeyTravel(id) { handlers.onJourneyTravel(id); },
+  journeyRecruit(key) { handlers.onJourneyRecruit(key); },
   startWave: tryStartWave,
   newGame: () => newGame(store.diff),
   comboLabel: (c) => (c.kind === 'rankup'

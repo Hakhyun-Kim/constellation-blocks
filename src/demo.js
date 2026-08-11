@@ -109,6 +109,25 @@ export const demo = {
     }
 
     /* ④ 준비 단계 — 봇의 판단을 하나씩 소비한다 */
+    if (state.phase === 'journey') {
+      if (this.t > 0) return;
+      if (state.journey?.pendingRecruit) {
+        const key = Bot.nextJourneyRecruit(state);
+        if (key) {
+          this.say(`✦ ${key} 영웅을 원정대에 맞이합니다`);
+          A.journeyRecruit(key);
+        }
+      } else {
+        const node = Bot.nextJourneyNode(state);
+        if (node) {
+          this.say(`🧭 ${node.name}(으)로 별길을 따라갑니다`);
+          A.journeyTravel(node.id);
+        }
+      }
+      this.t = 1.05;
+      return;
+    }
+
     if (state.phase === 'prep') {
       if (this.t > 0) return;
       const act = Bot.nextPrepAction(state, P, state.rng || Math.random);

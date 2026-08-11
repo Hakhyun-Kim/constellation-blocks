@@ -1,10 +1,15 @@
 /* Fixed, named defenders.  Their class never changes; only their build does. */
 export const SQUAD = [
-  { cls: 'knight', name: '아린', pad: 0, role: '전방 처형' },
-  { cls: 'guard', name: '도윤', pad: 1, role: '길 저지' },
-  { cls: 'archer', name: '세라', pad: 2, role: '원거리 관통' },
-  { cls: 'mage', name: '유나', pad: 3, role: '범위 제어' },
+  { key: 'arin', cls: 'knight', name: '아린', pad: 0, role: '전방 처형', starts: true },
+  { key: 'luna', cls: 'mage', name: '루나', pad: 3, role: '별자리 마도사', starts: true },
+  { key: 'doyun', cls: 'guard', name: '도윤', pad: 1, role: '길 저지' },
+  { key: 'sera', cls: 'archer', name: '세라', pad: 2, role: '원거리 관통' },
+  { key: 'yuna', cls: 'mage', name: '유나', pad: 4, role: '범위 제어' },
 ];
+
+export const SQUAD_MAX = 5;
+export const STARTING_SQUAD_KEYS = SQUAD.filter((hero) => hero.starts).map((hero) => hero.key);
+export const squadSpec = (key) => SQUAD.find((hero) => hero.key === key) || null;
 
 export const HERO_XP = {
   kill: 1,
