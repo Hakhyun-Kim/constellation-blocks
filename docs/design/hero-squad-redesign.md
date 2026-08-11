@@ -1,6 +1,6 @@
 # 디자인 결정: 고정 영웅단 리디자인
 
-- 상태: 채택
+- 상태: 대체됨 — `journey-campaign-redesign.md` 참조
 - 적용 대상: `Constellation Defense` 공개 게임
 - 결정일: 2026-08-11
 
