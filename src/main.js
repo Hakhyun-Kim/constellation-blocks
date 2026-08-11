@@ -4,6 +4,7 @@
 import * as D from './data.js';
 import * as E from './engine.js';
 import { Renderer3D } from './gfx/renderer.js';
+import { VillageRenderer } from './gfx/village.js';
 import { heroPortrait, champPortrait } from './gfx/units3d.js';
 import { UI } from './ui.js';
 import { SFX, toggleSfx, toggleMusic, toggleAll, isSfxMuted, isMusicMuted, forceMute, getAc, getMaster, registerDucker, updateAudioFlow } from './sfx.js';
@@ -58,6 +59,7 @@ const renderer = new Renderer3D(ui.el.scene3d, {
   decor: useDecor,
   touch: isMobile,
 });
+const villageRenderer = new VillageRenderer({ quality: renderer.quality, touch: isMobile });
 
 let state = null;
 let speed = 1;
@@ -755,6 +757,8 @@ function onGameOver() {
 /* ---------- UI 바인딩 ---------- */
 const handlers = {
   onWaveStart() { tryStartWave(); },
+  onVillagePresentation(presentation) { villageRenderer.setPresentation(presentation); },
+  onVillagePick(clientX, clientY) { return villageRenderer.pickWorld(clientX, clientY); },
   onJourneyTravel(id) {
     const result = E.travelJourney(state, id);
     if (!result.ok) return;
@@ -1393,8 +1397,12 @@ function frame(now) {
     if (selHero != null) ui.renderHeroPanel(state, selHero);
   }
 
-  renderer.sync(state);
-  renderer.frame(isPaused() ? 0 : realDt * speed, state);
+  if (ui.isVillageActive()) {
+    villageRenderer.frame(isPaused() ? 0 : realDt);
+  } else {
+    renderer.sync(state);
+    renderer.frame(isPaused() ? 0 : realDt * speed, state);
+  }
 }
 
 /* ---------- 시작 ----------

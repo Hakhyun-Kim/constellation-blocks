@@ -4,6 +4,7 @@
 import * as D from './data.js';
 import * as E from './engine.js';
 import { heroCardClass, heroCardMarkup } from './app/hero-card.js';
+import { VILLAGE_FACILITY_SPOTS, VILLAGE_RECRUITER_SPOTS, VILLAGE_START, isNearVillageTarget, villageWalkPoint } from './app/village-layout.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -142,7 +143,7 @@ export class UI {
     this.el.journeyModal = $('journeyModal');
     this.el.journeyBody = $('journeyBody');
     this._journeyState = null;
-    this._village = { open: false, nodeId: null, x: 50, y: 78, dialog: null };
+    this._village = { open: false, nodeId: null, ...VILLAGE_START, dialog: null };
     this._villageKeyHandler = (event) => this._handleVillageKey(event);
     /* Capture movement keys before the global combat shortcuts.  The village is
      * a presentation layer: all rewards and skill validation remain in engine/. */
@@ -159,54 +160,77 @@ export class UI {
 
   _ensureVillage(node) {
     if (this._village.nodeId === node.id) return;
-    this._village = { open: true, nodeId: node.id, x: 50, y: 78, dialog: null };
+    this._village = { open: true, nodeId: node.id, ...VILLAGE_START, dialog: null };
   }
 
   _villageTargets(state, node) {
-    const recruiterSpot = {
-      doyun: { x: 25, y: 60, place: '수문 초소' },
-      sera: { x: 76, y: 59, place: '전령 길드' },
-    };
-    const facilitySpot = {
-      forge: { x: 22, y: 28 },
-      shrine: { x: 50, y: 24 },
-      guild: { x: 78, y: 29 },
-    };
     const targets = [];
     if (state.journey.pendingRecruit === node.id) {
       for (const key of node.offers || []) {
         if (state.field.some((hero) => hero.heroKey === key)) continue;
         const spec = D.squadSpec(key);
         const C = spec && D.CLASSES[spec.cls];
-        const spot = recruiterSpot[key] || { x: 50, y: 55, place: '마을 광장' };
-        if (spec && C) targets.push({ id: `recruit:${key}`, type: 'recruit', key, x: spot.x, y: spot.y, place: spot.place, label: spec.name, emoji: C.emoji });
+        const spot = VILLAGE_RECRUITER_SPOTS[key] || { x: 0, z: 0, place: '마을 광장' };
+        if (spec && C) targets.push({ id: `recruit:${key}`, type: 'recruit', key, x: spot.x, z: spot.z, place: spot.place, label: spec.name, emoji: C.emoji });
       }
     }
     for (const key of node.facilities || []) {
       const facility = D.HERO_FACILITIES[key];
-      const spot = facilitySpot[key];
-      if (facility && spot) targets.push({ id: `facility:${key}`, type: 'facility', key, x: spot.x, y: spot.y, label: facility.name, emoji: facility.emoji, desc: facility.desc });
+      const spot = VILLAGE_FACILITY_SPOTS[key];
+      if (facility && spot) targets.push({ id: `facility:${key}`, type: 'facility', key, x: spot.x, z: spot.z, label: facility.name, emoji: facility.emoji, desc: facility.desc });
     }
     return targets;
   }
 
   _nearVillageTarget(target) {
-    const dx = this._village.x - target.x;
-    const dy = this._village.y - target.y;
-    return dx * dx + dy * dy <= 13 * 13;
+    return isNearVillageTarget(this._village, target);
   }
 
-  _moveVillage(x, y) {
-    this._village.x = Math.max(6, Math.min(94, Math.round(x)));
-    this._village.y = Math.max(16, Math.min(88, Math.round(y)));
+  _moveVillage(x, z) {
+    const next = villageWalkPoint(this._village, { x, z });
+    if (next.x === this._village.x && next.z === this._village.z) return;
+    this._village.x = next.x;
+    this._village.z = next.z;
     this._village.dialog = null;
-    this.renderJourney(this._journeyState);
+    this._syncVillagePresentation();
   }
 
   _openVillageTarget(target) {
     if (!this._nearVillageTarget(target)) return;
     this._village.dialog = { type: target.type, key: target.key };
     this.renderJourney(this._journeyState);
+  }
+
+  isVillageActive() {
+    return !!this._activeVillageNode(this._journeyState) && this._village.open;
+  }
+
+  _syncVillagePresentation() {
+    const state = this._journeyState;
+    const node = this._activeVillageNode(state);
+    if (!node || !this._village.open) {
+      this.h?.onVillagePresentation?.({ active: false });
+      return;
+    }
+    const targets = this._villageTargets(state, node);
+    const nearby = targets.find((target) => this._nearVillageTarget(target)) || null;
+    const hint = nearby
+      ? `${nearby.emoji} ${nearby.label} 근처입니다. Enter 또는 대화 버튼을 누르세요.`
+      : 'WASD·방향키 또는 광장을 클릭해 걸어가세요. 빛나는 표식 가까이에서 대화할 수 있습니다.';
+    const hintEl = this.el.journeyBody.querySelector('[data-village-hint]');
+    if (hintEl) hintEl.textContent = hint;
+    const action = this.el.journeyBody.querySelector('[data-village-action]');
+    if (action) {
+      action.disabled = !nearby;
+      action.textContent = nearby ? `${nearby.emoji} ${nearby.type === 'recruit' ? `${nearby.label}와 대화` : `${nearby.label} 방문`}` : '가까운 사람 또는 시설 찾기';
+    }
+    this.h?.onVillagePresentation?.({
+      active: true,
+      host: this.el.journeyBody.querySelector('#village3d'),
+      player: { x: this._village.x, z: this._village.z },
+      targets,
+      nearby,
+    });
   }
 
   _handleVillageKey(event) {
@@ -229,15 +253,15 @@ export class UI {
       return;
     }
     const move = {
-      ArrowLeft: [-5, 0], a: [-5, 0], A: [-5, 0],
-      ArrowRight: [5, 0], d: [5, 0], D: [5, 0],
-      ArrowUp: [0, -5], w: [0, -5], W: [0, -5],
-      ArrowDown: [0, 5], s: [0, 5], S: [0, 5],
+      ArrowLeft: [-.9, 0], a: [-.9, 0], A: [-.9, 0],
+      ArrowRight: [.9, 0], d: [.9, 0], D: [.9, 0],
+      ArrowUp: [0, -.9], w: [0, -.9], W: [0, -.9],
+      ArrowDown: [0, .9], s: [0, .9], S: [0, .9],
     }[event.key];
     if (move) {
       event.preventDefault();
       event.stopImmediatePropagation();
-      this._moveVillage(this._village.x + move[0], this._village.y + move[1]);
+      this._moveVillage(this._village.x + move[0], this._village.z + move[1]);
       return;
     }
     if ((event.key === 'Enter' || event.key === ' ') && !this._village.dialog) {
@@ -284,27 +308,44 @@ export class UI {
     this._ensureVillage(node);
     const targets = this._villageTargets(state, node);
     const nearby = targets.find((target) => this._nearVillageTarget(target));
-    const targetMarkup = targets.map((target) => {
-      const near = this._nearVillageTarget(target);
-      const cls = target.type === 'recruit' ? 'village-person' : `village-building ${target.key}`;
-      return `<button class="${cls}${near ? ' near' : ''}" style="--x:${target.x}%;--y:${target.y}%" data-village-talk="${target.id}" ${near ? '' : 'disabled'}>
-        <i>${target.emoji}</i><b>${target.label}</b><small>${target.place || target.desc}</small></button>`;
-    }).join('');
     const hint = nearby
-      ? `${nearby.emoji} ${nearby.label} 근처입니다. Enter 또는 표식을 눌러 ${nearby.type === 'recruit' ? '대화' : '방문'}하세요.`
-      : 'WASD·방향키 또는 광장을 클릭해 걸어가세요. 가까워지면 표식이 빛납니다.';
+      ? `${nearby.emoji} ${nearby.label} 근처입니다. Enter 또는 대화 버튼을 누르세요.`
+      : 'WASD·방향키 또는 광장을 클릭해 걸어가세요. 빛나는 표식 가까이에서 대화할 수 있습니다.';
     const locked = state.journey.pendingRecruit === node.id;
-    return `<div class="village-visit">
-      <div class="village-scene" data-village-ground>
-        <div class="village-sky"><i></i><i></i><i></i></div><div class="village-hill village-hill-back"></div><div class="village-hill village-hill-front"></div>
-        <div class="village-road"></div><div class="village-trees tree-a">♣</div><div class="village-trees tree-b">♣</div><div class="village-lantern lantern-a">✦</div><div class="village-lantern lantern-b">✦</div>
-        ${targetMarkup}
-        <div class="village-avatar" style="--x:${this._village.x}%;--y:${this._village.y}%"><span>✦</span></div>
-        <div class="village-status"><b>${node.icon} ${node.name}</b><span>${hint}</span></div>
-      </div>
-      <div class="village-foot"><span>${locked ? '동료 한 명과 먼저 대화해야 길이 열립니다.' : '시설 방문을 마치면 지도에서 다음 길을 선택할 수 있습니다.'}</span>${locked ? '' : '<button data-village-leave>지도 보기</button>'}</div>
+    return `<section class="village-screen">
+      <div id="village3d" class="village-3d" aria-label="갈림길 마을 3D 광장"></div>
+      <header class="village-top"><span>CONSTELLATION VILLAGE</span><h1>${node.icon} ${node.name}</h1><p>${locked ? '동료 한 명과 대화해야 다음 길이 열립니다.' : '시설을 방문하거나 지도에서 다음 별길로 출발하세요.'}</p></header>
+      <div class="village-bottom"><p data-village-hint>${hint}</p><div class="village-controls"><button data-village-action ${nearby ? '' : 'disabled'}>${nearby ? `${nearby.emoji} ${nearby.label} ${nearby.type === 'recruit' ? '와 대화' : '방문'}` : '가까운 사람 또는 시설 찾기'}</button><div class="village-dpad" aria-label="마을 이동"><button data-village-step="up">▲</button><span><button data-village-step="left">◀</button><button data-village-step="down">▼</button><button data-village-step="right">▶</button></span></div>${locked ? '' : '<button class="village-map-exit" data-village-leave>지도 보기</button>'}</div></div>
       ${this._villageDialogMarkup(state, node)}
-    </div>`;
+    </section>`;
+  }
+
+  _bindVillageScreen(state, node) {
+    const openNearby = () => {
+      const target = this._villageTargets(state, node).find((entry) => this._nearVillageTarget(entry));
+      if (target) this._openVillageTarget(target);
+    };
+    this.el.journeyBody.querySelectorAll('[data-village-action]').forEach((button) =>
+      button.addEventListener('click', openNearby));
+    const steps = { up: [0, -.9], down: [0, .9], left: [-.9, 0], right: [.9, 0] };
+    this.el.journeyBody.querySelectorAll('[data-village-step]').forEach((button) =>
+      button.addEventListener('click', () => {
+        const step = steps[button.dataset.villageStep];
+        if (step) this._moveVillage(this._village.x + step[0], this._village.z + step[1]);
+      }));
+    this.el.journeyBody.querySelectorAll('[data-village-leave]').forEach((button) =>
+      button.addEventListener('click', () => { this._village.open = false; this._village.dialog = null; this.renderJourney(state); }));
+    this.el.journeyBody.querySelectorAll('[data-village-recruit]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onJourneyRecruit(button.dataset.villageRecruit)));
+    this.el.journeyBody.querySelectorAll('[data-village-skill]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onHeroSkill(Number(button.dataset.heroId), button.dataset.villageSkill)));
+    this.el.journeyBody.querySelectorAll('[data-village-close]').forEach((button) =>
+      button.addEventListener('click', () => { this._village.dialog = null; this.renderJourney(state); }));
+    const surface = this.el.journeyBody.querySelector('#village3d');
+    surface?.addEventListener('click', (event) => {
+      const point = this.h?.onVillagePick?.(event.clientX, event.clientY);
+      if (point) this._moveVillage(point.x, point.z);
+    });
   }
 
   renderJourney(state) {
@@ -323,6 +364,18 @@ export class UI {
       this._village.dialog = null;
     }
     const villageNode = this._activeVillageNode(state);
+    if (villageNode) {
+      this.el.journeyBody.className = 'journey-shell village-shell';
+      this.el.journeyBody.innerHTML = this._renderVillage(state, villageNode);
+      this._bindVillageScreen(state, villageNode);
+      this.el.journeyModal.classList.remove('hidden');
+      this.el.journeyModal.classList.add('village-mode');
+      this._syncVillagePresentation();
+      return;
+    }
+    this.el.journeyBody.className = 'journey-shell';
+    this.el.journeyModal.classList.remove('village-mode');
+    this.h?.onVillagePresentation?.({ active: false });
     const party = state.field.map((hero) => {
       const C = D.CLASSES[hero.cls];
       return `<span class="journey-party"><i>${C.emoji}</i><b>${hero.name}</b><small>Lv ${hero.level}</small></span>`;
