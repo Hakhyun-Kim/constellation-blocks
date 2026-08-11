@@ -14,6 +14,7 @@ During battle, swap neighboring stars on the 6×6 board. Each match targets the 
 The player’s choices are deliberately focused: choose a route and companions on the expedition, position the recruited heroes, select their specializations and castle upgrades between battles, then react with tactical swaps during the fight. Random summoning, duplicate heroes, rank combinations, and rarity collection are not part of the current game.
 
 The redesign decisions and verification gates are recorded in [docs/design/journey-campaign-redesign.md](docs/design/journey-campaign-redesign.md).
+For a fresh setup or handoff to another computer, start with [docs/CONTINUATION.md](docs/CONTINUATION.md).
 
 ## Play
 

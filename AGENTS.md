@@ -1,5 +1,12 @@
 # Constellation Defense — 에이전트 작업 지침
 
+## 다른 컴퓨터에서 작업 이어가기
+
+- 새 세션은 먼저 `docs/CONTINUATION.md`를 읽고, `git status --short`, `git log -1 --oneline`으로 인수 상태를 확인한다.
+- Windows PowerShell에서는 `npm` 대신 `npm.cmd`를 쓴다. 처음에는 `npm.cmd ci`, 이어서 `npm.cmd run check`와 `node scripts/balance-check.mjs 60`을 실행한다.
+- 마을 화면은 전투 화면의 변형이 아니다. `src/ui.js`의 이동·상호작용, `src/app/village-layout.js`의 순수 좌표/충돌, `src/gfx/village.js`의 시각 표현 경계를 지킨다. 마을에서는 방어 캔버스/HUD를 표시하거나 프레임하지 않는다.
+- 이 저장소는 공개용이다. `D:\constellation-defense-submission`의 비공개 제출 문구·체크리스트·녹화물은 이 저장소에 복사하지 않는다.
+
 ## 제품 경계
 
 - 이 게임의 공식 이름은 반드시 `Constellation Defense`다.
