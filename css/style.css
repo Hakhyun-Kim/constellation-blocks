@@ -742,6 +742,29 @@ button { font-family: inherit; }
 .squad-card .tr { font-size: 10px; color: #65718d; white-space: nowrap; }
 .squad-card .rg { margin-top: 3px; }
 .squad-point { position: absolute; top: -6px; right: -4px; display: grid; place-items: center; min-width: 20px; height: 20px; border-radius: 999px; background: #ffca57; color: #5b3d00; border: 2px solid #fff; font-size: 11px; font-weight: 900; }
+.hero-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.hero-card {
+  position: relative; isolation: isolate; min-width: 0; min-height: 176px; overflow: hidden;
+  display: grid; grid-template-columns: 62px minmax(0, 1fr); grid-template-areas: 'art copy' 'ability ability' 'stats stats' 'growth growth'; gap: 5px;
+  padding: 8px; border: 1px solid color-mix(in srgb, var(--hero-card-accent) 58%, #ffffff); border-radius: 14px;
+  background: linear-gradient(145deg, #ffffff 0%, color-mix(in srgb, var(--hero-card-accent) 12%, #fafcff) 100%);
+  box-shadow: 0 4px 10px rgba(43, 54, 87, .10); color: #29324c; font-family: inherit; text-align: left; cursor: pointer;
+  transition: transform .16s ease, border-color .16s ease, box-shadow .16s ease;
+}
+.hero-card::before { content: ''; position: absolute; z-index: -1; width: 120px; height: 120px; right: -47px; top: -56px; border-radius: 50%; background: radial-gradient(circle, color-mix(in srgb, var(--hero-card-accent) 38%, transparent) 0 8%, transparent 9% 17%, color-mix(in srgb, var(--hero-card-accent) 17%, transparent) 18% 32%, transparent 33%); opacity: .88; }
+.hero-card::after { content: ''; position: absolute; z-index: -1; inset: 0; opacity: .24; background-image: radial-gradient(circle at 18% 20%, var(--hero-card-accent) 0 1px, transparent 1.7px), radial-gradient(circle at 78% 74%, var(--hero-card-deep) 0 1px, transparent 1.8px); background-size: 29px 29px, 41px 41px; pointer-events: none; }
+.hero-card:hover { transform: translateY(-2px); border-color: var(--hero-card-accent); box-shadow: 0 9px 18px color-mix(in srgb, var(--hero-card-deep) 21%, transparent); }
+.hero-card:focus-visible { outline: 3px solid #f5bd5d; outline-offset: 2px; }
+.hero-card.sel { border: 2px solid var(--hero-card-deep); padding: 7px; box-shadow: 0 0 0 3px color-mix(in srgb, var(--hero-card-accent) 28%, transparent), 0 8px 18px color-mix(in srgb, var(--hero-card-deep) 20%, transparent); }
+.hero-card.ready .hero-card-growth b { color: #8e5710; }
+.hero-card-art { grid-area: art; position: relative; display: grid; place-items: center; width: 58px; height: 58px; overflow: hidden; border: 1px solid color-mix(in srgb, var(--hero-card-accent) 54%, #ffffff); border-radius: 19px; background: radial-gradient(circle at 35% 26%, #fff 0 6%, color-mix(in srgb, var(--hero-card-accent) 62%, #f5f0ff) 35%, var(--hero-card-deep) 100%); box-shadow: inset 0 1px rgba(255,255,255,.55), 0 4px 9px color-mix(in srgb, var(--hero-card-deep) 22%, transparent); }
+.hero-card-constellation { position: absolute; top: -12px; right: -3px; color: #fff8bf; font-size: 39px; font-style: normal; opacity: .70; transform: rotate(-15deg); }
+.hero-card-crest { position: relative; z-index: 1; color: #fffdf5; font-size: 29px; font-style: normal; filter: drop-shadow(0 2px 2px rgba(0,0,0,.25)); }
+.hero-card-spark { position: absolute; color: #fff9cf; font-size: 13px; font-style: normal; }.hero-card-spark.spark-a { left: 8px; top: 7px; }.hero-card-spark.spark-b { right: 9px; bottom: 6px; font-size: 21px; }
+.hero-card-copy { grid-area: copy; min-width: 0; align-self: center; }.hero-card-copy > * { display: block; }.hero-card-role { color: var(--hero-card-deep); font-size: 9px; font-weight: 900; letter-spacing: .04em; }.hero-card-name { overflow: hidden; color: #28304c; font-size: 16px; line-height: 1.15; text-overflow: ellipsis; white-space: nowrap; }.hero-card-title { overflow: hidden; margin-top: 2px; color: #68728c; font-size: 9.5px; text-overflow: ellipsis; white-space: nowrap; }
+.hero-card-ability { grid-area: ability; display: flex; align-items: center; gap: 5px; min-width: 0; padding: 4px 5px; border-radius: 8px; background: color-mix(in srgb, var(--hero-card-accent) 13%, #ffffff); color: #4b5570; }.hero-card-ability > i { display: grid; place-items: center; flex: 0 0 18px; width: 18px; height: 18px; border-radius: 6px; background: var(--hero-card-deep); color: #fff; font-size: 11px; font-style: normal; }.hero-card-ability span { display: block; min-width: 0; }.hero-card-ability small, .hero-card-ability b { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.hero-card-ability small { color: var(--hero-card-deep); font-size: 8.5px; font-weight: 900; }.hero-card-ability b { font-size: 9.5px; }
+.hero-card-stats { grid-area: stats; display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }.hero-card-stats > span { padding: 3px 2px; border-radius: 7px; background: rgba(255,255,255,.66); text-align: center; }.hero-card-stats small, .hero-card-stats b { display: block; }.hero-card-stats small { color: #7a8499; font-size: 8px; font-weight: 800; }.hero-card-stats b { color: #35405b; font-size: 11px; }
+.hero-card-growth { grid-area: growth; display: block; }.hero-card-growth > span { display: flex; align-items: baseline; justify-content: space-between; gap: 4px; }.hero-card-growth b { color: var(--hero-card-deep); font-size: 10px; }.hero-card-growth small { overflow: hidden; color: #778197; font-size: 8.5px; text-overflow: ellipsis; white-space: nowrap; }.hero-card-growth > i { display: block; height: 5px; margin-top: 3px; overflow: hidden; border-radius: 999px; background: rgba(75, 89, 122, .14); }.hero-card-growth > i > i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--hero-card-accent), var(--hero-card-deep)); transition: width .2s ease; }
 .growth-note { margin: 0 0 9px; color: #64708b; font-size: 12px; line-height: 1.4; }
 .growth-hero { padding: 10px; border: 1px solid #d5d9ea; border-radius: 12px; background: linear-gradient(135deg, #fbfcff, #f4f0ff); margin-bottom: 8px; }
 .growth-hero header { display: flex; justify-content: space-between; align-items: baseline; color: #343457; }
@@ -1680,6 +1703,9 @@ button { font-family: inherit; }
 /* 아주 좁은 화면: 벤치를 3열로, 글자를 조금 줄인다 */
 @media (max-width: 560px) {
   .topbar h1 { font-size: 20px; }
+  .hero-card-grid { grid-template-columns: 1fr; }
+  .hero-card { min-height: 156px; grid-template-columns: 56px minmax(0, 1fr); }
+  .hero-card-art { width: 52px; height: 52px; border-radius: 17px; }
   .bench { grid-template-columns: repeat(3, 1fr); }
   .gradebar { flex-wrap: wrap; }
 }

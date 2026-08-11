@@ -3,6 +3,7 @@
  * ===================================================== */
 import * as D from './data.js';
 import * as E from './engine.js';
+import { heroCardClass, heroCardMarkup } from './app/hero-card.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -483,19 +484,17 @@ export class UI {
    * sell(Set)이 오면 판매 모드: 카드가 체크박스가 된다 — 가격을 크게, 고르면 ✓ */
   renderSquad(state, selId) {
     const el = this.el.bench;
+    el.classList.add('hero-card-grid');
     el.innerHTML = '';
     for (const hero of state.field) {
-      const C = D.CLASSES[hero.cls];
       const d = document.createElement('button');
-      const m = E.heroMods(hero);
+      const card = heroCardClass(hero, selId === hero.id);
       d.type = 'button';
-      d.className = `hcard squad-card ${selId === hero.id ? 'sel' : ''}`;
-      d.innerHTML =
-        `<div class="em">${C.emoji}</div>` +
-        `<div class="nm">${hero.name || C.name}</div>` +
-        `<div class="tr">${C.name} · Lv ${hero.level}</div>` +
-        `<div class="rg ${rangeLabel(m.range).cls}">⚔️${hero.dmg}</div>` +
-        (hero.sp > 0 ? `<span class="squad-point">+${hero.sp}</span>` : '');
+      d.className = card.className;
+      d.style.cssText = card.style;
+      d.setAttribute('aria-label', card.ariaLabel);
+      d.setAttribute('aria-pressed', String(selId === hero.id));
+      d.innerHTML = heroCardMarkup(hero);
       d.addEventListener('click', () => this.h.onSquadSelect(hero.id));
       d.addEventListener('mouseenter', (ev) => this.showTooltip(hero, state, ev.clientX, ev.clientY));
       d.addEventListener('mousemove', (ev) => this.moveTooltip(ev.clientX, ev.clientY));
@@ -537,6 +536,7 @@ export class UI {
 
   renderBench(state, selId, sell = null) {
     const el = this.el.bench;
+    el.classList.remove('hero-card-grid');
     if (!state.bench.length) {
       el.innerHTML = '<div class="empty-msg">벤치가 비어 있어요.<br>용사를 소환해 보세요!</div>';
       this.el.benchHint.classList.add('hidden');

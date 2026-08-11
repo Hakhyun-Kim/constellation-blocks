@@ -14,8 +14,9 @@
     "balance:check": "node scripts/balance-check.mjs 60",
     "engine:check": "node scripts/engine-check.mjs",
     "tactics:check": "node scripts/tactic-board-check.mjs",
+    "ui:check": "node scripts/hero-card-check.mjs",
     "storage:check": "node scripts/storage-check.mjs",
-    "check": "npm run engine:check && npm run tactics:check && npm run build"
+    "check": "npm run engine:check && npm run tactics:check && npm run ui:check && npm run build"
   },
   "dependencies": {
     "three": "^0.166.0"
