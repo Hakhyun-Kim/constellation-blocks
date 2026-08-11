@@ -4,6 +4,7 @@
 import * as D from '../data.js';
 import { champStats } from './champion.js';
 import { makeHero, padOccupant, placeHero } from './roster.js';
+import { createSquadHero, refreshHeroDamage } from './squad.js';
 import { buildWave } from './combat.js';
 import { createResonance, restoreResonance } from './resonance.js';
 
@@ -34,6 +35,7 @@ export function createGame(opts = {}) {
 
     nextId: 1,
     bench: [], field: [],
+    squad: opts.fixedSquad !== false,
     enemies: [], projectiles: [],
     spawnQueue: [], waveT: 0,
     pendingWave: null,
@@ -63,6 +65,15 @@ export function createGame(opts = {}) {
   };
   state.champ.maxHp = champStats(state).maxHp;
   state.champ.hp = state.champ.maxHp;
+  if (state.squad) {
+    for (const spec of D.SQUAD) {
+      const hero = createSquadHero(state, spec);
+      hero.padIndex = spec.pad;
+      hero.x = D.PADS[spec.pad].x;
+      hero.y = D.PADS[spec.pad].y;
+      state.field.push(hero);
+    }
+  }
   state.pendingWave = buildWave(state);
   return state;
 }
@@ -78,6 +89,7 @@ export function nextLoop(state) {
     metaLevels: state.meta,
     rng: state.rng === Math.random ? undefined : state.rng,
     loop: (state.loop || 0) + 1,
+    fixedSquad: state.squad === true,
   });
   const c = state.champ, n = next.champ;
   if (c && n) {
@@ -87,6 +99,15 @@ export function nextLoop(state) {
     n.skills = { ...c.skills };
     n.maxHp = champStats(next).maxHp;
     n.hp = n.maxHp;
+  }
+  for (const hero of next.field) {
+    const previous = state.field.find((entry) => entry.cls === hero.cls);
+    if (!previous) continue;
+    hero.level = previous.level;
+    hero.xp = previous.xp;
+    hero.sp = previous.sp;
+    hero.skills = { ...previous.skills };
+    refreshHeroDamage(n, hero);
   }
   next.seenStory = new Set(state.seenStory || []);
   next.revealed = new Set(state.revealed || []);
@@ -98,7 +119,7 @@ export function nextLoop(state) {
  * 객체 그래프라 직렬화가 잘 깨지고, 전투 도중 복원을 허용하면 반쯤 이긴
  * 웨이브를 저장해 두고 골드만 불리는 꼼수가 생긴다. 그래서 웨이브 진행은
  * 담지 않고, 불러오면 그 웨이브의 준비 단계에서 다시 시작한다. */
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 const SAVE_STATS = [
   'kills', 'bossKills', 'midBossKills', 'summons', 'combos', 'goldEarned',
   'specialsMade', 'mythicsMade', 'tacticCasts', 'resonanceCasts',
@@ -106,7 +127,10 @@ const SAVE_STATS = [
 ];
 
 export function serialize(state) {
-  const hero = (h) => ({ cls: h.cls, tier: h.tier, pad: h.padIndex });
+  const hero = (h) => state.squad ? ({
+    cls: h.cls, name: h.name, pad: h.padIndex,
+    level: h.level, xp: Math.round(h.xp || 0), sp: h.sp || 0, skills: { ...(h.skills || {}) },
+  }) : ({ cls: h.cls, tier: h.tier, pad: h.padIndex });
   const stats = {};
   for (const k of SAVE_STATS) stats[k] = state[k];
   return {
@@ -121,7 +145,8 @@ export function serialize(state) {
     castleHp: state.castleHp,
     castleMax: state.castleMax,
     castle: { ...state.castle },
-    bench: state.bench.map(hero),
+    squad: state.squad === true,
+    bench: state.squad ? [] : state.bench.map(hero),
     field: state.field.map(hero),
     /* 별지기 — 위치·체력은 준비 단계마다 리셋되니 성장만 담는다 */
     champ: state.champ ? {
@@ -141,12 +166,12 @@ export function serialize(state) {
  * 용사는 벤치로 대피시킨다(사라지는 것보단 낫다). 복원할 수 없는 구조면 null. */
 export function deserialize(data, opts = {}) {
   if (!data || typeof data !== 'object') return null;
-  if (!Array.isArray(data.bench) || !Array.isArray(data.field)) return null;
+  if (!Array.isArray(data.field)) return null;
   const clamp = (v, lo, hi, dflt) =>
     (Number.isFinite(v) ? Math.min(hi, Math.max(lo, Math.round(v))) : dflt);
   const difficulty = D.DIFFICULTIES[data.difficulty] ? data.difficulty : 'normal';
   const meta = (data.meta && typeof data.meta === 'object') ? data.meta : {};
-  const state = createGame({ difficulty, metaLevels: meta, rng: opts.rng, loop: data.loop });
+  const state = createGame({ difficulty, metaLevels: meta, rng: opts.rng, loop: data.loop, fixedSquad: data.squad === true || opts.fixedSquad === true });
 
   state.wave = clamp(data.wave, 1, 999, 1);
   restoreResonance(state, data.resonance);
@@ -157,17 +182,50 @@ export function deserialize(data, opts = {}) {
   state.castleMax = clamp(data.castleMax, 1, 1e6, state.castleMax);
   state.castleHp = clamp(data.castleHp, 1, state.castleMax, state.castleMax);
 
-  const revive = (rec, pad) => {
-    if (!rec || !D.CLASSES[rec.cls]) return;
-    if (state.bench.length >= D.BENCH_MAX) return;
-    const h = makeHero(state, rec.cls, clamp(rec.tier, 0, D.maxTierOf(rec.cls), 0));
-    state.bench.push(h);
-    if (Number.isInteger(pad) && pad >= 0 && pad < D.PADS.length && !padOccupant(state, pad)) {
-      placeHero(state, h.id, pad);
+  if (state.squad) {
+    const savedByClass = new Map(data.field
+      .filter((record) => record && D.SQUAD.some((spec) => spec.cls === record.cls))
+      .map((record) => [record.cls, record]));
+    const usedPads = new Set();
+    for (const hero of state.field) hero.padIndex = -1;
+    for (const hero of state.field) {
+      const record = savedByClass.get(hero.cls);
+      if (record) {
+        hero.name = typeof record.name === 'string' ? record.name.slice(0, 16) : hero.name;
+        hero.level = clamp(record.level, 1, D.HERO_XP.maxLevel, 1);
+        hero.xp = clamp(record.xp, 0, 1e6, 0);
+        hero.sp = clamp(record.sp, 0, 99, 0);
+        hero.skills = {};
+        if (record.skills && typeof record.skills === 'object') {
+          for (const [key, value] of Object.entries(record.skills)) {
+            const skill = D.HERO_SKILLS[key];
+            const rank = clamp(value, 0, skill?.max || 0, 0);
+            if (skill && skill.cls === hero.cls && rank > 0) hero.skills[key] = rank;
+          }
+        }
+        refreshHeroDamage(state, hero);
+      }
+      const defaultPad = D.SQUAD.find((spec) => spec.cls === hero.cls)?.pad ?? -1;
+      const savedPad = Number.isInteger(record?.pad) ? record.pad : defaultPad;
+      const pad = savedPad >= 0 && savedPad < D.PADS.length && !usedPads.has(savedPad)
+        ? savedPad
+        : D.PADS.findIndex((_, index) => !usedPads.has(index));
+      if (pad < 0) continue;
+      hero.padIndex = pad;
+      hero.x = D.PADS[pad].x;
+      hero.y = D.PADS[pad].y;
+      usedPads.add(pad);
     }
-  };
-  for (const rec of data.field.slice(0, D.PADS.length)) revive(rec, rec && rec.pad);
-  for (const rec of data.bench.slice(0, D.BENCH_MAX)) revive(rec, null);
+  } else {
+    const revive = (record, pad) => {
+      if (!record || !D.CLASSES[record.cls] || state.bench.length >= D.BENCH_MAX) return;
+      const hero = makeHero(state, record.cls, clamp(record.tier, 0, D.maxTierOf(record.cls), 0));
+      state.bench.push(hero);
+      if (Number.isInteger(pad) && pad >= 0 && pad < D.PADS.length && !padOccupant(state, pad)) placeHero(state, hero.id, pad);
+    };
+    for (const record of data.field.slice(0, D.PADS.length)) revive(record, record && record.pad);
+    for (const record of (data.bench || []).slice(0, D.BENCH_MAX)) revive(record, null);
+  }
 
   /* 별지기 — 값 하나하나 의심한다. 모르는 스킬은 버리고, 랭크는 상한으로 자른다 */
   const cd = data.champ;

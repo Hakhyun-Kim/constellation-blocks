@@ -28,3 +28,4 @@ export * from './balance/tactics.js';
 export * from './balance/resonance.js';
 export * from './balance/champion.js';
 export * from './balance/achievements.js';
+export * from './balance/squad.js';

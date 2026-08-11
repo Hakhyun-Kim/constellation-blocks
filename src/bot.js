@@ -89,8 +89,7 @@ export function castlePlan(state, P) {
   return out;
 }
 
-export const wantsSummon = (state, P) =>
-  state.gold >= D.SUMMON_COST + P.reserve && state.bench.length < D.BENCH_MAX;
+export const wantsSummon = () => false;
 
 /* ---------- 별지기 ----------
  * 스킬은 정해진 순서(SKILL_PLAN)로 찍는다 — 사람마다 다르지만 봇은 무난한 한 길이면 된다. */
@@ -107,6 +106,19 @@ export function nextSkill(state) {
 }
 
 /* 전투 중 마법 판단: 별똥별은 적이 몇이라도 몰리면, 은하수는 보스나 대부대가 있을 때 */
+export function nextHeroSkill(state) {
+  for (const hero of state.field) {
+    if (hero.sp < 1) continue;
+    for (const key of D.HERO_SKILL_KEYS) {
+      const skill = D.HERO_SKILLS[key];
+      if (skill.cls !== hero.cls) continue;
+      if ((hero.skills[key] || 0) >= skill.max || hero.level < skill.level) continue;
+      return { heroId: hero.id, key, hero, skill };
+    }
+  }
+  return null;
+}
+
 export function wantsStar(state, P) {
   const c = state.champ;
   if (!c || c.ko || c.spellCd > 0) return false;
@@ -159,6 +171,13 @@ export function nextPrepAction(state, P, rng = Math.random) {
   /* ⓪ 별지기 스킬 — 공짜 성장이라 제일 먼저 */
   const sk = nextSkill(state);
   if (sk) return { type: 'skill', key: sk, skill: D.CHAMP_SKILLS[sk] };
+
+  if (state.squad) {
+    const heroSkill = nextHeroSkill(state);
+    if (heroSkill) return { type: 'heroSkill', ...heroSkill };
+    const squadPlan = castlePlan(state, P);
+    return squadPlan.length ? { type: 'castle', key: squadPlan[0] } : null;
+  }
 
   /* ① 소환 — 벤치를 채운다 */
   if (wantsSummon(state, P)) return { type: 'summon' };

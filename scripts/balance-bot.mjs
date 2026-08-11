@@ -19,6 +19,13 @@ function prepActions(state, profile) {
   for (let key = Bot.nextSkill(state); key; key = Bot.nextSkill(state)) {
     if (!E.takeSkill(state, key).ok) break;
   }
+  if (state.squad) {
+    for (let choice = Bot.nextHeroSkill(state); choice; choice = Bot.nextHeroSkill(state)) {
+      if (!E.takeHeroSkill(state, choice.heroId, choice.key).ok) break;
+    }
+    for (const key of Bot.castlePlan(state, profile)) E.castleUpgrade(state, key);
+    return;
+  }
   while (Bot.wantsSummon(state, profile)) {
     if (!E.summon(state).ok) break;
   }
@@ -86,8 +93,6 @@ export function playRun(profileName, difficulty, seed, options = {}) {
   const trace = options.trace ? [] : null;
   const profile = Bot.PROFILES[profileName];
   const state = E.createGame({ rng: Bot.mulberry32(seed), difficulty });
-  state.bench.push(E.makeHero(state, 'knight', 0));
-  state.bench.push(E.makeHero(state, 'archer', 0));
 
   let board = createStableBoard(state.rng);
   let stalemate = false;

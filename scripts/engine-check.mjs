@@ -18,7 +18,7 @@ const ok = (name, cond, detail = '') => {
   else { failed++; console.log(`❌ ${name}${detail ? ' — ' + detail : ''}`); }
 };
 const fresh = (gold = 99999) => {
-  const st = E.createGame({ difficulty: 'normal' });
+  const st = E.createGame({ difficulty: 'normal', fixedSquad: false });
   st.gold = gold;
   return st;
 };
@@ -30,6 +30,35 @@ const put = (st, cls, tier, pad) => {
 };
 
 /* ---------- ① padIndex 규약: 벤치는 항상 -1, 필드는 항상 유효한 정수 ---------- */
+/* ---------- fixed squad: no summon, no duplicate ranks ---------- */
+{
+  const st = E.createGame({ difficulty: 'normal' });
+  const classes = st.field.map((hero) => hero.cls).join(',');
+  ok('fixed squad: four defenders start on the field', st.bench.length === 0 && classes === 'knight,guard,archer,mage', classes);
+  ok('fixed squad: every defender grows by level', st.field.every((hero) => hero.tier === 0 && hero.level === 1 && hero.sp === 0));
+
+  const knight = st.field.find((hero) => hero.cls === 'knight');
+  const before = knight.dmg;
+  const events = [];
+  E.gainHeroXp(st, knight, D.heroXpNeed(1), events);
+  ok('fixed squad: XP grants a level and specialization point', knight.level === 2 && knight.sp === 1 && knight.dmg > before && events.some((event) => event.type === 'heroLevel'));
+  const locked = E.takeHeroSkill(st, knight.id, 'knight_arc');
+  ok('fixed squad: milestone skill is rejected early', !locked.ok && locked.reason === 'level');
+  const skill = E.takeHeroSkill(st, knight.id, 'knight_edge');
+  ok('fixed squad: matching class spends one specialization point', skill.ok && knight.sp === 0 && knight.skills.knight_edge === 1);
+
+  const saved = E.serialize(st);
+  const back = E.deserialize(JSON.parse(JSON.stringify(saved)));
+  const restored = back.field.find((hero) => hero.cls === 'knight');
+  ok('fixed squad: level and specialization survive save/load', back.squad && restored.level === 2 && restored.skills.knight_edge === 1);
+  saved.field[0].pad = saved.field[1].pad;
+  const repaired = E.deserialize(JSON.parse(JSON.stringify(saved)));
+  ok('fixed squad: duplicate saved pads are repaired', new Set(repaired.field.map((hero) => hero.padIndex)).size === repaired.field.length);
+  const next = E.nextLoop(st);
+  const carried = next.field.find((hero) => hero.cls === 'knight');
+  ok('fixed squad: level and specialization survive a trial', next.field.length === 4 && carried.level === 2 && carried.skills.knight_edge === 1);
+}
+
 function padIndexSane(st, label) {
   const bad = [];
   for (const h of st.bench) if (h.padIndex !== -1) bad.push(`bench ${h.cls}#${h.id} padIndex=${JSON.stringify(h.padIndex)}`);

@@ -1,17 +1,17 @@
 {
-  "comment": "Constellation Defense 전술 봇 기준선. 봇은 현재 6×6 보드에서 유효한 인접 스왑만 골라 Flare/Tide/Bloom을 실제 엔진에 시전하고, 보충과 연쇄도 해소한다. 값은 수학 문제 정답률이나 전용 보상을 쓰지 않는다.",
-  "date": "2026-08-05",
+  "comment": "Fixed-squad baseline: the bot uses only permanent hero growth, placement, castle upgrades, and real Flare/Tide/Bloom swaps. It has no summon, combination, or hidden information action.",
+  "date": "2026-08-11",
   "runs": 60,
   "tolerance": 5,
   "medians": {
-    "easy/초보": 13,
-    "easy/보통": 27,
-    "easy/고수": 41,
-    "normal/초보": 11,
-    "normal/보통": 22,
-    "normal/고수": 40,
-    "hard/초보": 10,
-    "hard/보통": 18,
-    "hard/고수": 34
+    "easy/초보": 23,
+    "easy/보통": 25,
+    "easy/고수": 30,
+    "normal/초보": 20,
+    "normal/보통": 23,
+    "normal/고수": 25,
+    "hard/초보": 19,
+    "hard/보통": 20,
+    "hard/고수": 22
   }
 }

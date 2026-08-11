@@ -76,7 +76,7 @@ let tactics = null;
  * 용사 탄생 · 전술 시전 · 웨이브 종료 · 레벨 업 · 게임 오버 · 승리.
  * 데모(봇)가 딴 업적은 업적이 아니므로 데모 중엔 기록도 평가도 멈춘다. */
 function recordHeroBorn(hero) {
-  if (demo.active || !hero) return;
+  if (demo.active || !hero || state?.squad) return;
   codexAddHero(hero.cls, hero.tier);
   checkAchievements();
 }
@@ -132,6 +132,7 @@ function resetSession() {
 
 /* 시작 용사 두 명 — 빈 벤치는 "뭘 해야 하지"가 된다. 도감도 여기서 첫 칸이 채워진다 */
 function giveStarters() {
+  if (state?.squad) return;
   for (const cls of ['knight', 'archer']) {
     const h = E.makeHero(state, cls, 0);
     state.bench.push(h);
@@ -194,9 +195,9 @@ function refreshPanels() {
   if (sellSel.size) {
     for (const id of [...sellSel]) if (!state.bench.some(h => h.id === id)) sellSel.delete(id);
   }
-  ui.renderBench(state, selBench, sellMode ? sellSel : null);
-  ui.renderSellBar(state, sellMode, sellSel);
-  ui.renderCombine(state);
+  ui.renderSquad(state, selHero);
+  ui.renderSellBar(state, false, sellSel);
+  ui.renderSquadGrowth(state);
   ui.renderCastlePanel(state);
   ui.renderHeroPanel(state, selHero);
 }
@@ -444,7 +445,7 @@ function selectField(hero) {
   selHero = hero ? hero.id : null;
   renderer.setSelectedHero(selHero);
   renderer.setPlacementMode(!!hero, hero ? D.CLASSES[hero.cls].range : 0, true);
-  ui.renderBench(state, null, sellMode ? sellSel : null);
+  ui.renderSquad(state, selHero);
   ui.renderHeroPanel(state, selHero);
   if (hero) { ui.showHeroTab(); SFX.tap(); }
   else ui.restoreTab();
@@ -537,7 +538,7 @@ function saveGame() {
 }
 
 function loadGame(data) {
-  const next = data ? E.deserialize(data) : null;
+  const next = data ? E.deserialize(data, { fixedSquad: true }) : null;
   if (!next) {
     ui.toast('😢 저장 파일을 읽을 수 없어요 — 이 게임에서 저장한 파일이 맞는지 확인해 주세요', 'bad');
     return false;
@@ -675,6 +676,12 @@ function handleEvents(events) {
         SFX.heroDead();
         ui.toast(`😵 별지기 ${heroName()}가 쓰러졌어요! 다음 웨이브 준비 때 다시 일어나요`, 'bad');
         break;
+      case 'heroLevel':
+        SFX.levelUp();
+        renderer.burst((ev.x - D.FIELD_W / 2) / 36, 0.52, (ev.y - D.FIELD_H / 2) / 36, 0xd8b4ff, 10, 1.8);
+        ui.toast(`✦ ${ev.name} Lv ${ev.level}! 영웅 성장 탭에서 전문화를 고르세요.`, 'good');
+        checkAchievements();
+        break;
       case 'champLevel':
         SFX.levelUp();
         ui.toast(`🌠 ${heroName()} 레벨 업! Lv ${ev.level} — 스킬 포인트 +1 (V키로 별자리를 이어요)`, 'good');
@@ -789,6 +796,25 @@ const handlers = {
    *   다른 용사 클릭  → 두 용사의 자리 교환 (끌어다 놓기와 같은 결과)
    *   같은 용사 클릭  → 선택 해제
    * 다른 용사의 정보만 보고 싶을 땐 마우스를 올리면 툴팁이 뜬다. */
+  onSquadSelect(id) {
+    const hero = state.field.find((entry) => entry.id === id);
+    if (!hero) return;
+    if (selHero === id) { deselectAll(); return; }
+    selectField(hero);
+  },
+  onHeroSkill(heroId, key) {
+    const result = E.takeHeroSkill(state, heroId, key);
+    if (!result.ok) {
+      if (result.reason === 'sp') ui.toast('이 영웅은 아직 전문화 포인트가 없어요.', 'bad');
+      else if (result.reason === 'level') ui.toast(`Lv ${result.level}에 열리는 전문화예요.`, 'bad');
+      return;
+    }
+    SFX.upgrade();
+    renderer.burst((result.hero.x - D.FIELD_W / 2) / 36, 0.55, (result.hero.y - D.FIELD_H / 2) / 36, 0xd8b4ff, 12, 2.1);
+    ui.toast(`✦ ${result.hero.name} · [${result.skill.name}] ${result.rank}/${result.skill.max}`, 'good');
+    checkAchievements();
+    refreshAll();
+  },
   onSceneClick(cx, cy) {
     const pad = renderer.screenToPad(cx, cy);
     if (pad == null) { deselectAll(); return; }
@@ -1033,7 +1059,7 @@ function deselectAll() {
   renderer.setPlacementMode(false);
   renderer.setSelectedHero(null);
   renderer.setHover(null);
-  ui.renderBench(state, selBench, sellMode ? sellSel : null);
+  ui.renderSquad(state, null);
   ui.renderHeroPanel(state, null);
   ui.restoreTab();
 }
@@ -1176,8 +1202,9 @@ document.addEventListener('keydown', (ev) => {
     case 'e': doUlt(); return;
     case 'v': openSkills(); return;
     case 'b': handlers.onBookOpen(); return;
-    case 's': doSummon(); return;
+    case 's': ui.showTab('squad'); return;
     case 'c': {
+      if (state.squad) { ui.showTab('squad'); return; }
       const combo = E.bestCombo(state);
       if (combo) doCombineDirect(E.comboToAction(combo));
       else {
@@ -1400,13 +1427,14 @@ demo.attach({
   spell: doSpell,
   ult: doUlt,
   skill(key) { handlers.onSkillPick(key); },
+  heroSkill(heroId, key) { handlers.onHeroSkill(heroId, key); },
   feast: doFeast,
   startWave: tryStartWave,
   newGame: () => newGame(store.diff),
   comboLabel: (c) => (c.kind === 'rankup'
     ? `${D.CLASSES[c.cls].name} ${D.TIERS[c.resultTier].name}`
     : `${D.CLASSES[c.result].name}`),
-  heroLabel: (h) => `${D.TIERS[h.tier].name} ${D.CLASSES[h.cls].name}`,
+  heroLabel: (h) => `${h.name || D.CLASSES[h.cls].name} · Lv ${h.level || 1}`,
   onCaption: (text) => ui.setDemoCaption(text),
   getTacticBoard: () => tactics ? tactics.getBoard() : [],
   tacticSwap(from, to) { return tactics ? tactics.swap(from, to) : false; },

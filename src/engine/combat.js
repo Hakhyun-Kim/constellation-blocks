@@ -6,6 +6,7 @@
 import * as D from '../data.js';
 import { champStats, champKillXp, gainChampXp, chargeUlt } from './champion.js';
 import { heroMods } from './roster.js';
+import { grantSquadWaveXp } from './squad.js';
 import { damageEnemy, applyBurn, applySlow, applyStun } from './effects.js';
 import { createResonance, resonanceDamageMul } from './resonance.js';
 
@@ -78,15 +79,14 @@ export function waveSummary(state) {
 }
 
 /* 지금 데리고 있는 신화 용사 수 — 몬스터가 여기에 반응한다 (enemies.js의 신화의 압력) */
-export const mythicCount = (state) =>
-  [...state.bench, ...state.field].filter(h => h.tier >= 4).length;
+export const mythicCount = () => 0;
 
 export function startWave(state) {
   if (state.phase !== 'prep') return { ok: false };
   state.phase = 'wave';
   /* 웨이브가 시작될 때 한 번만 센다 — 전투 중 조합으로 몬스터가 갑자기 단단해지면
    * 방금 본 체력바와 어긋나서 "버그처럼" 보인다 */
-  state.mythicPress = mythicCount(state);
+  state.mythicPress = 0;
   state.spawnQueue = [...(state.pendingWave || buildWave(state))];
   state.waveT = 0;
   state.waveDmgTaken = 0;                  // 완벽 방어 판정 재료 (수리로 되돌려도 완벽은 아니다)
@@ -153,12 +153,12 @@ function firstInRange(state, x, y, range) {
 }
 
 function meleeStrike(state, h, mods, e, events) {
-  const baseDmg = Math.round(h.dmg * resonanceDamageMul(state, e.route));
+  const baseDmg = Math.round(h.dmg * (state.squad ? 1 : resonanceDamageMul(state, e.route)));
   for (let k = 0; k < mods.hits; k++) {
     /* 치명타: 짧은 사거리를 보상하는 한 방 */
     const crit = mods.crit && state.rng() < mods.crit.chance;
     const dmg = crit ? Math.round(baseDmg * mods.crit.mul) : baseDmg;
-    damageEnemy(state, e, dmg, events, crit ? 'crit' : 'hit', mods.healOnKill);
+    damageEnemy(state, e, dmg, events, crit ? 'crit' : 'hit', mods.healOnKill, null, h.id);
     if (e.dead) break;
   }
   if (!e.dead) {
@@ -225,6 +225,7 @@ function updateHeroes(state, dt, events) {
         slowOnHit: mods.slowOnHit,
         burn: mods.burn,
         pierce: mods.pierce,
+        heroId: h.id,
         srcX: h.x, srcY: h.y,
       });
       events.push({ type: 'shoot', kind: mods.atk, x: h.x, y: h.y, heroId: h.id, tx: target.x, ty: target.y });
@@ -569,8 +570,8 @@ function updateProjectiles(state, dt, events) {
         for (const e of state.enemies) {
           if (e.dead) continue;
           if (Math.hypot(e.x - t.x, e.y - t.y) <= p.splash) {
-            const dmg = Math.round(p.dmg * resonanceDamageMul(state, e.route));
-            damageEnemy(state, e, dmg, events);
+            const dmg = Math.round(p.dmg * (state.squad ? 1 : resonanceDamageMul(state, e.route)));
+            damageEnemy(state, e, dmg, events, 'hit', 0, null, p.heroId);
             if (!e.dead) {
               if (p.splashSlow) applySlow(e, p.splashSlow);
               if (p.burn) applyBurn(e, dmg, p.burn);
@@ -578,8 +579,8 @@ function updateProjectiles(state, dt, events) {
           }
         }
       } else {
-        const hitDmg = Math.round(p.dmg * resonanceDamageMul(state, t.route));
-        damageEnemy(state, t, hitDmg, events);
+        const hitDmg = Math.round(p.dmg * (state.squad ? 1 : resonanceDamageMul(state, t.route)));
+        damageEnemy(state, t, hitDmg, events, 'hit', 0, null, p.heroId);
         if (!t.dead) {
           if (p.slowOnHit) applySlow(t, p.slowOnHit);
           if (p.burn) applyBurn(t, hitDmg, p.burn);
@@ -606,8 +607,8 @@ function updateProjectiles(state, dt, events) {
             });
           for (const e of cands) {
             if (remaining <= 0) break;
-            const pierceDmg = Math.round(p.dmg * resonanceDamageMul(state, e.route));
-            damageEnemy(state, e, pierceDmg, events, 'pierce');
+            const pierceDmg = Math.round(p.dmg * (state.squad ? 1 : resonanceDamageMul(state, e.route)));
+            damageEnemy(state, e, pierceDmg, events, 'pierce', 0, null, p.heroId);
             if (!e.dead && p.slowOnHit) applySlow(e, p.slowOnHit);
             events.push({ type: 'pierceHit', x: e.x, y: e.y });
             remaining--;
@@ -637,6 +638,7 @@ function endWave(state, events) {
   /* 별지기 — 쓰러졌어도 다음 준비 단계엔 다시 일어난다.
    * 클리어 보너스 경험치, 성이 무피해였으면(완벽 방어) 더 크게 + 별조각 1. */
   const c = state.champ;
+  grantSquadWaveXp(state, events);
   if (c) {
     const revived = c.ko;
     c.ko = false;
@@ -665,7 +667,7 @@ function endWave(state, events) {
   }
   state.wave++;
   state.phase = 'prep';
-  state.resonance = createResonance(state.wave);
+  state.resonance = createResonance(state.wave); // Kept empty for legacy save compatibility; it has no gameplay effect.
   state.pendingWave = buildWave(state);
 }
 

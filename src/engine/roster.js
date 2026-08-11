@@ -4,19 +4,19 @@
 import * as D from '../data.js';
 import { gainChampXp } from './champion.js';
 import { activateResonance, heroStarValue, matchingResonanceLanes } from './resonance.js';
+import { createSquadHero, heroGrowthMods, refreshHeroDamage } from './squad.js';
 
 export function makeHero(state, cls, tier) {
-  const s = D.heroStats(cls, tier);
-  return {
-    id: state.nextId++, cls, tier,
-    dmg: Math.round(s.dmg * state.dmgMul),
-    padIndex: -1, x: 0, y: 0, cd: 0,
-  };
+  const hero = createSquadHero(state, { cls });
+  hero.tier = tier || 0;                 // legacy save/test compatibility; fixed squad always stays tier 0.
+  if (hero.tier) hero.dmg = Math.round(D.heroStats(cls, hero.tier).dmg * state.dmgMul);
+  return hero;
 }
 
 /* 등급 오버라이드를 합친 실효 수정자 (전설 → 신화 순으로 덮어씌움) */
 export function heroMods(h) {
   const C = D.CLASSES[h.cls];
+  const growth = heroGrowthMods(h);
   const o = Object.assign(
     {},
     h.tier >= 3 ? (D.LEGEND_OVERRIDES[h.cls] || {}) : {},
@@ -26,17 +26,20 @@ export function heroMods(h) {
     atk: C.atk,
     range: C.range,
     spd: C.spd,
-    hits: o.hits ?? C.hits ?? 1,
-    burn: o.burn ?? C.burn ?? 0,
-    slowOnHit: o.slowOnHit ?? C.slowOnHit ?? null,
-    splash: (C.splash || 0) * (o.splashMul || 1),
-    splashSlow: o.splashSlow ?? C.splashSlow ?? null,
-    healOnKill: o.healOnKill ?? C.healOnKill ?? 0,
-    pierce: o.pierce ?? C.pierce ?? 1,
-    cleave: !!o.cleave,
+    hits: growth.hits ?? o.hits ?? C.hits ?? 1,
+    burn: growth.burn ?? o.burn ?? C.burn ?? 0,
+    slowOnHit: growth.slowOnHit ?? o.slowOnHit ?? C.slowOnHit ?? null,
+    splash: (C.splash || 0) * (growth.splashMul ?? o.splashMul ?? 1),
+    splashSlow: growth.splashSlow ?? o.splashSlow ?? C.splashSlow ?? null,
+    healOnKill: growth.healOnKill ?? o.healOnKill ?? C.healOnKill ?? 0,
+    pierce: growth.pierce ?? o.pierce ?? C.pierce ?? 1,
+    cleave: growth.cleave ?? !!o.cleave,
     aura: o.aura || 0,
-    crit: o.crit ?? C.crit ?? null,
-    block: o.block ?? C.block ?? null,
+    crit: growth.crit ?? o.crit ?? C.crit ?? null,
+    block: (o.block ?? C.block) ? {
+      ...(o.block ?? C.block),
+      period: (o.block ?? C.block).period * (growth.blockPeriodMul ?? 1),
+    } : null,
   };
 }
 
@@ -56,6 +59,7 @@ export function rollTier(state) {
 }
 
 export function summon(state) {
+  if (state.squad) return { ok: false, reason: 'fixed-squad' };
   if (state.phase === 'over') return { ok: false, reason: 'over' };
   if (state.gold < D.SUMMON_COST) return { ok: false, reason: 'gold' };
   if (state.bench.length >= D.BENCH_MAX) return { ok: false, reason: 'bench' };
@@ -174,6 +178,7 @@ export function comboToAction(c) {
 }
 
 export function listCombos(state) {
+  if (state.squad) return [];
   const out = [];
   /* 등급업 — 벤치/필드 통합 집계 (천장 = 신화, 모든 직업 공통) */
   const seen = new Set();
@@ -221,6 +226,7 @@ export function bestCombo(state) {
 }
 
 export function combineRankUp(state, cls, tier) {
+  if (state.squad) return { ok: false, reason: 'fixed-squad' };
   const mats = unitsOf(state, cls, tier).slice(0, 2);
   if (mats.length < 2 || tier >= D.maxTierOf(cls)) return { ok: false };
   const cost = D.combineCost(tier + 1, false);
@@ -242,6 +248,7 @@ export function combineRankUp(state, cls, tier) {
 
 /* 레시피 조합 — 같은 등급 2명끼리, 결과는 그 등급 +1 (신화까지) */
 export function combineRecipe(state, result) {
+  if (state.squad) return { ok: false, reason: 'fixed-squad' };
   const R = D.CLASSES[result];
   if (!R || !R.recipe) return { ok: false };
   const r = D.RECIPES.find(x => x.result === result);
@@ -335,6 +342,7 @@ export function placeHero(state, heroId, padIndex) {
 }
 
 export function recallHero(state, heroId) {
+  if (state.squad) return { ok: false, reason: 'fixed-squad' };
   const h = state.field.find(v => v.id === heroId);
   if (!h) return { ok: false };
   if (state.bench.length >= D.BENCH_MAX) return { ok: false, reason: 'bench' };
@@ -345,6 +353,7 @@ export function recallHero(state, heroId) {
 }
 
 export function sellHero(state, heroId) {
+  if (state.squad) return { ok: false, reason: 'fixed-squad' };
   const h = state.field.find(v => v.id === heroId) || state.bench.find(v => v.id === heroId);
   if (!h) return { ok: false };
   state.field = state.field.filter(v => v !== h);
@@ -358,6 +367,7 @@ export function sellHero(state, heroId) {
  * 준비 단계에 한 번, 골드로 잔치를 벌이면 승급 가능한 용사 중 하나가 랜덤으로 등급 UP.
  * 별지기도 얻어먹고 경험치를 챙긴다. 배치된 용사는 그 자리에서 그대로 승급한다. */
 export function holdFeast(state) {
+  if (state.squad) return { ok: false, reason: 'fixed-squad' };
   if (state.phase !== 'prep') return { ok: false, reason: 'phase' };
   if (state.feastWave === state.wave) return { ok: false, reason: 'done' };
   const cost = D.feastCost(state.wave);
@@ -380,7 +390,7 @@ export function holdFeast(state) {
   const from = hero.tier;
   hero.tier++;
   /* 공격력은 현재 등급과 메타 배율에서 다시 계산한다. */
-  hero.dmg = Math.round(D.heroStats(hero.cls, hero.tier).dmg * state.dmgMul);
+  refreshHeroDamage(state, hero);
 
   const events = [];
   gainChampXp(state, D.feastChampXp(state.wave), events);

@@ -26,7 +26,7 @@ function previewHero(cls, tier, state) {
 /* 용사 상세 정보(툴팁/패널 공용) */
 export function describeHero(hero, state, preview) {
   const C = D.CLASSES[hero.cls];
-  const T = D.TIERS[hero.tier];
+  const T = hero.level ? { color: '#7658c7', name: `Lv ${hero.level}` } : D.TIERS[hero.tier];
   const m = E.heroMods(hero);
   const rl = rangeLabel(m.range);
   const rows = [];
@@ -44,12 +44,12 @@ export function describeHero(hero, state, preview) {
   if (m.healOnKill) rows.push(`💚 처치 시 성 회복 <b>+${m.healOnKill}</b>`);
 
   let ability = '';
-  const MA = hero.tier >= 4 ? D.MYTHIC_ABILITIES[hero.cls] : null;
+  const MA = !hero.level && hero.tier >= 4 ? D.MYTHIC_ABILITIES[hero.cls] : null;
   const LA = D.LEGEND_ABILITIES[hero.cls];
   if (MA) ability = `<div class="tt-mythic">🌌 ${MA.name} — ${MA.desc}</div>`;
   else if (hero.tier === 3 && LA) ability = `<div class="tt-legend">⭐ ${LA.name} — ${LA.desc}</div>`;
   let recipe = '';
-  if (C.recipe) {
+  if (!hero.level && C.recipe) {
     const [a, b] = C.recipe;
     const label = C.mythic ? '🌌 신화 조합 전용' : '✨ 조합 전용 특수 용사';
     recipe = `<div class="tt-recipe">${label} (${D.CLASSES[a].emoji}+${D.CLASSES[b].emoji})</div>`;
@@ -57,7 +57,9 @@ export function describeHero(hero, state, preview) {
   const barPct = Math.round((m.range / D.RANGE_MAX) * 100);
   const onField = hero.padIndex >= 0;
   const cap = D.maxTierOf(hero.cls);
-  const capNote = hero.tier >= cap
+  const capNote = hero.level
+    ? `Level ${hero.level} · specialization points ${hero.sp || 0}`
+    : hero.tier >= cap
     ? `🔒 최고 등급(${D.TIERS[cap].name})`
     : `⬆ ${D.TIERS[cap].name}까지 성장 가능`;
   const foot = preview
@@ -115,8 +117,23 @@ export class UI {
     ].forEach(id => this.el[id] = $(id));
     this._lastKnow = -1;
     this._lastProbSig = '';
-    this._tab = 'combine';
+    const squadTab = [...this.el.tabs.querySelectorAll('button')].find((button) => button.dataset.tab === 'combine');
+    const squadPane = document.querySelector('.tabbody .pane[data-pane="combine"]');
+    if (squadTab && squadPane) {
+      squadTab.dataset.tab = 'squad';
+      squadTab.innerHTML = '✦ 영웅 성장<span id="combineDot" class="tabdot hidden"></span>';
+      squadPane.dataset.pane = 'squad';
+      squadPane.querySelector('h2').innerHTML = '✦ 영웅 성장 <span class="sub">레벨업 때 전문화를 고르세요</span>';
+      this.el.combineDot = squadTab.querySelector('#combineDot');
+    }
+    this._tab = 'squad';
     this._tabBefore = null;
+    this.el.summonBtn.classList.add('hidden');
+    this.el.helpBox.innerHTML = `
+      <p>🛡️ <b>영웅단</b> 네 영웅은 처음부터 성을 지킵니다. 영웅 카드를 눌러 선택한 뒤 빈 발판이나 다른 영웅을 눌러 위치를 옮기거나 교환하세요.</p>
+      <p>✦ <b>성장</b> 처치와 웨이브 완료로 영웅 경험치를 얻습니다. 레벨업 포인트가 생기면 <b>영웅 성장</b> 탭에서 그 영웅의 전문화를 고르세요. <b>S</b> 키로 바로 열 수 있어요.</p>
+      <p>☄️ <b>별자리 전술</b> 전투 중 6×6 보드에서 이웃 별을 바꾸세요. Flare는 공격, Tide는 감속, Bloom은 회복·후퇴를 맡고, 맞춘 열이 대상 길을 정합니다.</p>
+      <p>🌠 <b>루나</b>는 직접 조작하는 별지기예요. <b>A</b> 별똥별, <b>E</b> 은하수, <b>V</b> 별지기 스킬을 사용합니다. <b>D</b>는 밸런스 봇 관전, <b>B</b>는 기록, <b>7~9</b>는 성 강화입니다.</p>`;
   }
 
   /* ---------- 오른쪽 패널 탭 ----------
@@ -128,7 +145,7 @@ export class UI {
     document.querySelectorAll('.tabbody .pane').forEach(p =>
       p.classList.toggle('hidden', p.dataset.pane !== name));
     if (name === 'hero') this.el.heroDot.classList.add('hidden');
-    if (name === 'combine') this.el.combineDot.classList.add('hidden');
+    if (name === 'squad') this.el.combineDot.classList.add('hidden');
   }
   /* ---------- 배치 중 안내 ----------
    * 전장 위 UI(웨이브 버튼 · 별지기 칩)가 하필 아래쪽 발판을 덮고 있어서,
@@ -156,7 +173,7 @@ export class UI {
   }
   restoreTab() {
     if (this._tab !== 'hero') return;
-    this.showTab(this._tabBefore || 'combine');
+    this.showTab(this._tabBefore || 'squad');
     this._tabBefore = null;
   }
 
@@ -380,6 +397,60 @@ export class UI {
 
   /* ---------- 벤치 ----------
    * sell(Set)이 오면 판매 모드: 카드가 체크박스가 된다 — 가격을 크게, 고르면 ✓ */
+  renderSquad(state, selId) {
+    const el = this.el.bench;
+    el.innerHTML = '';
+    for (const hero of state.field) {
+      const C = D.CLASSES[hero.cls];
+      const d = document.createElement('button');
+      const m = E.heroMods(hero);
+      d.type = 'button';
+      d.className = `hcard squad-card ${selId === hero.id ? 'sel' : ''}`;
+      d.innerHTML =
+        `<div class="em">${C.emoji}</div>` +
+        `<div class="nm">${hero.name || C.name}</div>` +
+        `<div class="tr">${C.name} · Lv ${hero.level}</div>` +
+        `<div class="rg ${rangeLabel(m.range).cls}">⚔️${hero.dmg}</div>` +
+        (hero.sp > 0 ? `<span class="squad-point">+${hero.sp}</span>` : '');
+      d.addEventListener('click', () => this.h.onSquadSelect(hero.id));
+      d.addEventListener('mouseenter', (ev) => this.showTooltip(hero, state, ev.clientX, ev.clientY));
+      d.addEventListener('mousemove', (ev) => this.moveTooltip(ev.clientX, ev.clientY));
+      d.addEventListener('mouseleave', () => this.hideTooltip());
+      el.appendChild(d);
+    }
+    this.el.benchHint.classList.add('hidden');
+  }
+
+  renderSquadGrowth(state) {
+    const ready = state.field.filter((hero) => hero.sp > 0);
+    this.el.combineDot.classList.toggle('hidden', this._tab === 'squad' || !ready.length);
+    const rows = state.field.map((hero) => {
+      const C = D.CLASSES[hero.cls];
+      const need = D.heroXpNeed(hero.level);
+      const skills = Object.entries(D.HERO_SKILLS)
+        .filter(([, skill]) => skill.cls === hero.cls)
+        .map(([key, skill]) => {
+          const rank = hero.skills[key] || 0;
+          const locked = hero.level < skill.level;
+          const capped = rank >= skill.max;
+          const enabled = hero.sp > 0 && !locked && !capped;
+          const label = capped ? `완료 ${rank}/${skill.max}` : locked ? `Lv ${skill.level} 필요` : `${rank}/${skill.max}`;
+          return `<button class="growth-skill${enabled ? ' ready' : ''}" data-hero-id="${hero.id}" data-skill="${key}" ${enabled ? '' : 'disabled'}>
+            <span>${skill.emoji} <b>${skill.name}</b></span><small>${skill.per} · ${label}</small>
+          </button>`;
+        }).join('');
+      return `<section class="growth-hero">
+        <header><span>${C.emoji} <b>${hero.name || C.name}</b> <small>${C.name}</small></span><strong>Lv ${hero.level}</strong></header>
+        <div class="growth-xp"><i style="width:${Math.min(100, (hero.xp / need) * 100)}%"></i></div>
+        <p>경험치 ${Math.round(hero.xp)}/${need} · 전문화 포인트 <b>${hero.sp}</b></p>
+        <div class="growth-skills">${skills}</div>
+      </section>`;
+    }).join('');
+    this.el.combineRows.innerHTML = `<p class="growth-note">전투 처치와 웨이브 완료로 경험치를 얻습니다. 포인트가 생기면 한 영웅의 역할을 깊게 만드세요.</p>${rows}`;
+    this.el.combineRows.querySelectorAll('button[data-skill]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onHeroSkill(Number(button.dataset.heroId), button.dataset.skill)));
+  }
+
   renderBench(state, selId, sell = null) {
     const el = this.el.bench;
     if (!state.bench.length) {
@@ -702,6 +773,9 @@ export class UI {
     el.recallBtn.classList.toggle('hidden', !onField);
     el.sellBtn.textContent = `💰 판매 +${D.SELL_PRICE[hero.tier]} (X)`;
     el.moveHint.classList.toggle('hidden', !onField);
+    /* Fixed squad members cannot be recalled or sold. Position is the only roster action. */
+    el.recallBtn.classList.add('hidden');
+    el.sellBtn.classList.add('hidden');
   }
 
   /* ---------- 상세 정보 툴팁 ---------- */
@@ -840,7 +914,7 @@ export class UI {
     if (!d) return;
     const tab = this._bookTab || 'heroes';
     let html = '';
-    if (tab === 'heroes') html = this._bookHeroes(d);
+    if (tab === 'heroes') html = d.state?.squad ? this._bookSquad(d) : this._bookHeroes(d);
     else if (tab === 'enemies') html = this._bookEnemies(d);
     else if (tab === 'ach') html = this._bookAch(d);
     else html = this._bookTactics(d);
@@ -868,6 +942,26 @@ export class UI {
         <span class="bkemoji">${known ? C.emoji : '❓'}</span>
         <span class="bkname">${known ? C.name : '???'}${tag}</span>
         <span class="bkcells">${cells}</span>
+      </div>`;
+    }
+    return html;
+  }
+
+  _bookSquad(d) {
+    const heroes = d.state.field;
+    let html = `<div class="book-progress">수호 영웅단 <b>${heroes.length}</b> / ${D.SQUAD.length}
+      <span class="cnt">네 영웅은 전투를 거치며 레벨과 전문화를 이어 갑니다.</span></div>`;
+    for (const spec of D.SQUAD) {
+      const hero = heroes.find((entry) => entry.cls === spec.cls);
+      const C = D.CLASSES[spec.cls];
+      const skills = Object.values(D.HERO_SKILLS)
+        .filter((skill) => skill.cls === spec.cls && (hero?.skills?.[skill.key] || 0) > 0)
+        .map((skill) => `${skill.name} ${hero.skills[skill.key]}`)
+        .join(' · ');
+      html += `<div class="book-row${hero ? '' : ' unknown'}">
+        <span class="bkemoji">${C.emoji}</span>
+        <span class="bkname">${spec.name}<small>${spec.role} · Lv ${hero?.level || 1}${skills ? `<br>${skills}` : ''}</small></span>
+        <span class="bkkills">${hero ? `경험치 ${hero.xp}/${D.heroXpNeed(hero.level)}` : '합류 대기'}</span>
       </div>`;
     }
     return html;
@@ -937,7 +1031,7 @@ export class UI {
     el.victoryTitle.textContent = run > 1 ? `서른 번째 아침 — ${run}번째 여정` : '🌅 서른 번째 아침';
     el.victoryStats.innerHTML =
       `🌊 <b>30웨이브</b>를 지켜냈어요! (${D.DIFFICULTIES[state.difficulty].name}${run > 1 ? ` · ${run}회차` : ''})<br>
-       👾 물리친 몬스터 <b>${state.kills}</b> · 🌌 신화 <b>${state.mythicsMade}</b> ·
+       👾 물리친 몬스터 <b>${state.kills}</b> · ✦ 영웅단 최고 레벨 <b>${Math.max(...state.field.map((hero) => hero.level || 1))}</b> ·
        🌌 전술판으로 길을 지키며 별의 시련을 이어가요<br>
        🌠 별지기 <b>Lv ${state.champ ? state.champ.level : 1}</b> — 다음 여정에도 그대로 함께해요`;
     el.victoryShards.textContent = `✨ 별조각 +${shards} 획득!`;
@@ -1178,7 +1272,7 @@ export class UI {
     this.el.overStats.innerHTML =
       `🌊 도달한 웨이브: <b>${state.wave}웨이브</b> (${D.DIFFICULTIES[state.difficulty].name})<br>
        👾 물리친 몬스터: <b>${state.kills}마리</b>${state.midBossKills ? ` · 👿 중간보스 ${state.midBossKills}` : ''}${state.bossKills ? ` · 🐉 대보스 ${state.bossKills}` : ''}<br>
-       🎲 소환 <b>${state.summons}</b> · ⚗️ 조합 <b>${state.combos}</b> · ✨ 특수 <b>${state.specialsMade}</b> · 🌌 신화 <b>${state.mythicsMade}</b><br>
+       ✦ 영웅단 최고 레벨 <b>${Math.max(...state.field.map((hero) => hero.level || 1))}</b> · ✧ 선택한 전문화 <b>${state.field.reduce((total, hero) => total + Object.values(hero.skills || {}).reduce((sum, rank) => sum + rank, 0), 0)}</b><br>
        🌌 별자리 전술판으로 세 갈래 길을 지켰어요<br>
        ${state.champ ? `<br>🌠 별지기: <b>Lv ${state.champ.level}</b> · 직접 처치 <b>${state.champKills || 0}</b> · ☄️ 별똥별 ${state.starCasts || 0}회${state.ultCasts ? ` · 🌌 은하수 ${state.ultCasts}회` : ''}${state.perfectWaves ? ` · 🛡️ 완벽 방어 ${state.perfectWaves}번` : ''}${state.feasts ? ` · 🎉 잔치 ${state.feasts}번` : ''}` : ''}`;
     this.el.overShards.textContent = `✨ 별조각 +${state.shardsEarned} 획득!`;

@@ -6,8 +6,9 @@
  * ===================================================== */
 import * as D from '../data.js';
 import { champKillXp, gainChampXp, chargeUlt } from './champion.js';
+import { gainHeroXp, heroKillXp } from './squad.js';
 
-export function damageEnemy(state, enemy, dmg, events, kind = 'hit', healOnKill = 0, visual = null) {
+export function damageEnemy(state, enemy, dmg, events, kind = 'hit', healOnKill = 0, visual = null, heroId = null) {
   if (enemy.dead) return;
   enemy.hp -= dmg;
   events.push({ type: 'enemyHit', x: enemy.x, y: enemy.y - enemy.size / 2, dmg, kind, ...(visual || {}) });
@@ -37,6 +38,7 @@ export function damageEnemy(state, enemy, dmg, events, kind = 'hit', healOnKill 
     chargeUlt(state,
       enemy.boss ? D.ULT.boss : enemy.midBoss ? D.ULT.mid : enemy.elite ? D.ULT.elite : D.ULT.kill, events);
   }
+  if (heroId != null) gainHeroXp(state, state.field.find((hero) => hero.id === heroId), heroKillXp(enemy), events);
 }
 
 export function applyBurn(enemy, dmg, ratio) {

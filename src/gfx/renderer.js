@@ -204,9 +204,11 @@ export class Renderer3D {
     holder.add(shadow);
 
     const isSpecial = !!D.CLASSES[hero.cls].special;
+    const squadColor = { knight: 0xe56b5d, guard: 0x5a96e8, archer: 0x63b56f, mage: 0xa779e8 }[hero.cls]
+      || D.TIERS[hero.tier].color;
     const ring = new THREE.Mesh(
       new THREE.RingGeometry(0.52, 0.64, 24),
-      new THREE.MeshBasicMaterial({ color: D.TIERS[hero.tier].color, transparent: true, opacity: 0.95, depthWrite: false })
+      new THREE.MeshBasicMaterial({ color: squadColor, transparent: true, opacity: 0.95, depthWrite: false })
     );
     ring.rotation.x = -Math.PI / 2;
     ring.position.y = 0.145;

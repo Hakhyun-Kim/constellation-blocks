@@ -182,6 +182,10 @@ export const demo = {
         this.say(`✨ 별지기의 별자리를 잇습니다 — [${act.skill.name}]`);
         A.skill(act.key);
         break;
+      case 'heroSkill':
+        this.say(`✦ ${A.heroLabel(act.hero)} specialization: ${act.skill.name}`);
+        A.heroSkill(act.heroId, act.key);
+        break;
       case 'feast':
         this.say('🎉 남는 골드로 잔치를 벌입니다 — 누가 승급할까요?');
         A.feast();

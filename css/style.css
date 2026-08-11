@@ -734,6 +734,28 @@ button { font-family: inherit; }
   margin-top: 8px;
   min-height: 40px;
 }
+.squad-intro { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 8px; color: #4a456f; }
+.squad-intro b { color: #5f469e; font-size: 15px; }
+.squad-intro span { font-size: 11px; color: #6f7890; }
+#benchCard .sellbar { display: none; }
+.squad-card { position: relative; min-width: 0; text-align: left; cursor: pointer; font-family: inherit; }
+.squad-card .tr { font-size: 10px; color: #65718d; white-space: nowrap; }
+.squad-card .rg { margin-top: 3px; }
+.squad-point { position: absolute; top: -6px; right: -4px; display: grid; place-items: center; min-width: 20px; height: 20px; border-radius: 999px; background: #ffca57; color: #5b3d00; border: 2px solid #fff; font-size: 11px; font-weight: 900; }
+.growth-note { margin: 0 0 9px; color: #64708b; font-size: 12px; line-height: 1.4; }
+.growth-hero { padding: 10px; border: 1px solid #d5d9ea; border-radius: 12px; background: linear-gradient(135deg, #fbfcff, #f4f0ff); margin-bottom: 8px; }
+.growth-hero header { display: flex; justify-content: space-between; align-items: baseline; color: #343457; }
+.growth-hero header small { color: #69748c; font-size: 11px; }
+.growth-hero header strong { color: #8057c7; font-size: 14px; }
+.growth-hero p { margin: 5px 0 7px; color: #66718a; font-size: 11px; }
+.growth-xp { height: 6px; overflow: hidden; border-radius: 999px; background: #e2e7f3; }
+.growth-xp i { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #69b7f5, #a56eea); transition: width .2s ease; }
+.growth-skills { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.growth-skill { min-height: 52px; padding: 5px; border: 1px solid #d3d8e7; border-radius: 8px; background: #fff; color: #66718a; font-family: inherit; font-size: 10px; text-align: left; }
+.growth-skill span, .growth-skill small { display: block; }
+.growth-skill small { margin-top: 3px; line-height: 1.2; }
+.growth-skill.ready { border-color: #c493ee; color: #4d357b; cursor: pointer; background: #fff9eb; box-shadow: 0 0 0 2px #f3ddff; }
+.combine-row.feast { display: none; }
 .bench .empty-msg {
   grid-column: 1 / -1;
   color: #9aa7ba;

@@ -11,6 +11,7 @@
  * ===================================================== */
 export * from './engine/state.js';
 export * from './engine/champion.js';
+export * from './engine/squad.js';
 export * from './engine/roster.js';
 export * from './engine/economy.js';
 export * from './engine/resonance.js';

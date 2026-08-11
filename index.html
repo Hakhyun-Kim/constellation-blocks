@@ -157,7 +157,8 @@
     </section>
 
     <section class="card fixed" id="benchCard">
-      <button id="summonBtn" class="big amber">🎲 용사 소환 (💰 50 · S)</button>
+      <div class="squad-intro"><b>✦ 수호 영웅단</b><span>카드를 눌러 위치를 바꾸세요</span></div>
+      <button id="summonBtn" class="big amber hidden" aria-hidden="true">영웅단은 처음부터 모두 합류합니다.</button>
       <div id="benchHint" class="benchhint hidden">🟩 빈 발판 = 배치 · 🟦 찬 발판 = 자리 교환 · ←→ 고르고 Enter</div>
       <div id="bench" class="bench"></div>
       <div class="sellbar">
@@ -170,14 +171,14 @@
 
     <!-- 탭: 한 번에 하나만 보여 세로 길이를 줄인다 -->
     <div class="tabs" id="tabs">
-      <button data-tab="combine" class="on">⚗️ 조합<span id="combineDot" class="tabdot hidden"></span></button>
+      <button data-tab="squad" class="on">✦ 영웅 성장<span id="combineDot" class="tabdot hidden"></span></button>
       <button data-tab="castle">🏰 성</button>
       <button data-tab="hero">🧍 용사<span id="heroDot" class="tabdot hidden"></span></button>
     </div>
 
     <div class="tabbody">
-      <section class="card pane" data-pane="combine">
-        <h2>⚗️ 용사 조합 <span class="sub">같은 등급 2명 + 골드</span></h2>
+      <section class="card pane" data-pane="squad">
+        <h2>✦ 영웅 성장 <span class="sub">레벨업 포인트로 전문화를 고르세요</span></h2>
         <div id="combineRows"></div>
       </section>
 
