@@ -69,6 +69,8 @@ diffuseColor.rgb *= 1.0 - 0.26 * (1.0 - smoothstep(0.0, 0.8, vShoreW.y - shoreEd
     const roadW = (D.ROAD_HALF * 2 + 10) * S;
     const edgeMat = lam(0x8d6a42);
     const roadMat = new THREE.MeshLambertMaterial({ map: roadTexture(), color: 0xe8d7bd });
+    this.roadEdgeMaterial = edgeMat;
+    this.roadMaterial = roadMat;
     for (const segs of D.ROUTE_SEGS) {
       for (const seg of segs) {
         const len = seg.len * S;

@@ -202,6 +202,8 @@ function refreshPanels() {
   ui.renderHeroPanel(state, selHero);
 }
 function refreshAll() {
+  const journeyBattle = E.journeyBattleProgress(state);
+  renderer.setRegionTheme(journeyBattle?.node.region || 'verdant-dawn');
   refreshPanels();
   ui.updateHud(state, store.shards, store.best(state.difficulty));
   ui.setWaveUI(state);
@@ -847,7 +849,10 @@ const handlers = {
   onHeroSkill(heroId, key) {
     const result = E.takeHeroSkill(state, heroId, key);
     if (!result.ok) {
-      if (result.reason === 'sp') ui.toast('이 영웅은 아직 전문화 포인트가 없어요.', 'bad');
+      if (result.reason === 'facility') {
+        const facility = D.HERO_FACILITIES[result.facility];
+        ui.toast(`${facility?.emoji || '⌂'} ${facility?.name || '마을 시설'}에서만 이 전문화를 선택할 수 있어요.`, 'bad');
+      } else if (result.reason === 'sp') ui.toast('이 영웅은 아직 전문화 포인트가 없어요.', 'bad');
       else if (result.reason === 'level') ui.toast(`Lv ${result.level}에 열리는 전문화예요.`, 'bad');
       return;
     }
@@ -856,6 +861,7 @@ const handlers = {
     ui.toast(`✦ ${result.hero.name} · [${result.skill.name}] ${result.rank}/${result.skill.max}`, 'good');
     checkAchievements();
     refreshAll();
+    autoSave();
   },
   onSceneClick(cx, cy) {
     const pad = renderer.screenToPad(cx, cy);

@@ -44,3 +44,15 @@ export const HERO_SKILLS = {
 };
 
 export const HERO_SKILL_KEYS = Object.keys(HERO_SKILLS);
+
+/* Experience is earned in battle, but specialization is chosen at the
+ * matching town facility.  This turns a level-up point into a route and
+ * timing decision instead of another combat-screen button. */
+export const HERO_FACILITIES = {
+  forge: { name: '별무기 대장간', emoji: '🔨', heroes: ['arin', 'doyun'], desc: '전방 영웅의 전투 기술을 벼립니다.' },
+  shrine: { name: '별빛 신전', emoji: '☾', heroes: ['luna', 'yuna'], desc: '마도사의 별자리 전문화를 엽니다.' },
+  guild: { name: '탐험가 길드', emoji: '🏹', heroes: ['sera'], desc: '궁수의 사격 전술을 전수합니다.' },
+};
+
+export const facilityForHero = (heroKey) =>
+  Object.entries(HERO_FACILITIES).find(([, facility]) => facility.heroes.includes(heroKey))?.[0] || null;

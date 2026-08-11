@@ -43,10 +43,8 @@ const put = (st, cls, tier, pad) => {
   const events = [];
   E.gainHeroXp(st, knight, D.heroXpNeed(1), events);
   ok('journey: XP grants a level and specialization point', knight.level === 2 && knight.sp === 1 && knight.dmg > before && events.some((event) => event.type === 'heroLevel'));
-  const locked = E.takeHeroSkill(st, knight.id, 'knight_arc');
-  ok('journey: milestone skill is rejected early', !locked.ok && locked.reason === 'level');
-  const skill = E.takeHeroSkill(st, knight.id, 'knight_edge');
-  ok('journey: matching class spends one specialization point', skill.ok && knight.sp === 0 && knight.skills.knight_edge === 1);
+  const awayFromTown = E.takeHeroSkill(st, knight.id, 'knight_edge');
+  ok('journey: specialization is rejected away from its town facility', !awayFromTown.ok && awayFromTown.reason === 'facility' && awayFromTown.facility === 'forge');
 
   ok('journey: unreachable nodes are rejected', !E.travelJourney(st, 'boss').ok);
   const battle = E.travelJourney(st, 'meadow');
@@ -60,6 +58,10 @@ const put = (st, cls, tier, pad) => {
   const complete = E.completeJourneyWave(st);
   ok('journey: short defense returns to the map', complete.complete && st.phase === 'journey' && st.journey.cleared.includes('meadow'));
   const town = E.travelJourney(st, 'town');
+  const locked = E.takeHeroSkill(st, knight.id, 'knight_arc');
+  ok('journey: milestone skill is rejected early at its facility', !locked.ok && locked.reason === 'level');
+  const skill = E.takeHeroSkill(st, knight.id, 'knight_edge');
+  ok('journey: forge spends one specialization point for its matching hero', skill.ok && knight.sp === 0 && knight.skills.knight_edge === 1);
   const recruit = E.recruitJourneyHero(st, 'doyun');
   ok('journey: town offer recruits one named hero', town.ok && town.type === 'recruit' && recruit.ok && st.field.some((hero) => hero.heroKey === 'doyun'));
 

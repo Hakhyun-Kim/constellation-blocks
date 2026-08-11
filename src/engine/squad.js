@@ -85,6 +85,13 @@ export function takeHeroSkill(state, heroId, key) {
   const hero = state.field.find((entry) => entry.id === heroId);
   const skill = D.HERO_SKILLS[key];
   if (!hero || !skill || skill.cls !== hero.cls) return { ok: false, reason: 'hero' };
+  if (state.squad) {
+    const node = state.journey && D.JOURNEY_CHAPTER.nodes.find((entry) => entry.id === state.journey.current);
+    const facility = D.facilityForHero(hero.heroKey);
+    if (state.phase !== 'journey' || node?.kind !== 'town' || !node.facilities?.includes(facility)) {
+      return { ok: false, reason: 'facility', facility };
+    }
+  }
   const rank = hero.skills[key] || 0;
   if (rank >= skill.max) return { ok: false, reason: 'max' };
   if (hero.sp < 1) return { ok: false, reason: 'sp' };

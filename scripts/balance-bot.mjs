@@ -20,9 +20,6 @@ function prepActions(state, profile) {
     if (!E.takeSkill(state, key).ok) break;
   }
   if (state.squad) {
-    for (let choice = Bot.nextHeroSkill(state); choice; choice = Bot.nextHeroSkill(state)) {
-      if (!E.takeHeroSkill(state, choice.heroId, choice.key).ok) break;
-    }
     for (const key of Bot.castlePlan(state, profile)) E.castleUpgrade(state, key);
     return;
   }
@@ -40,6 +37,17 @@ function prepActions(state, profile) {
   Bot.placeAll(state, profile.sloppy || 0);
   for (const key of Bot.castlePlan(state, profile)) E.castleUpgrade(state, key);
   if (Bot.wantsFeast(state, profile)) E.holdFeast(state);
+}
+
+/* The player may only commit specialization points while standing in the
+ * authored town.  Mirror that restriction here so balance results never use
+ * a hidden out-of-combat advantage. */
+function spendTownSpecializations(state) {
+  const node = E.journeyNode(state?.journey?.current);
+  if (state.phase !== 'journey' || node?.kind !== 'town' || state.journey.pendingRecruit) return;
+  for (let choice = Bot.nextHeroSkill(state); choice; choice = Bot.nextHeroSkill(state)) {
+    if (!E.takeHeroSkill(state, choice.heroId, choice.key).ok) break;
+  }
 }
 
 /* 화면 어댑터의 resolveQueue와 같은 순서다. 독립 매치는 타입·대상 방어로를
@@ -99,6 +107,7 @@ export function playRun(profileName, difficulty, seed, options = {}) {
   while (state.phase !== 'over' && state.wave <= waveCap && !state.journey?.complete && !stalemate) {
     /* 지도 선택과 영입도 실제 플레이와 같은 순수 엔진 명령으로 처리한다. */
     if (state.phase === 'journey') {
+      spendTownSpecializations(state);
       if (state.journey?.pendingRecruit) {
         const key = Bot.nextJourneyRecruit(state);
         if (!key || !E.recruitJourneyHero(state, key).ok) { stalemate = true; break; }

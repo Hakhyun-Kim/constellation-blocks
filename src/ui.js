@@ -141,9 +141,174 @@ export class UI {
       </section>`);
     this.el.journeyModal = $('journeyModal');
     this.el.journeyBody = $('journeyBody');
+    this._journeyState = null;
+    this._village = { open: false, nodeId: null, x: 50, y: 78, dialog: null };
+    this._villageKeyHandler = (event) => this._handleVillageKey(event);
+    /* Capture movement keys before the global combat shortcuts.  The village is
+     * a presentation layer: all rewards and skill validation remain in engine/. */
+    window.addEventListener('keydown', this._villageKeyHandler, true);
+  }
+
+  _activeVillageNode(state) {
+    const pending = E.journeyNode(state?.journey?.pendingRecruit);
+    const current = E.journeyNode(state?.journey?.current);
+    if (pending?.kind === 'town') return pending;
+    if (this._village.open && current?.kind === 'town') return current;
+    return null;
+  }
+
+  _ensureVillage(node) {
+    if (this._village.nodeId === node.id) return;
+    this._village = { open: true, nodeId: node.id, x: 50, y: 78, dialog: null };
+  }
+
+  _villageTargets(state, node) {
+    const recruiterSpot = {
+      doyun: { x: 25, y: 60, place: '수문 초소' },
+      sera: { x: 76, y: 59, place: '전령 길드' },
+    };
+    const facilitySpot = {
+      forge: { x: 22, y: 28 },
+      shrine: { x: 50, y: 24 },
+      guild: { x: 78, y: 29 },
+    };
+    const targets = [];
+    if (state.journey.pendingRecruit === node.id) {
+      for (const key of node.offers || []) {
+        if (state.field.some((hero) => hero.heroKey === key)) continue;
+        const spec = D.squadSpec(key);
+        const C = spec && D.CLASSES[spec.cls];
+        const spot = recruiterSpot[key] || { x: 50, y: 55, place: '마을 광장' };
+        if (spec && C) targets.push({ id: `recruit:${key}`, type: 'recruit', key, x: spot.x, y: spot.y, place: spot.place, label: spec.name, emoji: C.emoji });
+      }
+    }
+    for (const key of node.facilities || []) {
+      const facility = D.HERO_FACILITIES[key];
+      const spot = facilitySpot[key];
+      if (facility && spot) targets.push({ id: `facility:${key}`, type: 'facility', key, x: spot.x, y: spot.y, label: facility.name, emoji: facility.emoji, desc: facility.desc });
+    }
+    return targets;
+  }
+
+  _nearVillageTarget(target) {
+    const dx = this._village.x - target.x;
+    const dy = this._village.y - target.y;
+    return dx * dx + dy * dy <= 13 * 13;
+  }
+
+  _moveVillage(x, y) {
+    this._village.x = Math.max(6, Math.min(94, Math.round(x)));
+    this._village.y = Math.max(16, Math.min(88, Math.round(y)));
+    this._village.dialog = null;
+    this.renderJourney(this._journeyState);
+  }
+
+  _openVillageTarget(target) {
+    if (!this._nearVillageTarget(target)) return;
+    this._village.dialog = { type: target.type, key: target.key };
+    this.renderJourney(this._journeyState);
+  }
+
+  _handleVillageKey(event) {
+    const state = this._journeyState;
+    const node = this._activeVillageNode(state);
+    if (!node || state?.phase !== 'journey' || !this._village.open) return;
+    if (event.key === 'Escape' && this._village.dialog) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this._village.dialog = null;
+      this.renderJourney(state);
+      return;
+    }
+    if (this._village.dialog) return;
+    if (event.key === 'Escape' && !state.journey.pendingRecruit) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this._village.open = false;
+      this.renderJourney(state);
+      return;
+    }
+    const move = {
+      ArrowLeft: [-5, 0], a: [-5, 0], A: [-5, 0],
+      ArrowRight: [5, 0], d: [5, 0], D: [5, 0],
+      ArrowUp: [0, -5], w: [0, -5], W: [0, -5],
+      ArrowDown: [0, 5], s: [0, 5], S: [0, 5],
+    }[event.key];
+    if (move) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      this._moveVillage(this._village.x + move[0], this._village.y + move[1]);
+      return;
+    }
+    if ((event.key === 'Enter' || event.key === ' ') && !this._village.dialog) {
+      const target = this._villageTargets(state, node).find((entry) => this._nearVillageTarget(entry));
+      if (target) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        this._openVillageTarget(target);
+      }
+    }
+  }
+
+  _villageDialogMarkup(state, node) {
+    const dialog = this._village.dialog;
+    if (!dialog) return '';
+    if (dialog.type === 'recruit') {
+      const spec = D.squadSpec(dialog.key);
+      const C = spec && D.CLASSES[spec.cls];
+      if (!spec || !C) return '';
+      return `<section class="village-dialog"><button class="village-dialog-close" data-village-close aria-label="대화 닫기">×</button>
+        <span class="village-dialog-portrait">${C.emoji}</span><div><p class="village-dialog-kicker">${spec.role}</p><h2>${spec.name}와 대화</h2><p>${spec.name}의 전술을 원정대에 더합니다. 이번 원정에는 한 명만 설득할 수 있습니다.</p>
+        <button class="village-dialog-action" data-village-recruit="${spec.key}">${C.emoji} ${spec.name} 영입하기</button></div></section>`;
+    }
+    const facility = D.HERO_FACILITIES[dialog.key];
+    if (!facility) return '';
+    const heroes = state.field.filter((hero) => facility.heroes.includes(hero.heroKey));
+    const heroRows = heroes.map((hero) => {
+      const C = D.CLASSES[hero.cls];
+      const skills = Object.entries(D.HERO_SKILLS).filter(([, skill]) => skill.cls === hero.cls).map(([key, skill]) => {
+        const rank = hero.skills[key] || 0;
+        const locked = hero.level < skill.level;
+        const capped = rank >= skill.max;
+        const enabled = hero.sp > 0 && !locked && !capped;
+        const label = capped ? `완료 ${rank}/${skill.max}` : locked ? `Lv ${skill.level} 필요` : `포인트 1 · ${rank}/${skill.max}`;
+        return `<button class="village-skill${enabled ? ' ready' : ''}" data-village-skill="${key}" data-hero-id="${hero.id}" ${enabled ? '' : 'disabled'}><span>${skill.emoji} <b>${skill.name}</b></span><small>${skill.per} · ${label}</small></button>`;
+      }).join('');
+      return `<div class="village-hero-build"><header><span>${C.emoji} <b>${hero.name}</b></span><small>Lv ${hero.level} · 전문화 ${hero.sp}</small></header>${skills}</div>`;
+    }).join('') || '<p class="village-empty">이 시설을 이용할 영웅이 아직 원정대에 없습니다.</p>';
+    return `<section class="village-dialog facility"><button class="village-dialog-close" data-village-close aria-label="시설 닫기">×</button>
+      <span class="village-dialog-portrait">${facility.emoji}</span><div><p class="village-dialog-kicker">마을 시설</p><h2>${facility.name}</h2><p>${facility.desc} 전투에서 얻은 전문화 포인트는 이곳에서만 사용합니다.</p>${heroRows}</div></section>`;
+  }
+
+  _renderVillage(state, node) {
+    this._ensureVillage(node);
+    const targets = this._villageTargets(state, node);
+    const nearby = targets.find((target) => this._nearVillageTarget(target));
+    const targetMarkup = targets.map((target) => {
+      const near = this._nearVillageTarget(target);
+      const cls = target.type === 'recruit' ? 'village-person' : `village-building ${target.key}`;
+      return `<button class="${cls}${near ? ' near' : ''}" style="--x:${target.x}%;--y:${target.y}%" data-village-talk="${target.id}" ${near ? '' : 'disabled'}>
+        <i>${target.emoji}</i><b>${target.label}</b><small>${target.place || target.desc}</small></button>`;
+    }).join('');
+    const hint = nearby
+      ? `${nearby.emoji} ${nearby.label} 근처입니다. Enter 또는 표식을 눌러 ${nearby.type === 'recruit' ? '대화' : '방문'}하세요.`
+      : 'WASD·방향키 또는 광장을 클릭해 걸어가세요. 가까워지면 표식이 빛납니다.';
+    const locked = state.journey.pendingRecruit === node.id;
+    return `<div class="village-visit">
+      <div class="village-scene" data-village-ground>
+        <div class="village-sky"><i></i><i></i><i></i></div><div class="village-hill village-hill-back"></div><div class="village-hill village-hill-front"></div>
+        <div class="village-road"></div><div class="village-trees tree-a">♣</div><div class="village-trees tree-b">♣</div><div class="village-lantern lantern-a">✦</div><div class="village-lantern lantern-b">✦</div>
+        ${targetMarkup}
+        <div class="village-avatar" style="--x:${this._village.x}%;--y:${this._village.y}%"><span>✦</span></div>
+        <div class="village-status"><b>${node.icon} ${node.name}</b><span>${hint}</span></div>
+      </div>
+      <div class="village-foot"><span>${locked ? '동료 한 명과 먼저 대화해야 길이 열립니다.' : '시설 방문을 마치면 지도에서 다음 길을 선택할 수 있습니다.'}</span>${locked ? '' : '<button data-village-leave>지도 보기</button>'}</div>
+      ${this._villageDialogMarkup(state, node)}
+    </div>`;
   }
 
   renderJourney(state) {
+    this._journeyState = state;
     const journey = state?.journey;
     if (!journey) { this.el.journeyModal.classList.add('hidden'); return; }
     const nodes = D.JOURNEY_CHAPTER.nodes;
@@ -152,6 +317,12 @@ export class UI {
     const choices = E.journeyChoices(state);
     const choiceIds = new Set(choices.map((node) => node.id));
     const pending = E.journeyNode(journey.pendingRecruit);
+    if (pending?.kind === 'town') this._village.open = true;
+    if (!pending && current?.kind !== 'town') {
+      this._village.open = false;
+      this._village.dialog = null;
+    }
+    const villageNode = this._activeVillageNode(state);
     const party = state.field.map((hero) => {
       const C = D.CLASSES[hero.cls];
       return `<span class="journey-party"><i>${C.emoji}</i><b>${hero.name}</b><small>Lv ${hero.level}</small></span>`;
@@ -174,7 +345,9 @@ export class UI {
       </button>`;
     }).join('');
     let action = '';
-    if (journey.complete) {
+    if (villageNode) {
+      action = this._renderVillage(state, villageNode);
+    } else if (journey.complete) {
       action = `<div class="journey-choice-card win"><span>✦</span><div><b>첫 원정을 완수했습니다</b><p>새 장과 별의 시련은 다음 목적지에서 이어집니다.</p></div></div>`;
     } else if (pending) {
       const offers = pending.offers.map((key) => {
@@ -192,7 +365,10 @@ export class UI {
         const suffix = node.waves ? ` · 방어 1/${node.waves}` : node.gold ? ` · 보급 +${node.gold}` : '';
         return `<button class="journey-choice-card" data-travel="${node.id}"><span style="color:${info.color}">${node.icon}</span><div><b>${node.name}</b><p>${node.text}</p></div><em>${info.label}${suffix}</em></button>`;
       }).join('');
-      action = `<div class="journey-action-title"><b>${current?.icon || '✦'} ${current?.name || '별길'}</b><span>${current?.text || ''}</span></div><div class="journey-offers">${items || '<p class="journey-quiet">이 별길은 아직 조용합니다.</p>'}</div>`;
+      const revisitTown = current?.kind === 'town'
+        ? '<button class="journey-choice-card recruit" data-village-enter><span>⌂</span><div><b>마을 광장 다시 둘러보기</b><p>대장간·별빛 신전·탐험가 길드에서 전문화를 정합니다.</p></div><em>시설</em></button>'
+        : '';
+      action = `<div class="journey-action-title"><b>${current?.icon || '✦'} ${current?.name || '별길'}</b><span>${current?.text || ''}</span></div><div class="journey-offers">${revisitTown}${items || '<p class="journey-quiet">이 별길은 아직 조용합니다.</p>'}</div>`;
     }
     this.el.journeyBody.innerHTML = `
       <header class="journey-header">
@@ -212,6 +388,27 @@ export class UI {
       button.addEventListener('click', () => this.h.onJourneyTravel(button.dataset.travel)));
     this.el.journeyBody.querySelectorAll('[data-recruit]').forEach((button) =>
       button.addEventListener('click', () => this.h.onJourneyRecruit(button.dataset.recruit)));
+    this.el.journeyBody.querySelectorAll('[data-village-talk]').forEach((button) =>
+      button.addEventListener('click', () => {
+        const target = this._villageTargets(state, villageNode).find((entry) => entry.id === button.dataset.villageTalk);
+        if (target) this._openVillageTarget(target);
+      }));
+    this.el.journeyBody.querySelectorAll('[data-village-recruit]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onJourneyRecruit(button.dataset.villageRecruit)));
+    this.el.journeyBody.querySelectorAll('[data-village-skill]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onHeroSkill(Number(button.dataset.heroId), button.dataset.villageSkill)));
+    this.el.journeyBody.querySelectorAll('[data-village-close]').forEach((button) =>
+      button.addEventListener('click', () => { this._village.dialog = null; this.renderJourney(state); }));
+    this.el.journeyBody.querySelectorAll('[data-village-leave]').forEach((button) =>
+      button.addEventListener('click', () => { this._village.open = false; this._village.dialog = null; this.renderJourney(state); }));
+    this.el.journeyBody.querySelectorAll('[data-village-enter]').forEach((button) =>
+      button.addEventListener('click', () => { this._village.open = true; this._village.dialog = null; this.renderJourney(state); }));
+    this.el.journeyBody.querySelectorAll('[data-village-ground]').forEach((ground) =>
+      ground.addEventListener('click', (event) => {
+        if (event.target.closest('button')) return;
+        const rect = ground.getBoundingClientRect();
+        this._moveVillage(((event.clientX - rect.left) / rect.width) * 100, ((event.clientY - rect.top) / rect.height) * 100);
+      }));
     this.el.journeyModal.classList.toggle('hidden', state.phase !== 'journey');
   }
 
@@ -506,18 +703,22 @@ export class UI {
 
   renderSquadGrowth(state) {
     const ready = state.field.filter((hero) => hero.sp > 0);
+    const currentNode = E.journeyNode(state.journey?.current);
     this.el.combineDot.classList.toggle('hidden', this._tab === 'squad' || !ready.length);
     const rows = state.field.map((hero) => {
       const C = D.CLASSES[hero.cls];
       const need = D.heroXpNeed(hero.level);
+      const facilityId = D.facilityForHero(hero.heroKey);
+      const facility = D.HERO_FACILITIES[facilityId];
+      const atFacility = state.phase === 'journey' && currentNode?.kind === 'town' && currentNode.facilities?.includes(facilityId);
       const skills = Object.entries(D.HERO_SKILLS)
         .filter(([, skill]) => skill.cls === hero.cls)
         .map(([key, skill]) => {
           const rank = hero.skills[key] || 0;
           const locked = hero.level < skill.level;
           const capped = rank >= skill.max;
-          const enabled = hero.sp > 0 && !locked && !capped;
-          const label = capped ? `완료 ${rank}/${skill.max}` : locked ? `Lv ${skill.level} 필요` : `${rank}/${skill.max}`;
+          const enabled = atFacility && hero.sp > 0 && !locked && !capped;
+          const label = capped ? `완료 ${rank}/${skill.max}` : locked ? `Lv ${skill.level} 필요` : atFacility ? `포인트 1 · ${rank}/${skill.max}` : `${facility?.emoji || '⌂'} ${facility?.name || '마을 시설'}에서 선택`;
           return `<button class="growth-skill${enabled ? ' ready' : ''}" data-hero-id="${hero.id}" data-skill="${key}" ${enabled ? '' : 'disabled'}>
             <span>${skill.emoji} <b>${skill.name}</b></span><small>${skill.per} · ${label}</small>
           </button>`;
@@ -526,10 +727,12 @@ export class UI {
         <header><span>${C.emoji} <b>${hero.name || C.name}</b> <small>${C.name}</small></span><strong>Lv ${hero.level}</strong></header>
         <div class="growth-xp"><i style="width:${Math.min(100, (hero.xp / need) * 100)}%"></i></div>
         <p>경험치 ${Math.round(hero.xp)}/${need} · 전문화 포인트 <b>${hero.sp}</b></p>
+        <p class="growth-facility">${facility?.emoji || '⌂'} ${facility?.name || '마을 시설'}${atFacility ? '에서 전문화를 선택할 수 있습니다.' : '에서만 전문화를 선택할 수 있습니다.'}</p>
         <div class="growth-skills">${skills}</div>
       </section>`;
     }).join('');
     this.el.combineRows.innerHTML = `<p class="growth-note">전투 처치와 웨이브 완료로 경험치를 얻습니다. 포인트가 생기면 한 영웅의 역할을 깊게 만드세요.</p>${rows}`;
+    this.el.combineRows.insertAdjacentHTML('afterbegin', '<p class="growth-note growth-note-facility">전투에서 얻은 전문화 포인트는 원정 지도 속 마을 시설에서만 사용합니다.</p>');
     this.el.combineRows.querySelectorAll('button[data-skill]').forEach((button) =>
       button.addEventListener('click', () => this.h.onHeroSkill(Number(button.dataset.heroId), button.dataset.skill)));
   }

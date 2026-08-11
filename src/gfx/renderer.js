@@ -17,6 +17,7 @@ import { worldMethods } from './world.js';
 import { fxMethods } from './fx.js';
 import { WindGrass, Sea, Fireflies, makePalette, daylightPalette, clockPhase, moonPhaseNow } from './nature.js';
 import { SkyBand } from './sky.js';
+import { RegionScenery, regionTheme } from './regions.js';
 
 export class Renderer3D {
   constructor(container, opts = {}) {
@@ -75,6 +76,11 @@ export class Renderer3D {
     this.baseHemiI = this.palette.hemiI;
     this._tint = new THREE.Color();   // 매 프레임 새 Color 를 만들지 않으려고
     this._clear = new THREE.Color();
+    this.region = regionTheme('verdant-dawn');
+    this._regionGroundColor = new THREE.Color(this.region.ground);
+    this._regionRoadColor = new THREE.Color(this.region.road);
+    this._regionRoadEdgeColor = new THREE.Color(this.region.roadEdge);
+    this._regionWallColor = new THREE.Color(this.region.wall);
 
     /* 화면 위쪽을 하늘에 내준다. 그만큼 게임이 차지할 자리가 줄어드니
      * 시야각을 넓혀(내용이 작아진다) + 시선을 살짝 올려(내용이 내려간다)
@@ -113,6 +119,8 @@ export class Renderer3D {
     this._buildCastle();
     this._buildParticles();
     this._buildDamageNumbers();
+    this.regions = new RegionScenery(this.scene);
+    this.setRegionTheme('verdant-dawn');
 
     /* 자연 배경 — 잔디 물결 · 성 뒤편 바다 · 밤 반딧불이 · 하늘 밴드.
      * 장식을 끄면 아예 만들지 않는다(감추는 게 아니라). 지오메트리도 셰이더
@@ -443,6 +451,20 @@ export class Renderer3D {
   /* 보스 분위기: 하늘·안개·조명을 어둡게 (0 없음 / 1 중간 / 2 대보스) */
   setBossMode(level) { this.bossMode = level; }
 
+  setRegionTheme(id) {
+    const theme = regionTheme(id);
+    if (this.region?.id === theme.id && this.regions) return;
+    this.region = theme;
+    this._regionGroundColor.setHex(theme.ground);
+    this._regionRoadColor.setHex(theme.road);
+    this._regionRoadEdgeColor.setHex(theme.roadEdge);
+    this._regionWallColor.setHex(theme.wall);
+    if (this.forcedHour == null) this.dayTarget = theme.phase;
+    if (this.roadMaterial) this.roadMaterial.color.copy(this._regionRoadColor);
+    if (this.roadEdgeMaterial) this.roadEdgeMaterial.color.copy(this._regionRoadEdgeColor);
+    this.regions?.setTheme(theme.id);
+  }
+
   /* ---------- 시간대: 지금 몇 시인가 ----------
    * 예전에는 웨이브가 지날수록 저물었는데, 13웨이브를 넘기면 계속 밤이었다.
    * 오래 버틸수록 화면이 어두워지기만 하니 잘하는 사람이 벌을 받는 꼴이었다.
@@ -456,7 +478,7 @@ export class Renderer3D {
     this._clockT = (this._clockT || 0) - dt;
     if (this._clockT <= 0) {
       this._clockT = 1;
-      this.dayTarget = clockPhase(this.forcedHour);
+      this.dayTarget = this.forcedHour == null ? this.region.phase : clockPhase(this.forcedHour);
       this.moonPhase = Math.max(0.12, moonPhaseNow());
     }
     /* 웨이브가 넘어갈 때 뚝 끊기지 않게 천천히 따라간다 */
@@ -475,6 +497,7 @@ export class Renderer3D {
     /* 밤에는 땅도 같이 가라앉아야 한다 — 조명만으로는 잔디가 형광으로 뜬다 */
     const n = p.night;
     this.ground.material.color.setRGB(0.82 - n * 0.65, 0.89 - n * 0.71, 0.76 - n * 0.56);
+    this.ground.material.color.lerp(this._regionGroundColor, 0.38);
   }
 
   _updateBossMood(dt) {
@@ -678,7 +701,9 @@ export class Renderer3D {
     this.castleHpRatio = hpRatio;
     const char = new THREE.Color(0x554f5e);
     for (const m of this.castleStoneMats) {
-      m.color.copy(m.userData.baseColor).lerp(char, (1 - hpRatio) * 0.55);
+      m.color.copy(m.userData.baseColor)
+        .lerp(this._regionWallColor, this.region.stoneMix)
+        .lerp(char, (1 - hpRatio) * 0.55);
     }
 
     if (this.placementMode) {
@@ -1144,6 +1169,7 @@ export class Renderer3D {
     }
     this._updateDaylight(dt, state);    // 먼저 시간대 기준값을 만들고
     this._updateBossMood(dt);           // 그 위에 보스 분위기를 덧칠한다
+    this.regions?.frame(t);
 
     if (this.decor) {
       this.grass.frame(dt, t, this.palette, this.bossBlend);
