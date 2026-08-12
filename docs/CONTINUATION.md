@@ -8,7 +8,7 @@ up `Constellation Defense` on another computer.
 ## Current handoff state
 
 - Branch: `main`
-- Latest feature/fix commit: `c165bd5 fix: keep expedition demos moving`
+- Latest feature/fix commit: `01b3e9b fix: leave time to read the run recap`
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-12. The latest 60-run balance gate passed after the hero
@@ -93,6 +93,8 @@ presentation blockers: the judge target dying before the taught swap (`6862133`)
 and the demo repeatedly attempting town-only specialization from battle prep
 (`c165bd5`). The repaired run showed all three tactics, a five-star Bloom with
 a cascade, castle recovery from 29 to 100, and a clean automatic restart.
+The spectate recap now remains visible for 12 seconds (`01b3e9b`) so a judge
+can read the run memory or use the share-card button before the next run.
 
 ## Change discipline
 
