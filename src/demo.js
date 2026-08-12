@@ -31,7 +31,7 @@ const PACE = {
   prep: 0.55,        // 준비 단계 행동 사이 (초)
   tactic: 0.45,      // 전술 스왑 뒤 다음 판단까지
   afterWave: 1.2,    // 웨이브를 깬 뒤 숨 고르기
-  restart: 4.0,      // 게임오버 후 다시 시작까지
+  restart: 12.0,     // 회고와 공유 카드를 읽은 뒤 다시 시작할 시간
 };
 
 export const demo = {
