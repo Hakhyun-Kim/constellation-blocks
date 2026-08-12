@@ -8,10 +8,11 @@ up `Constellation Defense` on another computer.
 ## Current handoff state
 
 - Branch: `main`
-- Town implementation commit: `8b4037c feat: add dedicated 3d town screen`
+- Latest feature commit: `3f9f16a feat: remember decisive constellation moments`
 - Working tree at handoff: clean
-- Latest deterministic gates: `npm.cmd run check` and
-  `node scripts/balance-check.mjs 60` passed on 2026-08-11.
+- Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
+  passed on 2026-08-12. The latest 60-run balance gate passed after the hero
+  specialization/tactics integration on the same date.
 
 The current campaign is an authored constellation expedition. It starts with
 Arin and Luna, uses a fixed five-hero party, and connects short defense stages
@@ -19,6 +20,14 @@ with map choices and towns. The live battle loop remains real-time match-3:
 Flare damages, Tide slows, and Bloom heals/pushes back enemies on the selected
 road. Do not restore the former math-prototype gates, random summoning, or
 rank-combination loop.
+
+The prize-focused presentation pass now also includes:
+
+- `?judge=1` for a direct, authored first battle and highlighted legal Flare swap.
+- `?weekly=YYYY-Www` for a deterministic weekly board and compact legal-swap replay.
+- Hero specializations that modify the matching Flare, Tide, or Bloom tactic.
+- Cinematic five-star feedback and a saved run memory for largest constellation,
+  most-defended lane, decisive recovery, and the expedition route.
 
 ## Fresh-machine setup
 
@@ -71,6 +80,12 @@ Before presenting or submitting a visual change, manually confirm:
 6. Repeat the first swap, all three tactics, 4/5 matches, wave clear, defeat
    reset, and a town facility visit at desktop and mobile widths.
 
+On 2026-08-12, the local judge route was visually checked at 1280×720 and
+390×844. Both widths had no horizontal overflow; the direct battle opened,
+the first defense advanced to 2/2, and the mobile expedition map remained
+readable with secondary panels hidden. Still repeat the full all-tactics,
+4/5-match, defeat-reset, and town-interaction sequence before the final release.
+
 ## Change discipline
 
 - Read `AGENTS.md`, this guide, and the relevant design note before changing a
@@ -94,7 +109,6 @@ material untouched.
 
 ## Suggested next task
 
-Perform the manual town smoke test above first. If the plaza still feels unlike
-a compact RPG town, improve only the presentation in `src/gfx/village.js` and
-CSS: path readability, building silhouettes, NPC readability, lighting, and
-camera framing. Keep the pure layout API and the engine/facility rules intact.
+Finish the remaining manual sequence in step 6, then run the full deterministic,
+storage, 60-run balance, and deployed-page checks. Record exact browser evidence
+for the result-memory modal and downloaded share card before release.
