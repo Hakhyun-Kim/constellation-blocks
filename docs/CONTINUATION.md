@@ -8,7 +8,7 @@ up `Constellation Defense` on another computer.
 ## Current handoff state
 
 - Branch: `main`
-- Latest feature commit: `3f9f16a feat: remember decisive constellation moments`
+- Latest feature/fix commit: `c165bd5 fix: keep expedition demos moving`
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-12. The latest 60-run balance gate passed after the hero
@@ -83,8 +83,16 @@ Before presenting or submitting a visual change, manually confirm:
 On 2026-08-12, the local judge route was visually checked at 1280×720 and
 390×844. Both widths had no horizontal overflow; the direct battle opened,
 the first defense advanced to 2/2, and the mobile expedition map remained
-readable with secondary panels hidden. Still repeat the full all-tactics,
-4/5-match, defeat-reset, and town-interaction sequence before the final release.
+readable with secondary panels hidden. Before final release, repeat all three
+tactics and a four/five-star match at mobile width, then inspect the real
+game-over memory modal and downloaded PNG share card.
+
+A subsequent novice spectate smoke traversed meadow 2/2, the town route, and
+Ember Gate 5/5 using the real bot and tactic paths. It exposed and fixed two
+presentation blockers: the judge target dying before the taught swap (`6862133`)
+and the demo repeatedly attempting town-only specialization from battle prep
+(`c165bd5`). The repaired run showed all three tactics, a five-star Bloom with
+a cascade, castle recovery from 29 to 100, and a clean automatic restart.
 
 ## Change discipline
 
