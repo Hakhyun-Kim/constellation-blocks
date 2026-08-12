@@ -632,7 +632,14 @@ body.tactic-climax .tactic-card { box-shadow: 0 0 0 2px #ffe99d, 0 0 30px #b787f
 .pane.hidden { display: none; }
 /* 탭 바로 아래에 붙으므로 위쪽 모서리는 각지게 */
 .tabbody .pane { border-radius: 0 0 14px 14px; }
-.minibtns { margin-left: auto; display: flex; gap: 6px; }
+.minibtns {
+  min-width: 0;
+  margin-left: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
 .minibtns button {
   border: 1px solid #cdd6e2;
   background: #f2f6fa;
@@ -1729,7 +1736,9 @@ button { font-family: inherit; }
 }
 /* 아주 좁은 화면: 벤치를 3열로, 글자를 조금 줄인다 */
 @media (max-width: 560px) {
-  .topbar h1 { font-size: 20px; }
+  .topbar { flex-wrap: wrap; gap: 6px; }
+  .topbar h1 { width: 100%; font-size: 20px; }
+  .top-right { width: 100%; justify-content: flex-end; gap: 5px; }
   .hero-card-grid { grid-template-columns: 1fr; }
   .hero-card { min-height: 156px; grid-template-columns: 56px minmax(0, 1fr); }
   .hero-card-art { width: 52px; height: 52px; border-radius: 17px; }
