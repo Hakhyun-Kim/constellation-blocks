@@ -268,8 +268,16 @@ function padIndexSane(st, label) {
   st.discovered.add('spellblade');
   st.kills = 123;
   st.combos = 7;
+  st.runMemory = {
+    byLane: [1, 4, 2], byKind: { flare: 3, tide: 2, bloom: 2 },
+    largest: { size: 5, kind: 'flare', lane: 1 },
+    biggestHeal: 21, biggestPush: 3, lowestCastleHp: 34,
+  };
   const data = E.serialize(st);
   const back = E.deserialize(JSON.parse(JSON.stringify(data)));   // 파일 왕복과 같다
+  const memory = E.summarizeRun(back);
+  ok('불러오기: 수호의 기억 유지', memory.favoriteLane === 1 && memory.favoriteCasts === 4
+    && memory.largest.size === 5 && memory.biggestHeal === 21 && memory.lowestCastleHp === 34);
   ok('불러오기: 복원된다', !!back);
   ok('불러오기: 골드/웨이브/성 유지',
     back.gold === 777 && back.wave === 9 && back.castleHp === 120 && back.castleMax === 160
@@ -393,6 +401,9 @@ function tacticState(route = 0, count = 1) {
   const flare = tacticState(0, 6);
   const hpBefore = flare.enemies.reduce((sum, e) => sum + e.hp, 0);
   const fr = E.castTactic(flare, 0, 'flare', 3);
+  const flareMemory = E.summarizeRun(flare);
+  ok('전술: 가장 큰 성좌와 집중 방어로를 기억한다', flareMemory.largest.size === 3
+    && flareMemory.largest.kind === 'flare' && flareMemory.favoriteLane === 0);
   const hpAfter = flare.enemies.reduce((sum, e) => sum + e.hp, 0);
   ok('전술: Flare가 피해·별똥별 이벤트를 낸다', fr.ok && fr.events.filter(e => e.type === 'starfall').length === 3 && hpAfter < hpBefore);
   ok('전술: Flare 별똥별이 착탄 피해 표식을 낸다', fr.events.filter(e => e.type === 'starfall')
@@ -419,6 +430,9 @@ function tacticState(route = 0, count = 1) {
   }
   const beforeS = bloom.enemies.map(e => e.s);
   const br = E.castTactic(bloom, 2, 'bloom', 4);
+  const bloomMemory = E.summarizeRun(bloom);
+  ok('전술: 실제 회복량과 후퇴 수를 기억한다', bloomMemory.biggestHeal === Math.min(30, br.events.find(e => e.type === 'castleHeal').amount)
+    && bloomMemory.biggestPush === 2 && bloomMemory.lowestCastleHp === bloom.castleMax - 30);
   ok('전술: Bloom이 성을 회복하고 적을 밀어낸다', br.ok && bloom.castleHp > bloom.castleMax - 30
     && bloom.enemies.every((e, i) => e.s < beforeS[i]) && br.events.filter(e => e.type === 'tacticPush').length === 2);
 

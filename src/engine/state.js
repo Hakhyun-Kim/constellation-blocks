@@ -8,6 +8,7 @@ import { createSquadHero, refreshHeroDamage } from './squad.js';
 import { buildWave } from './combat.js';
 import { createResonance, restoreResonance } from './resonance.js';
 import { beginJourneyBattle, createJourney, restoreJourney, serializeJourney } from './journey.js';
+import { createRunMemory, restoreRunMemory } from './run-memory.js';
 
 const riFor = (rng) => (a, b) => Math.floor(rng() * (b - a + 1)) + a;
 const pickFor = (rng) => (arr) => arr[Math.floor(rng() * arr.length)];
@@ -48,6 +49,7 @@ export function createGame(opts = {}) {
     feasts: 0, feastWave: 0,
     shardsEarned: 0,
     tacticCasts: 0,
+    runMemory: createRunMemory(),
     resonanceCasts: 0,
     resonance: createResonance(1),
     mythicPress: 0,             // 이번 웨이브가 반응하는 신화 용사 수 (enemies.js)
@@ -130,7 +132,7 @@ export function nextLoop(state) {
  * 객체 그래프라 직렬화가 잘 깨지고, 전투 도중 복원을 허용하면 반쯤 이긴
  * 웨이브를 저장해 두고 골드만 불리는 꼼수가 생긴다. 그래서 웨이브 진행은
  * 담지 않고, 불러오면 그 웨이브의 준비 단계에서 다시 시작한다. */
-export const SAVE_VERSION = 5;
+export const SAVE_VERSION = 6;
 const SAVE_STATS = [
   'kills', 'bossKills', 'midBossKills', 'summons', 'combos', 'goldEarned',
   'specialsMade', 'mythicsMade', 'tacticCasts', 'resonanceCasts',
@@ -167,6 +169,7 @@ export function serialize(state) {
       ult: Math.round(state.champ.ult * 100) / 100,
     } : null,
     stats,
+    runMemory: restoreRunMemory(state.runMemory),
     discovered: [...state.discovered],
     seenStory: state.seenStory ? [...state.seenStory] : [],
     revealed: state.revealed ? [...state.revealed] : [],
@@ -279,6 +282,7 @@ export function deserialize(data, opts = {}) {
   state.revealed = new Set(strings(data.revealed));
   const stats = (data.stats && typeof data.stats === 'object') ? data.stats : {};
   for (const k of SAVE_STATS) state[k] = clamp(stats[k], 0, 1e9, 0);
+  state.runMemory = restoreRunMemory(data.runMemory);
   if (state.journey) {
     state.journey = restoreJourney(data.journey);
     state.phase = state.journey.activeBattle ? 'prep' : 'journey';

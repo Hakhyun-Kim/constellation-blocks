@@ -18,3 +18,4 @@ export * from './engine/economy.js';
 export * from './engine/resonance.js';
 export * from './engine/combat.js';
 export * from './engine/tactics.js';
+export * from './engine/run-memory.js';

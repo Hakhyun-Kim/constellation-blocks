@@ -1612,6 +1612,16 @@ export class UI {
   isStartOpen() { return !this.el.startModal.classList.contains('hidden'); }
   /* ---------- 게임 오버 ---------- */
   showOver(state) {
+    const memory = E.summarizeRun(state);
+    const lanes = ['왼쪽 길', '가운데 길', '오른쪽 길'];
+    const kinds = { flare: 'Flare', tide: 'Tide', bloom: 'Bloom' };
+    const route = state.journey?.visited?.map((id) => E.journeyNode(id)?.name).filter(Boolean).join(' → ');
+    const constellation = memory.largest.size
+      ? `${memory.largest.size}개 ${kinds[memory.largest.kind]} · ${lanes[memory.largest.lane]}`
+      : '아직 기록되지 않음';
+    const recovery = memory.biggestHeal
+      ? `한 번에 성벽 ${memory.biggestHeal} 회복${memory.lowestCastleHp != null ? ` · 최저 ${memory.lowestCastleHp}에서 반격` : ''}`
+      : '회복 없이 끝까지 버팀';
     this.el.overStats.innerHTML =
       `🌊 도달한 웨이브: <b>${state.wave}웨이브</b> (${D.DIFFICULTIES[state.difficulty].name})<br>
        👾 물리친 몬스터: <b>${state.kills}마리</b>${state.midBossKills ? ` · 👿 중간보스 ${state.midBossKills}` : ''}${state.bossKills ? ` · 🐉 대보스 ${state.bossKills}` : ''}<br>
@@ -1619,6 +1629,11 @@ export class UI {
        🌌 별자리 전술판으로 세 갈래 길을 지켰어요<br>
        ${state.champ ? `<br>🌠 별지기: <b>Lv ${state.champ.level}</b> · 직접 처치 <b>${state.champKills || 0}</b> · ☄️ 별똥별 ${state.starCasts || 0}회${state.ultCasts ? ` · 🌌 은하수 ${state.ultCasts}회` : ''}${state.perfectWaves ? ` · 🛡️ 완벽 방어 ${state.perfectWaves}번` : ''}${state.feasts ? ` · 🎉 잔치 ${state.feasts}번` : ''}` : ''}`;
     this.el.overShards.textContent = `✨ 별조각 +${state.shardsEarned} 획득!`;
+    this.el.overStats.innerHTML +=
+      `<br><br><b>이번 수호의 기억</b><br>
+       🌠 가장 큰 성좌 <b>${constellation}</b><br>
+       🛡️ 집중 방어 <b>${memory.favoriteLane == null ? '세 길을 고르게 방어' : `${lanes[memory.favoriteLane]} · ${memory.favoriteCasts}회`}</b><br>
+       💚 결정적 회복 <b>${recovery}</b>${route ? `<br>🗺️ 원정 경로 <b>${route}</b>` : ''}`;
     this.el.overModal.classList.remove('hidden');
   }
   hideOver() { this.el.overModal.classList.add('hidden'); }
@@ -1686,6 +1701,9 @@ export class UI {
 
   /* ---------- 기록 카드 (공유용 PNG) ---------- */
   makeShareCard(state, best) {
+    const memory = E.summarizeRun(state);
+    const lanes = ['왼쪽 길', '가운데 길', '오른쪽 길'];
+    const kinds = { flare: 'Flare', tide: 'Tide', bloom: 'Bloom' };
     const c = document.createElement('canvas');
     c.width = 720; c.height = 960;
     const g = c.getContext('2d');
@@ -1710,7 +1728,15 @@ export class UI {
       `별자리 전술 ${state.tacticCasts || 0}회 발동`,
       `최고 기록 ${best}웨이브`,
     ];
-    lines.forEach((s, i) => g.fillText(s, 360, 520 + i * 60));
+    lines.splice(3, 0,
+      memory.largest.size
+        ? `가장 큰 성좌 ${memory.largest.size}개 ${kinds[memory.largest.kind]} · ${lanes[memory.largest.lane]}`
+        : '세 갈래 길을 끝까지 수호',
+      memory.favoriteLane == null
+        ? '세 길을 고르게 방어'
+        : `집중 방어 ${lanes[memory.favoriteLane]} · ${memory.favoriteCasts}회`,
+      memory.biggestHeal ? `결정적 회복 +${memory.biggestHeal}` : '회복 없이 끝까지 버팀');
+    lines.forEach((s, i) => g.fillText(s, 360, 480 + i * 50));
     g.font = '28px "Malgun Gothic", sans-serif';
     g.fillStyle = '#8fb4e8';
     g.fillText(new Date().toLocaleDateString('ko-KR'), 360, 860);

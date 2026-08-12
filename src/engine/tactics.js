@@ -7,6 +7,7 @@
 import * as D from '../data.js';
 import { damageEnemy, applySlow } from './effects.js';
 import { squadTacticMods } from './squad.js';
+import { recordTacticMemory } from './run-memory.js';
 
 const validSize = (size) => (size >= 5 ? 5 : size === 4 ? 4 : 3);
 
@@ -20,6 +21,7 @@ export function castTactic(state, route, kind, size = 3) {
   if (!targets.length) return { ok: false, reason: 'none' };
 
   const events = [];
+  const castleBefore = state.castleHp;
   const power = D.tacticPower(stars);
   const mods = squadTacticMods(state);
   if (kind === 'flare') {
@@ -54,5 +56,11 @@ export function castTactic(state, route, kind, size = 3) {
     }
   }
   state.tacticCasts = (state.tacticCasts || 0) + 1;
+  recordTacticMemory(state, {
+    route, kind, size: stars,
+    heal: Math.max(0, state.castleHp - castleBefore),
+    pushes: events.filter((event) => event.type === 'tacticPush').length,
+    castleHp: kind === 'bloom' ? castleBefore : null,
+  });
   return { ok: true, events, targets: targets.length };
 }
