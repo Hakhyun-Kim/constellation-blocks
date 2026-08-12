@@ -185,13 +185,15 @@ export function runProfile(profile, difficulty, runs, options = {}) {
     survived.push(result.survived ? 1 : 0);
     tactics.push(result.tactics);
   }
+  const survivedRate = average(survived);
   return {
     profile,
     difficulty,
     mean: average(waves).toFixed(1),
     p25: percentile(waves, 0.25), p50: percentile(waves, 0.5), p75: percentile(waves, 0.75),
     min: Math.min(...waves), max: Math.max(...waves),
-    survivedPct: `${(average(survived) * 100).toFixed(0)}%`,
+    survivedRate,
+    survivedPct: `${(survivedRate * 100).toFixed(0)}%`,
     tacticMean: average(tactics).toFixed(1),
   };
 }
@@ -219,11 +221,18 @@ for (const difficulty of difficulties) {
     const result = runProfile(profile, difficulty, runs);
     const baselineKey = `${difficulty}/${profile}`;
     const expected = baseline && baseline.medians[baselineKey];
+    const completionMin = baseline?.completionMins?.[baselineKey];
     const outOfRange = expected != null && Math.abs(result.p50 - expected) > baseline.tolerance;
-    if (outOfRange) drift = true;
-    const check = expected == null ? '' : outOfRange
-      ? `  ⚠ 기준 중앙값 ${expected} ±${baseline.tolerance} 이탈`
-      : `  ✓ 기준 중앙값 ${expected} ±${baseline.tolerance}`;
+    const completionLow = completionMin != null && result.survivedRate * 100 < completionMin;
+    if (outOfRange || completionLow) drift = true;
+    const checks = [];
+    if (expected != null) checks.push(outOfRange
+      ? `⚠ 중앙값 ${expected} ±${baseline.tolerance} 이탈`
+      : `✓ 중앙값 ${expected} ±${baseline.tolerance}`);
+    if (completionMin != null) checks.push(completionLow
+      ? `⚠ 완주율 ${completionMin}% 미만`
+      : `✓ 완주율 ${completionMin}% 이상`);
+    const check = checks.length ? `  ${checks.join(' · ')}` : '';
     console.log(`[${D.DIFFICULTIES[difficulty].name}] ${result.profile} 평균 ${result.mean}웨이브`
       + ` (p25 ${result.p25} / 중앙 ${result.p50} / p75 ${result.p75}) 범위 ${result.min}~${result.max}`
       + ` · 첫 원정 완수 ${result.survivedPct} · 평균 전술 ${result.tacticMean}회${check}`);

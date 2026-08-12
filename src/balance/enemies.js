@@ -43,9 +43,9 @@ export const midBossRamp = (w) => Math.min(1, 0.45 + w * 0.12);
 
 /* ---------- 난이도 ---------- */
 export const DIFFICULTIES = {
-  easy:   { name: '쉬움',   emoji: '🌱', hpMul: 0.75, countMul: 0.8,  goldMul: 1.15 },
-  normal: { name: '보통',   emoji: '⚔️', hpMul: 1.0,  countMul: 1.0,  goldMul: 1.0 },
-  hard:   { name: '어려움', emoji: '🔥', hpMul: 1.3,  countMul: 1.15, goldMul: 0.95 },
+  easy:   { name: '쉬움',   emoji: '🌱', hpMul: 0.55, countMul: 0.65, goldMul: 1.25 },
+  normal: { name: '보통',   emoji: '⚔️', hpMul: 0.62, countMul: 0.72, goldMul: 1.2 },
+  hard:   { name: '어려움', emoji: '🔥', hpMul: 0.82, countMul: 0.9,  goldMul: 1.1 },
 };
 
 /* 마릿수가 늘어난 만큼 개체 체력 곡선은 완화 — "많이 몰려오지만 하나하나는 잡힌다"

@@ -1,0 +1,24 @@
+name: Scheduled balance check
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 21 * * *'
+
+permissions:
+  contents: read
+
+jobs:
+  balance:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm.cmd ci
+      - run: npm.cmd run check
+      - run: npm.cmd run storage:check
+      - run: node scripts/balance-check.mjs 60
