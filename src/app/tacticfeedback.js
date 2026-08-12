@@ -23,11 +23,13 @@ export function createTacticFeedback() {
     return { announceMatch() {}, showCast() {}, showPreview() {}, reset() {} };
   }
 
-  function present(kind, headline, subline, preview = false) {
+  function present(kind, headline, subline, preview = false, size = 3) {
     const spell = SPELL[kind] || SPELL.flare;
     const token = ++generation;
     if (timer) clearTimeout(timer);
     root.dataset.kind = kind;
+    root.dataset.matchSize = String(size);
+    document.body.classList.toggle('tactic-climax', size >= 5);
     icon.textContent = spell.icon;
     title.textContent = headline;
     detail.textContent = subline;
@@ -36,14 +38,18 @@ export function createTacticFeedback() {
     root.classList.add('show');
     if (preview) root.classList.add('preview');
     timer = setTimeout(() => {
-      if (token === generation) root.classList.remove('show', 'preview');
+      if (token === generation) {
+        root.classList.remove('show', 'preview');
+        document.body.classList.remove('tactic-climax');
+      }
     }, preview ? 1000 : 1700);
   }
 
   function announceMatch(kind, lane, size) {
     const spell = SPELL[kind] || SPELL.flare;
     const bonus = size >= 5 ? '전장 강타 준비!' : size === 4 ? '강화 준비!' : '길을 조준해요';
-    present(kind, `${size}매치 · ${spell.name}`, `${LANE[lane] || LANE[1]} 길 ${bonus}`, true);
+    present(kind, size >= 5 ? `STARFALL · ${spell.name}` : `${size}매치 · ${spell.name}`,
+      `${LANE[lane] || LANE[1]} 길 ${bonus}`, true, size);
   }
 
   function showCast(result, kind, lane, size) {
@@ -52,20 +58,24 @@ export function createTacticFeedback() {
     if (kind === 'flare') {
       const hits = events.filter(event => event.type === 'enemyHit' && event.tactic === 'flare');
       const total = hits.reduce((sum, event) => sum + (event.dmg || 0), 0);
-      present(kind, `${SPELL.flare.name}!`, `${laneName} 길 · ${hits.length}명 · ${total} 피해`);
+      present(kind, size >= 5 ? `☄ STARFALL!` : `${SPELL.flare.name}!`,
+        `${laneName} 길 · ${hits.length}명 · ${total} 피해`, false, size);
     } else if (kind === 'tide') {
       const slowed = events.filter(event => event.type === 'enemyHit' && event.kind === 'slow').length;
-      present(kind, `${SPELL.tide.name}!`, `${laneName} 길 · ${slowed}명 감속`);
+      present(kind, size >= 5 ? `❄ ABSOLUTE ZERO!` : `${SPELL.tide.name}!`,
+        `${laneName} 길 · ${slowed}명 감속`, false, size);
     } else {
       const healed = events.find(event => event.type === 'castleHeal')?.amount || 0;
       const pushed = events.filter(event => event.type === 'tacticPush').length;
-      present(kind, `${SPELL.bloom.name}!`, `성 +${healed} · ${pushed}명 후퇴`);
+      present(kind, size >= 5 ? `🛡 CELESTIAL AEGIS!` : `${SPELL.bloom.name}!`,
+        `성 +${healed} · ${pushed}명 후퇴`, false, size);
     }
   }
 
   function showPreview(kind, lane, size) {
     const spell = SPELL[kind] || SPELL.flare;
-    present(kind, `테스트 · ${spell.name}`, `${LANE[lane] || LANE[1]} 길 · ${size}매치 연출`, true);
+    present(kind, size >= 5 ? `STARFALL · ${spell.name}` : `테스트 · ${spell.name}`,
+      `${LANE[lane] || LANE[1]} 길 · ${size}매치 연출`, true, size);
   }
 
   function reset() {
@@ -73,6 +83,7 @@ export function createTacticFeedback() {
     if (timer) clearTimeout(timer);
     timer = null;
     root.classList.remove('show', 'preview');
+    document.body.classList.remove('tactic-climax');
   }
 
   return { announceMatch, showCast, showPreview, reset };

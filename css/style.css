@@ -307,6 +307,29 @@ body {
 .tactic-impact[data-kind="bloom"] { border-color: #b8ffac; background: rgba(28, 83, 62, .84); }
 .tactic-impact[data-kind="bloom"] .tactic-impact-icon { background: linear-gradient(135deg, #dbffc3, #54ad77); box-shadow: 0 0 13px #99ee90; }
 .tactic-impact.preview { opacity: .82; }
+.tactic-impact[data-match-size="5"] {
+  min-width: 270px;
+  border-width: 2px;
+  background: linear-gradient(115deg, rgba(31, 21, 79, .96), rgba(114, 42, 102, .94));
+  box-shadow: 0 0 0 2px #fff2b555, 0 0 32px #be76ffcc, inset 0 0 20px #fff2b522;
+}
+.tactic-impact[data-match-size="5"] .tactic-impact-icon {
+  width: 48px;
+  height: 48px;
+  font-size: 32px;
+  animation: tactic-climax-icon .42s ease-in-out infinite alternate;
+}
+.tactic-impact[data-match-size="5"] .tactic-impact-copy b {
+  color: #fff2b5;
+  font-size: 19px;
+  letter-spacing: .8px;
+  text-shadow: 0 0 12px #ffdf75;
+}
+.tactic-impact[data-match-size="5"] .tactic-impact-copy small { color: #fff; font-size: 12px; }
+body.tactic-climax #scene3d { animation: tactic-climax-scene .55s ease-out; }
+body.tactic-climax .tactic-card { box-shadow: 0 0 0 2px #ffe99d, 0 0 30px #b787ff99; }
+@keyframes tactic-climax-icon { to { transform: scale(1.14) rotate(5deg); filter: brightness(1.28); } }
+@keyframes tactic-climax-scene { 0% { filter: brightness(1.8) saturate(1.5); } 100% { filter: none; } }
 @keyframes tactic-impact-in { 0% { opacity: 0; transform: translateY(-12px) scale(.78); } 65% { opacity: 1; transform: translateY(1px) scale(1.07); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes tactic-impact-out { to { opacity: 0; transform: translateY(-7px) scale(.96); } }
 
