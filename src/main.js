@@ -31,6 +31,12 @@ const urlParams = new URLSearchParams(location.search);
 const urlGfx = urlParams.get('gfx');
 const judgeMode = urlParams.has('judge');
 const weeklyChallenge = urlParams.has('weekly') ? createWeeklyChallenge(urlParams.get('weekly')) : null;
+const systemReducedEffects = typeof matchMedia === 'function'
+  && matchMedia('(prefers-reduced-motion: reduce)').matches;
+/* 눈이 편한 쪽이 기본값이다. 사용자가 생동감을 명시적으로 켠 경우에만
+ * 전체 품질을 쓰며, 운영체제의 동작 줄이기 설정은 항상 우선한다. */
+let reducedEffects = systemReducedEffects || store.effectsReduced !== false;
+document.body.classList.toggle('reduced-effects', reducedEffects);
 const weeklyReplay = weeklyChallenge ? createSwapReplay(weeklyChallenge.id) : null;
 if (weeklyChallenge) {
   document.body.classList.add('weekly-mode');
@@ -71,8 +77,9 @@ const renderer = new Renderer3D(ui.el.scene3d, {
   preserve: urlParams.has('rafshim') || urlGfx === 'min',
   decor: useDecor,
   touch: isMobile,
+  reducedEffects,
 });
-const villageRenderer = new VillageRenderer({ quality: renderer.quality, touch: isMobile });
+const villageRenderer = new VillageRenderer({ quality: renderer.quality, touch: isMobile, reducedEffects });
 
 let state = null;
 let speed = 1;
@@ -853,6 +860,19 @@ const handlers = {
     ui.setSoundLabels(isSfxMuted(), isMusicMuted());
     music.sync();
   },
+  onToggleEffects() {
+    if (systemReducedEffects) {
+      ui.toast('🌙 기기의 동작 줄이기 설정을 따르고 있어요.', 'good');
+      return;
+    }
+    reducedEffects = !reducedEffects;
+    store.effectsReduced = reducedEffects;
+    document.body.classList.toggle('reduced-effects', reducedEffects);
+    renderer.setReducedEffects(reducedEffects);
+    villageRenderer.setReducedEffects(reducedEffects);
+    ui.setEffectsLabel(reducedEffects, false);
+    ui.toast(reducedEffects ? '🌙 화면 흔들림과 번쩍임을 줄였어요.' : '✨ 생동감 효과를 켰어요.', 'good');
+  },
   onDiff(d) {
     if (!(state.phase === 'prep' && state.wave === 1)) return;
     store.diff = d;
@@ -1529,6 +1549,7 @@ if (bootSave) ui.showStart(bootSave);
   ui.setChampName(D.champNameOf(cfg.name));
 }
 ui.setSoundLabels(isSfxMuted(), isMusicMuted());
+ui.setEffectsLabel(reducedEffects, systemReducedEffects);
 ui.setSpeedLabel(speed);
 ui.coachChip();
 requestAnimationFrame(frame);

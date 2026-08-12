@@ -674,6 +674,11 @@ body.tactic-climax .tactic-card { box-shadow: 0 0 0 2px #ffe99d, 0 0 30px #b787f
   border-color: #c3cbd8;
   text-decoration: line-through;
 }
+.minibtns #effectsBtn.calm {
+  background: #e9edf4;
+  color: #56657b;
+  border-color: #bfc9d7;
+}
 
 /* ===== 버튼 ===== */
 button { font-family: inherit; }
@@ -2549,4 +2554,60 @@ body.judge-mode #diffRow { display: none !important; }
   cursor: not-allowed;
   background: #eef1f6;
   color: #8a94ac;
+}
+
+/* ===== 저자극 연출 =====
+ * 기본값이며 운영체제의 모션 감소 설정도 같은 안전한 표현을 강제한다. */
+.reduced-effects #hitFlash,
+.reduced-effects #rarityFlash,
+.reduced-effects #bossVignette {
+  display: none !important;
+}
+.reduced-effects #lowHpVignette.on {
+  animation: none;
+  opacity: .14;
+  transform: translateX(-50%);
+}
+.reduced-effects #bossWarnBanner,
+.reduced-effects #bossBanner,
+.reduced-effects #comboChip.pop,
+.reduced-effects .combine-row.ready,
+.reduced-effects .hcard.t3,
+.reduced-effects .hcard.t4,
+.reduced-effects .reveal.t4,
+.reduced-effects .tactic-board.casting,
+.reduced-effects .tactic-routes span.active,
+.reduced-effects .guided-opening .tactic-star.guided-from,
+.reduced-effects .guided-opening .tactic-star.guided-to {
+  animation: none !important;
+}
+.reduced-effects .tactic-star.matched { animation-duration: .12s; }
+.reduced-effects .tactic-beam.run { animation-duration: .13s; }
+
+@media (prefers-reduced-motion: reduce) {
+  #hitFlash,
+  #rarityFlash,
+  #bossVignette {
+    display: none !important;
+  }
+  #lowHpVignette.on {
+    animation: none;
+    opacity: .14;
+    transform: translateX(-50%);
+  }
+  #bossWarnBanner,
+  #bossBanner,
+  #comboChip.pop,
+  .combine-row.ready,
+  .hcard.t3,
+  .hcard.t4,
+  .reveal.t4,
+  .tactic-board.casting,
+  .tactic-routes span.active,
+  .guided-opening .tactic-star.guided-from,
+  .guided-opening .tactic-star.guided-to {
+    animation: none !important;
+  }
+  .tactic-star.matched { animation-duration: .12s; }
+  .tactic-beam.run { animation-duration: .13s; }
 }

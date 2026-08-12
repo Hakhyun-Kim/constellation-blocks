@@ -30,6 +30,10 @@ export const fxMethods = {
   },
 
   burst(x3, y3, z3, color, n = 10, speed = 3, opts = {}) {
+    if (this.reducedEffects) {
+      n = Math.max(2, Math.ceil(n * .34));
+      speed *= .78;
+    }
     const col = new THREE.Color(color);
     let spawned = 0;
     for (let i = 0; i < this.pMax && spawned < n; i++) {
@@ -244,7 +248,7 @@ export const fxMethods = {
       s.mesh.visible = true;
       s.mesh.position.lerpVectors(s.from, s.to, ke);
       s.mesh.rotation.y += dt * 14;
-      if (Math.random() < dt * 30) {
+      if (!this.reducedEffects && Math.random() < dt * 30) {
         this.burst(s.mesh.position.x, s.mesh.position.y, s.mesh.position.z, 0xffe9a0, 1, 0.4, { grav: 0.5, ttl: 0.3, size: 0.5 });
       }
       if (k >= 1) {
@@ -364,7 +368,7 @@ export const fxMethods = {
       this.burst(cx, 1.55, cz, 0x9cff9d, 15 + jackpot * 12, 2.7, { grav: -1.1, ttl: 0.5 });
       this._shockRing(x, z, 1.25 + jackpot * 0.35, 0xbaffad, 0.38);
       this.showNumber(cx, 3.1, cz, size >= 5 ? '🛡 별의 수호!' : size === 4 ? '🛡 수호 폭발!' : '🛡 수호 성좌!', '#c9ffb6', 1 + jackpot * 0.16);
-      this.bloomPulse = Math.max(this.bloomPulse || 0, 0.58 + jackpot * 0.22);
+      if (!this.reducedEffects) this.bloomPulse = Math.max(this.bloomPulse || 0, 0.58 + jackpot * 0.22);
     }
   },
 
@@ -398,7 +402,10 @@ export const fxMethods = {
     this.burst(0, 2.2, 2, color, big ? 40 : 20, big ? 5 : 3.4, { grav: 3 });
   },
 
-  addShake(v) { this.shake = Math.min(0.8, this.shake + v); },
+  addShake(v) {
+    if (this.reducedEffects) return;
+    this.shake = Math.min(.55, this.shake + v * .72);
+  },
 
   /* 성을 강화한 순간 — 성벽을 따라 빛이 번지고 흔들린다 */
   castleUpgradeFx(kind) {

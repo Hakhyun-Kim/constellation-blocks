@@ -34,4 +34,10 @@ sfx.toggleAll();
 assert.equal(localStorage.getItem('constellation-defense.audio.sfx'), '1', 'audio toggles write the new key');
 assert.equal(localStorage.getItem('constellation-defense.audio.music'), '1', 'audio toggles write the new key');
 
+assert.equal(store.effectsReduced, null, 'effect intensity is unset until the player chooses');
+store.effectsReduced = true;
+assert.equal(store.effectsReduced, true, 'reduced effects preference persists');
+store.effectsReduced = false;
+assert.equal(store.effectsReduced, false, 'lively effects preference persists');
+
 console.log('Storage migration checks passed.');

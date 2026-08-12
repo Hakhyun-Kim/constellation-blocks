@@ -162,6 +162,7 @@ function wellSet() {
 export class VillageRenderer {
   constructor(opts = {}) {
     this.active = false;
+    this.reducedEffects = opts.reducedEffects !== false;
     this.host = null;
     this.time = 0;
     this.targetViews = new Map();
@@ -256,6 +257,10 @@ export class VillageRenderer {
     this.host = null;
   }
 
+  setReducedEffects(reduced) {
+    this.reducedEffects = !!reduced;
+  }
+
   setPresentation({ active, host, player, motion, destination, targets, nearby }) {
     this.active = !!active;
     if (!this.active) { this.deactivate(); return; }
@@ -304,15 +309,16 @@ export class VillageRenderer {
     this.player.position.lerp(this.playerTarget, 1 - Math.pow(.0001, frameDt));
     const rig = this.player.userData.rig;
     const stride = this.playerMotion.moving ? Math.sin(this.time * 10) : 0;
-    const bounce = this.playerMotion.moving ? Math.abs(stride) * .08 : 0;
+    const bounce = this.playerMotion.moving && !this.reducedEffects ? Math.abs(stride) * .08 : 0;
     this.player.position.y = bounce;
     this.player.rotation.y = Math.atan2(this.playerMotion.x, this.playerMotion.z);
     if (rig) {
-      rig.legA.rotation.x = stride * .62;
-      rig.legB.rotation.x = -stride * .62;
-      rig.armA.rotation.x = -stride * .48;
-      rig.armB.rotation.x = stride * .48;
-      rig.torso.rotation.z = stride * .025;
+      const motionScale = this.reducedEffects ? .42 : 1;
+      rig.legA.rotation.x = stride * .62 * motionScale;
+      rig.legB.rotation.x = -stride * .62 * motionScale;
+      rig.armA.rotation.x = -stride * .48 * motionScale;
+      rig.armB.rotation.x = stride * .48 * motionScale;
+      rig.torso.rotation.z = stride * .025 * motionScale;
     }
     const follow = 1 - Math.pow(.001, frameDt);
     this.cameraGoal.set(this.player.position.x * .7, 12.4, this.player.position.z + 10.3);
@@ -320,18 +326,18 @@ export class VillageRenderer {
     this.camera.position.lerp(this.cameraGoal, follow);
     this.cameraLook.lerp(this.cameraLookGoal, follow);
     this.camera.lookAt(this.cameraLook);
-    if (this.forgeFire) { const s = 1 + Math.sin(this.time * 8) * .22; this.forgeFire.scale.setScalar(s); }
-    if (this.shrineCrystal) { this.shrineCrystal.rotation.y += dt * .9; this.shrineCrystal.position.y = .9 + Math.sin(this.time * 2) * .08; }
-    if (this.wellWater) this.wellWater.material.opacity = .68 + Math.sin(this.time * 2.3) * .07;
+    if (this.forgeFire) { const s = this.reducedEffects ? 1 : 1 + Math.sin(this.time * 8) * .22; this.forgeFire.scale.setScalar(s); }
+    if (this.shrineCrystal) { this.shrineCrystal.rotation.y += dt * (this.reducedEffects ? .25 : .9); this.shrineCrystal.position.y = .9 + (this.reducedEffects ? 0 : Math.sin(this.time * 2) * .08); }
+    if (this.wellWater) this.wellWater.material.opacity = this.reducedEffects ? .68 : .68 + Math.sin(this.time * 2.3) * .07;
     if (this.destinationMarker.visible) {
-      this.destinationMarker.rotation.z -= frameDt * 1.7;
-      this.destinationMarker.scale.setScalar(1 + Math.sin(this.time * 5) * .1);
+      this.destinationMarker.rotation.z -= frameDt * (this.reducedEffects ? .35 : 1.7);
+      this.destinationMarker.scale.setScalar(this.reducedEffects ? 1 : 1 + Math.sin(this.time * 5) * .1);
     }
     for (const view of this.targetViews.values()) {
       if (!view.group.visible) continue;
-      view.group.position.y = Math.sin(this.time * 2.5 + view.group.position.x) * .025;
-      view.ring.rotation.z += dt * 1.2;
-      const scale = view.near ? 1.1 + Math.sin(this.time * 4) * .025 : 1;
+      view.group.position.y = this.reducedEffects ? 0 : Math.sin(this.time * 2.5 + view.group.position.x) * .025;
+      view.ring.rotation.z += dt * (this.reducedEffects ? .2 : 1.2);
+      const scale = view.near ? 1.1 + (this.reducedEffects ? 0 : Math.sin(this.time * 4) * .025) : 1;
       const easedScale = view.group.scale.x + (scale - view.group.scale.x) * Math.min(1, frameDt * 8);
       view.group.scale.setScalar(easedScale);
       view.label.material.rotation = 0;

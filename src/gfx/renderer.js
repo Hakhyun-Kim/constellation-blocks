@@ -23,6 +23,7 @@ export class Renderer3D {
   constructor(container, opts = {}) {
     this.container = container;
     this.quality = opts.quality || 'high';
+    this.reducedEffects = opts.reducedEffects !== false;
     /* 배경 장식(바람 잔디 · 바닷가 · 하늘 밴드 · 반딧불이)을 통째로 끄는 스위치.
      * 모바일은 이걸 끈다 — 화소당 셰이더 비용이 제일 비싼 것들이기도 하고,
      * 작은 화면에서는 하늘에 내줬던 19%를 전장에 돌려주는 게 훨씬 이득이다.
@@ -162,7 +163,8 @@ export class Renderer3D {
   }
 
   _setupComposer() {
-    if (this.quality !== 'high') { this.composer = null; return; }
+    if (this.composer?.dispose) this.composer.dispose();
+    if (this.quality !== 'high' || this.reducedEffects) { this.composer = null; this.bloom = null; return; }
     const size = new THREE.Vector2();
     this.renderer.getSize(size);
     this.composer = new EffectComposer(this.renderer);
@@ -181,6 +183,14 @@ export class Renderer3D {
     if (this.grass) this.grass.setQuality(q);
     if (this.sea) this.sea.setQuality(q);
     if (this.fireflies) this.fireflies.setQuality(q);
+    this._resize();
+  }
+
+  setReducedEffects(reduced) {
+    this.reducedEffects = !!reduced;
+    this.shake = 0;
+    this.bloomPulse = 0;
+    this._setupComposer();
     this._resize();
   }
 
@@ -983,7 +993,7 @@ export class Renderer3D {
         case 'ultCast': {
           const hits = ev.hits || [];
           hits.forEach((h, i) => this._starfall(wx(h.x), wz(h.y), Math.min(1.2, i * 0.05)));
-          this.bloomPulse = 1;
+          if (!this.reducedEffects) this.bloomPulse = 1;
           this.addShake(0.55);
           break;
         }
@@ -1200,9 +1210,11 @@ export class Renderer3D {
 
     this.shake = Math.max(0, this.shake - dt * 1.7);
     const s2 = this.shake * this.shake;
+    const idleX = this.reducedEffects ? 0 : Math.sin(t * 0.23) * 0.18;
+    const idleY = this.reducedEffects ? 0 : Math.sin(t * 0.31) * 0.1;
     this.camera.position.set(
-      this.camBase.x + Math.sin(t * 0.23) * 0.18 + (Math.random() - 0.5) * s2 * 2.2,
-      this.camBase.y + Math.sin(t * 0.31) * 0.1 + (Math.random() - 0.5) * s2 * 1.4,
+      this.camBase.x + idleX + (Math.random() - 0.5) * s2 * 2.2,
+      this.camBase.y + idleY + (Math.random() - 0.5) * s2 * 1.4,
       this.camBase.z + (Math.random() - 0.5) * s2 * 2.2
     );
     this.camera.lookAt(this.camLook);

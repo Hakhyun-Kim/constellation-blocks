@@ -20,7 +20,7 @@ function migrate(name, legacyName = name) {
   localStorage.removeItem(legacy);
 }
 [
-  'shards', 'meta', 'diff', 'gfx', 'decor_off', 'story_off', 'autosave', 'champ',
+  'shards', 'meta', 'diff', 'gfx', 'decor_off', 'story_off', 'effects_reduced', 'autosave', 'champ',
   'victories', 'trial_clears', 'codex', 'achievements', 'coach',
 ].forEach(name => migrate(name));
 ['easy', 'normal', 'hard'].forEach(diff => migrate(`best.${diff}`, `best_${diff}`));
@@ -50,6 +50,11 @@ export const store = {
   set decorOff(v) { localStorage.setItem(key('decor_off'), v ? '1' : '0'); },
   get storyOff() { return text('story_off') === '1'; },
   set storyOff(v) { localStorage.setItem(key('story_off'), v ? '1' : '0'); },
+  get effectsReduced() {
+    const value = text('effects_reduced');
+    return value == null ? null : value === '1';
+  },
+  set effectsReduced(v) { localStorage.setItem(key('effects_reduced'), v ? '1' : '0'); },
   /* 자동 저장 슬롯 (웨이브가 끝날 때마다 갱신, 함락되면 삭제) */
   get autosave() { return json('autosave', null); },
   set autosave(v) {

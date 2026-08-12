@@ -99,7 +99,7 @@ export class UI {
       'bestWave', 'shards', 'metaBtn', 'castleText', 'castleFill', 'castleGhost',
       'scene3d', 'hitFlash', 'lowHpVignette', 'bossBanner', 'comboChip', 'waveInfo', 'remainN',
       'waveBtn', 'coachChip', 'toasts', 'gold', 'waveNo', 'waveLabel', 'speedBtn',
-      'summonBtn', 'benchHint', 'bench', 'combineRows', 'sfxBtn', 'bgmBtn',
+      'summonBtn', 'benchHint', 'bench', 'combineRows', 'sfxBtn', 'bgmBtn', 'effectsBtn',
       'placeBar', 'placeBarText', 'placeBarCancel',
       'castleRows', 'heroPanel', 'hpTitle', 'hpInfo', 'heroActiveBtn', 'recallBtn', 'sellBtn', 'moveHint',
       'diffRow',
@@ -598,6 +598,7 @@ export class UI {
     el.speedBtn.addEventListener('click', h.onSpeed);
     el.sfxBtn.addEventListener('click', h.onToggleSfx);
     el.bgmBtn.addEventListener('click', h.onToggleBgm);
+    el.effectsBtn.addEventListener('click', h.onToggleEffects);
     el.metaBtn.addEventListener('click', h.onMetaOpen);
     el.overMetaBtn.addEventListener('click', h.onMetaOpen);
     el.metaClose.addEventListener('click', () => this.hideMeta());
@@ -1769,6 +1770,7 @@ export class UI {
 
   /* 전체 화면을 번쩍이지 않는다. 발동 중심의 작은 빛만 짧게 표시한다. */
   flashAccent(kind) {
+    if (document.body.classList.contains('reduced-effects')) return;
     const el = this.el.rarityFlash;
     el.className = kind;
     void el.offsetWidth;
@@ -1786,6 +1788,7 @@ export class UI {
     setTimeout(() => d.remove(), 2700);
   }
   flashHit() {
+    if (document.body.classList.contains('reduced-effects')) return;
     const el = this.el.hitFlash;
     el.classList.remove('on');
     void el.offsetWidth;
@@ -1806,6 +1809,13 @@ export class UI {
     this.el.sfxBtn.classList.toggle('off', sfxOff);
     this.el.bgmBtn.textContent = bgmOff ? '🔇 배경음' : '🎵 배경음';
     this.el.bgmBtn.classList.toggle('off', bgmOff);
+  }
+  setEffectsLabel(reduced, system = false) {
+    this.el.effectsBtn.textContent = reduced ? '🌙 저자극' : '✨ 생동감';
+    this.el.effectsBtn.classList.toggle('calm', reduced);
+    this.el.effectsBtn.title = system
+      ? '기기의 동작 줄이기 설정을 따르는 중'
+      : reduced ? '화면 흔들림과 번쩍임을 줄이는 중' : '모든 시각 효과를 사용하는 중';
   }
 
   /* ---------- 기록 카드 (공유용 PNG) ---------- */
