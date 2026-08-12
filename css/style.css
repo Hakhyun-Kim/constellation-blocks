@@ -452,6 +452,10 @@ body.tactic-climax .tactic-card { box-shadow: 0 0 0 2px #ffe99d, 0 0 30px #b787f
 }
 .wave-btn:hover { filter: brightness(1.06); }
 .wave-btn:active { transform: translateX(-50%) translateY(3px); box-shadow: 0 1px 0 #c98a00; }
+.wave-btn.auto-next {
+  outline: 2px solid rgba(255, 246, 191, .82);
+  outline-offset: 3px;
+}
 
 #coachChip {
   position: absolute;

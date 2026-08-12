@@ -1,0 +1,33 @@
+/* Real-time pacing between completed defenses. This stays outside the engine:
+ * it never decides combat results and only asks main to press the same start
+ * action available to the player. */
+
+export const AUTO_PHASE_DELAY = 4;
+
+export function autoPhaseKey(state) {
+  if (!state || state.phase !== 'prep') return null;
+  if (state.journey?.activeBattle) {
+    /* The first defense after choosing a map node is a deliberate player start.
+     * Only the next defense in that same encounter is linked automatically. */
+    if ((state.journey.wavesInBattle || 0) <= 0) return null;
+    return `journey:${state.journey.activeBattle}:${state.journey.wavesInBattle}`;
+  }
+  /* The very first wave remains an onboarding/setup moment. */
+  if ((state.wave || 1) <= 1) return null;
+  return `wave:${state.loop || 0}:${state.wave}`;
+}
+
+export function createAutoPhaseClock() {
+  return { key: null, remaining: AUTO_PHASE_DELAY, ready: false };
+}
+
+export function advanceAutoPhase(clock, state, dt, blocked = false) {
+  const key = autoPhaseKey(state);
+  if (!key) return createAutoPhaseClock();
+  const current = clock?.key === key
+    ? clock
+    : { key, remaining: AUTO_PHASE_DELAY, ready: false };
+  if (blocked || !Number.isFinite(dt) || dt <= 0) return { ...current, ready: false };
+  const remaining = Math.max(0, current.remaining - dt);
+  return { key, remaining, ready: remaining === 0 };
+}

@@ -752,22 +752,28 @@ export class UI {
 
   }
 
-  setWaveUI(state) {
+  setWaveUI(state, autoStartSeconds = null) {
     const el = this.el;
     const journeyProgress = E.journeyBattleProgress(state);
     const stageLabel = journeyProgress
       ? `${journeyProgress.node.name} · 방어 ${journeyProgress.step}/${journeyProgress.total}`
       : `${state.wave}웨이브`;
     if (state.phase === 'prep') {
-      el.waveBtn.textContent = `▶ ${stageLabel} 시작!${journeyProgress?.node.kind === 'boss' || D.isBossWave(state.wave) ? ' 🐉' : ''} (Space)`;
+      const countdown = Number.isFinite(autoStartSeconds)
+        ? ` · 자동 ${Math.max(1, Math.ceil(autoStartSeconds))}초`
+        : '';
+      el.waveBtn.textContent = `▶ ${stageLabel} 시작!${journeyProgress?.node.kind === 'boss' || D.isBossWave(state.wave) ? ' 🐉' : ''}${countdown} (Space)`;
+      el.waveBtn.classList.toggle('auto-next', !!countdown);
       el.waveBtn.classList.remove('hidden');
       el.waveInfo.classList.add('hidden');
     } else if (state.phase === 'wave') {
+      el.waveBtn.classList.remove('auto-next');
       el.waveBtn.classList.add('hidden');
       el.wavePreview.classList.add('hidden');
       el.waveInfo.classList.remove('hidden');
       el.remainN.textContent = `${stageLabel} · 남은 몬스터 ${E.remainingEnemies(state)}`;
     } else {
+      el.waveBtn.classList.remove('auto-next');
       el.waveBtn.classList.add('hidden');
       el.wavePreview.classList.add('hidden');
       el.waveInfo.classList.add('hidden');

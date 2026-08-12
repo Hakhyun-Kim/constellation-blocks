@@ -19,6 +19,7 @@ import { createTacticFlow } from './app/tacticflow.js';
 import { createTacticFeedback } from './app/tacticfeedback.js';
 import { JUDGE_OPENING, prepareJudgeWave } from './app/judge-run.js';
 import { createSwapReplay, createWeeklyChallenge, seededRandom } from './challenges/weekly.js';
+import { advanceAutoPhase, createAutoPhaseClock } from './app/phase-flow.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
 
@@ -84,6 +85,7 @@ let panelT = 0;
 let sellMode = false;         // 여러 명 판매 모드 (벤치 카드가 체크박스가 된다)
 const sellSel = new Set();    // 판매하려고 고른 용사 id
 let tactics = null;
+let autoPhaseClock = createAutoPhaseClock();
 
 /* ---------- 도감 · 업적 ----------
  * 조건은 전부 값 비교라 아무 때나 다시 평가해도 싸다. 언제 부르는지가 전부다:
@@ -162,6 +164,7 @@ function newGame(difficulty, opts = {}) {
     metaLevels: store.meta,
     rng: weeklyChallenge ? seededRandom(weeklyChallenge.seed) : undefined,
   });
+  autoPhaseClock = createAutoPhaseClock();
   if (tactics) tactics.reset();
   tacticFeedback.reset();
   giveStarters();
@@ -179,6 +182,7 @@ function startTrial() {
   if (!state || state.phase === 'over') return;
   gameOverToken++;
   state = E.nextLoop(state);
+  autoPhaseClock = createAutoPhaseClock();
   tacticFeedback.reset();
   giveStarters();
   resetSession();
@@ -570,6 +574,7 @@ function loadGame(data) {
   }
   gameOverToken++;                     // 예약된 게임오버 연출이 불러온 판을 덮지 않게
   state = next;
+  autoPhaseClock = createAutoPhaseClock();
   tacticFeedback.reset();
   store.diff = state.difficulty;
   resetSession();
@@ -1315,6 +1320,24 @@ function isPaused() {
     || ui.isRevealOpen() || ui.isBookOpen() || ui.isVictoryOpen() || state.phase === 'over';
 }
 
+function updateAutoPhaseFlow(dt) {
+  /* 관전 봇은 자체 준비 정책을 쓰며, 사람이 읽거나 선택하는 모달 뒤에서는
+   * 카운트다운을 멈춘다. 자동 시작도 수동 버튼과 같은 경로만 호출한다. */
+  if (demo.active) {
+    autoPhaseClock = createAutoPhaseClock();
+    return null;
+  }
+  const blocked = isPaused() || ui.isStoryOpen() || ui.isStartOpen() || document.hidden;
+  autoPhaseClock = advanceAutoPhase(autoPhaseClock, state, dt, blocked);
+  if (!autoPhaseClock.key) return null;
+  const remaining = autoPhaseClock.remaining;
+  if (autoPhaseClock.ready) {
+    autoPhaseClock = createAutoPhaseClock();
+    tryStartWave();
+  }
+  return remaining;
+}
+
 const STEP = 1 / 60;          // 고정 시뮬레이션 타임스텝
 const MAX_STEPS = 8;          // 프레임당 최대 캐치업 (낮은 fps 대비)
 let lastT = performance.now();
@@ -1394,10 +1417,12 @@ function frame(now) {
     } else if (state.phase === 'prep') music.setTrack('prep');
   }
 
+  const autoPhaseRemaining = updateAutoPhaseFlow(realDt);
+
   /* UI 갱신 */
   ui.updateHud(state, store.shards, store.best(state.difficulty));
   ui.updateChampChip(state);
-  ui.setWaveUI(state);
+  ui.setWaveUI(state, autoPhaseRemaining);
   ui.comboChip(state.combo.count, state.combo.count >= D.COMBO.x3At ? 3 : state.combo.count >= D.COMBO.x2At ? 2 : 1);
   const barBoss = greatBoss || midBoss;
   ui.setBossBar(barBoss ? {
