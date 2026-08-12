@@ -871,7 +871,7 @@ const handlers = {
     renderer.setReducedEffects(reducedEffects);
     villageRenderer.setReducedEffects(reducedEffects);
     ui.setEffectsLabel(reducedEffects, false);
-    ui.toast(reducedEffects ? '🌙 화면 흔들림과 번쩍임을 줄였어요.' : '✨ 생동감 효과를 켰어요.', 'good');
+    ui.toast(reducedEffects ? '🌙 국소 파티클을 줄였어요.' : '✨ 국소 파티클을 더 보여줘요. 전체 화면 점멸은 항상 꺼져요.', 'good');
   },
   onDiff(d) {
     if (!(state.phase === 'prep' && state.wave === 1)) return;
@@ -1190,14 +1190,16 @@ function cycleField(dir) {
 
 function tryStartWave() {
   if (ui.isStoryOpen() || ui.isRevealOpen()) return;   // 연출 중에 웨이브가 몰래 시작되지 않게
-  const quip = store.storyOff ? null : Story.waveQuip(state.wave);
+  const incoming = E.journeyEncounter(state);
+  const quip = store.storyOff || incoming.boss ? null : Story.waveQuip(state.wave);
   if (quip) setTimeout(() => ui.toast(`📣 ${quip}`), 260);
   const r = E.startWave(state);
   if (!r.ok) return;
   SFX.waveStart();
   music.setWave(state.wave);
   ui.toast(`🌊 ${state.wave}웨이브 시작! 몬스터를 막아요!`);
-  if (r.boss) ui.toast('⚠️ 대보스가 지름길로 돌진하는 웨이브예요!', 'bad');
+  if (r.boss) ui.toast('⚠️ 지역 대보스와 중간보스 호위대가 함께 진군해요!', 'bad');
+  else if (r.encounter?.midBoss) ui.toast('⚠️ 중간보스가 졸개들을 이끌고 세 길을 압박해요!', 'bad');
   ui.setWaveUI(state);
 }
 

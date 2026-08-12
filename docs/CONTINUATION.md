@@ -8,7 +8,8 @@ up `Constellation Defense` on another computer.
 ## Current handoff state
 
 - Branch: `main`
-- Latest feature/fix commit: `03f53dc fix: keep game effects easy on the eyes`
+- Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
+  the regional boss formation and absolute full-screen-effect safety pass.
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-13. The 60-run balance gate also passed with the real
@@ -28,6 +29,8 @@ The prize-focused presentation pass now also includes:
 - Hero specializations that modify the matching Flare, Tide, or Bloom tactic.
 - Cinematic five-star feedback and a saved run memory for largest constellation,
   most-defended lane, decisive recovery, and the expedition route.
+- Region-owned encounter pacing: a commander with minions before each regional
+  finale, then a great boss arriving in formation with mid-boss lieutenants.
 
 ## Current play-feel implementation
 
@@ -49,6 +52,12 @@ commits:
 - `03f53dc` makes reduced effects the default, respects the OS reduced-motion
   preference, persists the player's choice, disables bloom and camera shake,
   and limits particles, flashing, and repeated village/HUD motion.
+- The current safety pass removes battlefield bloom, camera shake, and the
+  five-match scene brightness flash in every setting. `visual:check` makes this
+  an automated release gate; lively mode now changes local particle density only.
+
+See [regional-boss-encounters.md](design/regional-boss-encounters.md) for the
+implemented tension curve and its balance budget.
 
 ## Fresh-machine setup
 
@@ -130,6 +139,13 @@ The button immediately displayed a `9.8초` cooldown. `🌙 저자극` was activ
 default and the browser console had no errors. The same release gate then
 passed `npm.cmd run check`, `npm.cmd run storage:check`, and
 `node scripts/balance-check.mjs 60`.
+
+The next 2026-08-13 pass replaced the global five-wave boss timer with region
+position. Browser smoke showed `푸른 초원 · 방어 1/2 · 지휘관전`, a preview
+containing seven normal enemies and one mid-boss, and a working WebGL battle.
+The effects toggle was checked in both `저자극` and `생동감`; `#scene3d` and its
+canvas had `animation: none` and `filter: none` in both. `npm.cmd run check` and
+the 60-seed balance gate passed after the encounter change.
 
 GitHub Pages build `1147977267` then published public SHA `1ae41e2`. The exact
 deployed judge URL opened without authentication, exposed the two authored

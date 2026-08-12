@@ -762,6 +762,7 @@ export class UI {
   setWaveUI(state, autoStartSeconds = null) {
     const el = this.el;
     const journeyProgress = E.journeyBattleProgress(state);
+    const encounter = E.journeyEncounter(state);
     const stageLabel = journeyProgress
       ? `${journeyProgress.node.name} · 방어 ${journeyProgress.step}/${journeyProgress.total}`
       : `${state.wave}웨이브`;
@@ -769,7 +770,8 @@ export class UI {
       const countdown = Number.isFinite(autoStartSeconds)
         ? ` · 자동 ${Math.max(1, Math.ceil(autoStartSeconds))}초`
         : '';
-      el.waveBtn.textContent = `▶ ${stageLabel} 시작!${journeyProgress?.node.kind === 'boss' || D.isBossWave(state.wave) ? ' 🐉' : ''}${countdown} (Space)`;
+      const encounterIcon = encounter.boss ? ' 🐉' : (encounter.midBoss ? ' 👿' : '');
+      el.waveBtn.textContent = `▶ ${stageLabel} 시작!${encounterIcon}${countdown} (Space)`;
       el.waveBtn.classList.toggle('auto-next', !!countdown);
       el.waveBtn.classList.remove('hidden');
       el.waveInfo.classList.add('hidden');
@@ -1266,7 +1268,9 @@ export class UI {
       ? `<span class="wchip myth" title="신화 용사 ${press}명 — 몬스터 체력 +${Math.round((D.mythicHpMul(press) - 1) * 100)}% · 골드 +${Math.round((D.mythicGoldMul(press) - 1) * 100)}%">🌌 체력 +${Math.round((D.mythicHpMul(press) - 1) * 100)}% · 💰 +${Math.round((D.mythicGoldMul(press) - 1) * 100)}%</span>`
       : '';
     const progress = E.journeyBattleProgress(state);
-    const label = progress ? `${progress.node.name} · 방어 ${progress.step}/${progress.total}` : '다음 웨이브';
+    const encounter = E.journeyEncounter(state);
+    const encounterLabel = encounter.boss ? ' · 지역 결전' : (encounter.midBoss ? ' · 지휘관전' : '');
+    const label = progress ? `${progress.node.name} · 방어 ${progress.step}/${progress.total}${encounterLabel}` : '다음 웨이브';
     el.innerHTML = `<span class="wlabel">${label}</span>${chips}${warn}`;
     el.classList.remove('hidden');
   }
@@ -1815,7 +1819,7 @@ export class UI {
     this.el.effectsBtn.classList.toggle('calm', reduced);
     this.el.effectsBtn.title = system
       ? '기기의 동작 줄이기 설정을 따르는 중'
-      : reduced ? '화면 흔들림과 번쩍임을 줄이는 중' : '모든 시각 효과를 사용하는 중';
+      : reduced ? '착탄 지점의 국소 파티클을 줄이는 중' : '국소 파티클을 더 표시하는 중 · 전장 전체 점멸과 흔들림은 항상 꺼짐';
   }
 
   /* ---------- 기록 카드 (공유용 PNG) ---------- */

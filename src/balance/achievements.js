@@ -46,8 +46,10 @@ export const ACHIEVEMENTS = [
     unlocks: { axis: 'hair', key: 'gold' },
     check: (c) => !!c.state && (c.state.tacticCasts || 0) >= 10 },
   { key: 'boss3', emoji: '👾', name: '성문 파괴자',
-    desc: '한 게임에서 보스 3마리를 처치하기', shards: 8,
-    check: (c) => !!c.state && c.state.bossKills >= 3 },
+    /* 저장 키는 기존 달성 기록과 호환하려고 유지한다. 첫 챕터의 두 지역을
+     * 모두 끝내면 달성 가능해야 하므로 실제 목표는 지역 보스 둘이다. */
+    desc: '한 게임에서 지역 보스 2마리를 처치하기', shards: 8,
+    check: (c) => !!c.state && c.state.bossKills >= 2 },
   { key: 'luna10', emoji: '🌟', name: '빛나는 루나',
     desc: '루나를 Lv 10으로 성장시키기', shards: 6,
     unlocks: { axis: 'weapon', key: 'dual' },

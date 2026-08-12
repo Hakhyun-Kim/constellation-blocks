@@ -5,10 +5,6 @@
  * 외부 에셋 0개: 지형·성·캐릭터·이펙트 전부 코드 생성.
  * ===================================================== */
 import * as THREE from 'three';
-import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer.js';
-import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
-import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import * as D from '../data.js';
 import { CHAMP_CHAT } from '../story.js';
 import { S, wx, wz, emojiTexture, blobTexture } from './common.js';
@@ -32,7 +28,6 @@ export class Renderer3D {
     /* 발판 클릭 허용 반경(PAD_RADIUS 배수). 터치는 넉넉하게. */
     this.padSlop = opts.touch ? 2.4 : 1.5;
     this.time = 0;
-    this.shake = 0;
 
     const r = new THREE.WebGLRenderer({
       antialias: this.quality !== 'min',
@@ -144,8 +139,6 @@ export class Renderer3D {
     this.selectedHeroId = null;
     this.hoverPad = null;
 
-    this._setupComposer();
-
     this._resize = this._resize.bind(this);
     this.ro = new ResizeObserver(this._resize);
     this.ro.observe(container);
@@ -162,24 +155,10 @@ export class Renderer3D {
     return 0.6;
   }
 
-  _setupComposer() {
-    if (this.composer?.dispose) this.composer.dispose();
-    if (this.quality !== 'high' || this.reducedEffects) { this.composer = null; this.bloom = null; return; }
-    const size = new THREE.Vector2();
-    this.renderer.getSize(size);
-    this.composer = new EffectComposer(this.renderer);
-    this.composer.addPass(new RenderPass(this.scene, this.camera));
-    this.bloom = new UnrealBloomPass(size, 0.5, 0.35, 0.62);
-    this.composer.addPass(this.bloom);
-    this.composer.addPass(new OutputPass());
-  }
-
   setQuality(q) {
     if (this.quality === q) return;
     this.quality = q;
     this.renderer.setPixelRatio(this._targetDpr());
-    if (q === 'high') this._setupComposer();
-    else { this.composer = null; }
     if (this.grass) this.grass.setQuality(q);
     if (this.sea) this.sea.setQuality(q);
     if (this.fireflies) this.fireflies.setQuality(q);
@@ -188,9 +167,6 @@ export class Renderer3D {
 
   setReducedEffects(reduced) {
     this.reducedEffects = !!reduced;
-    this.shake = 0;
-    this.bloomPulse = 0;
-    this._setupComposer();
     this._resize();
   }
 
@@ -203,7 +179,6 @@ export class Renderer3D {
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     if (this.sky) this.sky.layout();     // 절두체가 바뀌면 밴드 크기도 다시 잡는다
-    if (this.composer) this.composer.setSize(w, h);
   }
 
   /* ---------- 뷰 생성 ---------- */
@@ -993,7 +968,6 @@ export class Renderer3D {
         case 'ultCast': {
           const hits = ev.hits || [];
           hits.forEach((h, i) => this._starfall(wx(h.x), wz(h.y), Math.min(1.2, i * 0.05)));
-          if (!this.reducedEffects) this.bloomPulse = 1;
           this.addShake(0.55);
           break;
         }
@@ -1192,11 +1166,6 @@ export class Renderer3D {
     this._updatePillars(dt);
     this._updateBubbles(dt);
     this._updateStars(dt);
-    /* 은하수 — 순간적으로 블룸이 차오른다 */
-    if (this.bloomPulse > 0) {
-      this.bloomPulse = Math.max(0, this.bloomPulse - dt * 1.3);
-      if (this.bloom) this.bloom.strength = 0.5 + this.bloomPulse * 0.9;
-    }
     this._updateDaylight(dt, state);    // 먼저 시간대 기준값을 만들고
     this._updateBossMood(dt);           // 그 위에 보스 분위기를 덧칠한다
     this.regions?.frame(t);
@@ -1208,19 +1177,12 @@ export class Renderer3D {
       this.sky.frame(dt, t, this.palette, this.moonPhase);
     }
 
-    this.shake = Math.max(0, this.shake - dt * 1.7);
-    const s2 = this.shake * this.shake;
-    const idleX = this.reducedEffects ? 0 : Math.sin(t * 0.23) * 0.18;
-    const idleY = this.reducedEffects ? 0 : Math.sin(t * 0.31) * 0.1;
-    this.camera.position.set(
-      this.camBase.x + idleX + (Math.random() - 0.5) * s2 * 2.2,
-      this.camBase.y + idleY + (Math.random() - 0.5) * s2 * 1.4,
-      this.camBase.z + (Math.random() - 0.5) * s2 * 2.2
-    );
+    /* 접근성 계약: 전투 피드백이 카메라 전체를 흔들거나 밝기를 펄스시키지 않는다.
+     * 생동감 설정은 착탄 지점의 국소 파티클 밀도만 바꾼다. */
+    this.camera.position.copy(this.camBase);
     this.camera.lookAt(this.camLook);
 
-    if (this.composer) this.composer.render();
-    else this.renderer.render(this.scene, this.camera);
+    this.renderer.render(this.scene, this.camera);
   }
 
   /* ---------- 입력 ---------- */

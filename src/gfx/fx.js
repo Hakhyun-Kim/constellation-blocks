@@ -368,7 +368,6 @@ export const fxMethods = {
       this.burst(cx, 1.55, cz, 0x9cff9d, 15 + jackpot * 12, 2.7, { grav: -1.1, ttl: 0.5 });
       this._shockRing(x, z, 1.25 + jackpot * 0.35, 0xbaffad, 0.38);
       this.showNumber(cx, 3.1, cz, size >= 5 ? '🛡 별의 수호!' : size === 4 ? '🛡 수호 폭발!' : '🛡 수호 성좌!', '#c9ffb6', 1 + jackpot * 0.16);
-      if (!this.reducedEffects) this.bloomPulse = Math.max(this.bloomPulse || 0, 0.58 + jackpot * 0.22);
     }
   },
 
@@ -402,9 +401,9 @@ export const fxMethods = {
     this.burst(0, 2.2, 2, color, big ? 40 : 20, big ? 5 : 3.4, { grav: 3 });
   },
 
-  addShake(v) {
-    if (this.reducedEffects) return;
-    this.shake = Math.min(.55, this.shake + v * .72);
+  addShake(_v) {
+    /* 화면 전체 움직임은 시각 안전 규칙상 금지한다. 호출부는 사건의 강도를
+     * 설명하는 흔적으로 남기되, 표현은 착탄 지점의 파티클·링에만 맡긴다. */
   },
 
   /* 성을 강화한 순간 — 성벽을 따라 빛이 번지고 흔들린다 */

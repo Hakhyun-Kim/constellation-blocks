@@ -338,10 +338,8 @@ body {
   text-shadow: 0 0 12px #ffdf75;
 }
 .tactic-impact[data-match-size="5"] .tactic-impact-copy small { color: #fff; font-size: 12px; }
-body.tactic-climax #scene3d { animation: tactic-climax-scene .55s ease-out; }
 body.tactic-climax .tactic-card { box-shadow: 0 0 0 2px #ffe99d, 0 0 30px #b787ff99; }
 @keyframes tactic-climax-icon { to { transform: scale(1.14) rotate(5deg); filter: brightness(1.28); } }
-@keyframes tactic-climax-scene { 0% { filter: brightness(1.8) saturate(1.5); } 100% { filter: none; } }
 @keyframes tactic-impact-in { 0% { opacity: 0; transform: translateY(-12px) scale(.78); } 65% { opacity: 1; transform: translateY(1px) scale(1.07); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes tactic-impact-out { to { opacity: 0; transform: translateY(-7px) scale(.96); } }
 

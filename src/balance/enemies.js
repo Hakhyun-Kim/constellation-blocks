@@ -6,7 +6,7 @@
  *   게임의 수학적 진실을 결정한다. 이 곡선을 바꾸면 게임의 성격 자체가 바뀐다.
  * ===================================================== */
 
-/* 일반 / 중간보스(매 웨이브) / 대보스(5웨이브마다) 3층 구조 */
+/* 일반 / 지역 지휘관 / 지역 대보스 3층 구조 */
 export const ENEMY_TYPES = {
   goblin:  { name: '고블린',     emoji: '👺', hp: 40,   spd: 62,  gold: 8,   castleDmg: 5,  size: 30 },
   wolf:    { name: '늑대',       emoji: '🐺', hp: 26,   spd: 105, gold: 10,  castleDmg: 4,  size: 30 },
@@ -18,28 +18,35 @@ export const ENEMY_TYPES = {
   bat:     { name: '박쥐떼',     emoji: '🦇', hp: 34,   spd: 150, gold: 12,  castleDmg: 3,  size: 26 },
   golem:   { name: '바위골렘',   emoji: '🗿', hp: 330,  spd: 22,  gold: 40,  castleDmg: 15, size: 42 },
 
-  /* 중간보스 — 매 웨이브 마지막에 등장, 3종이 순환 (일반 몬스터의 2~3배 체력) */
+  /* 중간보스 — 지역 결전 직전에는 졸개를 지휘하고, 결전에서는 보스를 호위한다. */
   ogrelord:    { name: '오우거 군주', emoji: '👿', hp: 780, spd: 30, gold: 90, castleDmg: 22, size: 50, midBoss: true },
   bonelord:    { name: '해골 장군',   emoji: '💀', hp: 600, spd: 42, gold: 85, castleDmg: 18, size: 47, midBoss: true },
   spiderqueen: { name: '거미 여왕',   emoji: '🕷️', hp: 680, spd: 36, gold: 95, castleDmg: 20, size: 48, midBoss: true,
                  heal: 22, healPeriod: 1.8, healRange: 160 },
 
-  /* 대보스 — 5웨이브마다, 체력 절반에서 분노 */
+  /* 대보스 — 각 지역의 마지막 방어에 등장, 체력 절반에서 분노 */
   boss:  { name: '보스 드래곤',   emoji: '🐉', hp: 2000, spd: 26, gold: 260, castleDmg: 45, size: 58, boss: true,
            enrageAt: 0.5, enrageSpd: 1.45 },
   boss2: { name: '고대 파괴자',   emoji: '🦖', hp: 2350, spd: 23, gold: 300, castleDmg: 50, size: 60, boss: true,
            enrageAt: 0.5, enrageSpd: 1.4 },
 };
 
-/* 중간보스는 매 웨이브, 대보스는 5웨이브마다 (두 종류가 번갈아) */
+/* 중간보스는 위협도에 따라 순환하고, 지역은 고유 대보스를 가진다. */
 export const MIDBOSS_CYCLE = ['ogrelord', 'bonelord', 'spiderqueen'];
-export const midBossType = (w) => MIDBOSS_CYCLE[(w - 1) % MIDBOSS_CYCLE.length];
+export const midBossType = (w, offset = 0) => MIDBOSS_CYCLE[(w - 1 + offset) % MIDBOSS_CYCLE.length];
 export const GREAT_BOSS_CYCLE = ['boss', 'boss2'];
-export const greatBossType = (w) => GREAT_BOSS_CYCLE[(Math.floor(w / 5) - 1) % GREAT_BOSS_CYCLE.length];
+export const REGION_BOSS_TYPES = {
+  'verdant-dawn': 'boss',
+  'ember-gate': 'boss2',
+};
+export const greatBossType = (region, fallback = 1) =>
+  REGION_BOSS_TYPES[region] || GREAT_BOSS_CYCLE[(Math.max(1, fallback) - 1) % GREAT_BOSS_CYCLE.length];
 /* 보스 등장 몇 초 전에 경고 */
 export const BOSS_WARN_LEAD = 2.6;
 /* 초반 중간보스는 약하게 시작해 5웨이브에 제 위력 (입문자 배려) */
 export const midBossRamp = (w) => Math.min(1, 0.45 + w * 0.12);
+/* 지역 결전의 중간보스는 별도 보스전이 아니라 좌우 압박을 만드는 호위대다. */
+export const BOSS_LIEUTENANT = { hpMul: 0.58, goldMul: 0.65, castleDmgMul: 0.72 };
 
 /* ---------- 난이도 ---------- */
 export const DIFFICULTIES = {
@@ -81,8 +88,6 @@ export function waveMix(w) {
  * 대신 보통/특별 두 가지로만 나눈다. 금빛 테두리 하나면 즉시 알아본다. */
 export const eliteChance = (w) => Math.min(0.11, Math.max(0, (w - 5) * 0.015));
 export const ELITE = { hpMul: 2.2, goldMul: 2.5, sizeMul: 1.15, name: '성난' };
-
-export const isBossWave = (w) => w % 5 === 0;
 
 /* ---------- 신화의 압력 ----------
  * ★ 신화 용사가 나오면 게임이 갑자기 쉬워진다. 신화는 이 게임의 최종 목표라

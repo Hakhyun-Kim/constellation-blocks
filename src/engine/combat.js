@@ -9,7 +9,7 @@ import { heroMods } from './roster.js';
 import { grantSquadWaveXp } from './squad.js';
 import { damageEnemy, applyBurn, applySlow, applyStun } from './effects.js';
 import { createResonance, resonanceDamageMul } from './resonance.js';
-import { completeJourneyWave, journeyBattleProgress } from './journey.js';
+import { completeJourneyWave, journeyBattleProgress, journeyEncounter } from './journey.js';
 
 /* ---------- 웨이브 생성 ---------- */
 function pickWeighted(state, mix) {
@@ -32,7 +32,11 @@ function pickRoute(state) {
 /* 분대 단위로 몰려오는 웨이브를 만든다 (+ 웨이브 말미의 보스들) */
 export function buildWave(state) {
   const w = state.wave;
-  const total = Math.round(D.waveCount(w) * state.diff.countMul);
+  const encounter = journeyEncounter(state);
+  /* 지휘관/결전에서도 일반 몬스터 총량은 유지하되, 마지막 세 마리를
+   * 보스와 동시에 세 갈래로 붙여 '보스만 남는 청소 시간'을 없앤다. */
+  const formationMinions = encounter.kind === 'patrol' ? 0 : 3;
+  const total = Math.max(0, Math.round(D.waveCount(w) * state.diff.countMul) - formationMinions);
   const mix = D.waveMix(w);
   const list = [];
   let t = 1.2;
@@ -54,18 +58,34 @@ export function buildWave(state) {
     t += size * D.SQUAD_INNER_GAP + D.squadGap(w) * (0.8 + state.rng() * 0.4);
   }
 
-  /* 중간보스: 매 웨이브 마지막을 장식한다 */
-  const midT = t + 1.6;
-  const midType = D.midBossType(w);
-  list.push({ t: midT - D.BOSS_WARN_LEAD, warnOnly: true, tier: 'mid', etype: midType });
-  list.push({ t: midT, type: midType, route: pickRoute(state) });
+  if (encounter.kind !== 'patrol') {
+    const formationT = t + 1.6;
+    const midType = D.midBossType(w);
+    const warnTier = encounter.boss ? 'great' : 'mid';
+    const warnType = encounter.boss ? D.greatBossType(encounter.region, w) : midType;
+    list.push({ t: formationT - D.BOSS_WARN_LEAD, warnOnly: true, tier: warnTier, etype: warnType });
 
-  /* 대보스: 5웨이브마다, 중간보스 뒤에 지름길로 돌진 */
-  if (D.isBossWave(w)) {
-    const bossT = midT + 4.5;
-    const bType = D.greatBossType(w);
-    list.push({ t: bossT - D.BOSS_WARN_LEAD, warnOnly: true, tier: 'great', etype: bType });
-    list.push({ t: bossT, type: bType });
+    /* 졸개가 먼저 세 길을 열고 지휘관이 그 틈을 파고든다. */
+    for (let route = 0; route < 3; route++) {
+      list.push({ t: formationT - 0.42 + route * 0.16, type: pickWeighted(state, mix), route });
+    }
+
+    if (encounter.kind === 'commander') {
+      list.push({ t: formationT, type: midType, route: w % 3 });
+    } else {
+      /* 대보스와 중간보스가 한 편대로 도착한다. 최종 지역은 좌우에
+       * 두 지휘관을 세워 마지막 결전의 실루엣을 확실히 다르게 만든다. */
+      const bType = D.greatBossType(encounter.region, w);
+      list.push({ t: formationT, type: bType });
+      const lieutenantRoutes = encounter.chapterFinal ? [0, 2] : [w % 2 ? 0 : 2];
+      lieutenantRoutes.forEach((route, index) => list.push({
+        t: formationT + 0.12 + index * 0.16,
+        type: D.midBossType(w, index),
+        route,
+        lieutenant: true,
+        silentBossBanner: true,
+      }));
+    }
   }
   return list;
 }
@@ -99,10 +119,11 @@ export function startWave(state) {
     state.champ.holdT = 0;
     state.champ.spellReadyT = 0;
   }
-  return { ok: true, boss: D.isBossWave(state.wave) };
+  const encounter = journeyEncounter(state);
+  return { ok: true, boss: encounter.boss, encounter };
 }
 
-function spawnEnemy(state, type, events, presetRoute) {
+function spawnEnemy(state, type, events, presetRoute, spawn = {}) {
   const E = D.ENEMY_TYPES[type];
   const w = state.wave;
   const rampMul = E.midBoss ? D.midBossRamp(w) : 1;
@@ -111,7 +132,9 @@ function spawnEnemy(state, type, events, presetRoute) {
   const elite = !E.boss && !E.midBoss && state.rng() < D.eliteChance(w);
   const press = state.mythicPress || 0;
   const loop = state.loop || 0;          // 별의 시련 — 회차만큼 세지고, 그만큼 더 준다
+  const lieutenant = spawn.lieutenant ? D.BOSS_LIEUTENANT : null;
   const hp = Math.round(E.hp * D.hpScale(w) * state.diff.hpMul * rampMul
+    * (lieutenant?.hpMul || 1)
     * (elite ? D.ELITE.hpMul : 1) * D.mythicHpMul(press) * D.loopHpMul(loop));
   /* 대보스는 지름길로 돌진 */
   const route = E.boss ? D.BOSS_ROUTE : (presetRoute != null ? presetRoute : pickRoute(state));
@@ -124,11 +147,12 @@ function spawnEnemy(state, type, events, presetRoute) {
     x: start.x, y: start.y,
     spd: E.spd * (0.92 + state.rng() * 0.16),
     gold: Math.round(E.gold * D.enemyGoldScale(w) * state.diff.goldMul
+      * (lieutenant?.goldMul || 1)
       * (elite ? D.ELITE.goldMul : 1) * D.mythicGoldMul(press) * D.loopGoldMul(loop)),
-    castleDmg: E.castleDmg * D.loopCastleDmgMul(loop),
+    castleDmg: E.castleDmg * D.loopCastleDmgMul(loop) * (lieutenant?.castleDmgMul || 1),
     size: E.size * (elite ? D.ELITE.sizeMul : 1), boss: !!E.boss, midBoss: !!E.midBoss,
     elite,
-    name: elite ? `${D.ELITE.name} ${E.name}` : E.name,
+    name: lieutenant ? `호위 ${E.name}` : (elite ? `${D.ELITE.name} ${E.name}` : E.name),
     enrageAt: E.enrageAt || 0, enrageSpd: E.enrageSpd || 1, enraged: false,
     heal: E.heal || 0, healPeriod: E.healPeriod || 0, healRange: E.healRange || 0,
     healCd: E.healPeriod || 0,
@@ -138,7 +162,7 @@ function spawnEnemy(state, type, events, presetRoute) {
   state.enemies.push(e);
   events.push({ type: 'spawn', etype: type, x: e.x, y: e.y, boss: e.boss, midBoss: e.midBoss });
   if (e.boss) events.push({ type: 'bossSpawn', tier: 'great', name: E.name, emoji: E.emoji });
-  else if (e.midBoss) events.push({ type: 'bossSpawn', tier: 'mid', name: E.name, emoji: E.emoji });
+  else if (e.midBoss && !spawn.silentBossBanner) events.push({ type: 'bossSpawn', tier: 'mid', name: E.name, emoji: E.emoji });
 }
 
 function firstInRange(state, x, y, range) {
@@ -715,7 +739,7 @@ export function tick(state, dt) {
       events.push({ type: 'bossWarn', tier: s.tier, name: D.ENEMY_TYPES[s.etype].name, emoji: D.ENEMY_TYPES[s.etype].emoji });
       continue;
     }
-    spawnEnemy(state, s.type, events, s.route);
+    spawnEnemy(state, s.type, events, s.route, s);
   }
 
   updateHeroes(state, dt, events);

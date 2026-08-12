@@ -34,6 +34,26 @@ export function journeyBattleProgress(state) {
   return { node, step, total };
 }
 
+/* 한 지역은 순찰 → 지휘관전 → 지역 결전의 리듬을 갖는다.
+ * 전역 웨이브 번호와 분리해야 5의 배수마다 뜬금없이 대보스가 나오는 일이 없다. */
+export function journeyEncounter(state) {
+  const progress = journeyBattleProgress(state);
+  if (!progress) return { kind: 'patrol', boss: false, midBoss: false, region: null, chapterFinal: false };
+  const common = {
+    region: progress.node.region || null,
+    chapterFinal: progress.node.kind === 'boss',
+    step: progress.step,
+    total: progress.total,
+  };
+  if (progress.step === progress.total) {
+    return { ...common, kind: 'regional-boss', boss: true, midBoss: true };
+  }
+  if (progress.total > 1 && progress.step === progress.total - 1) {
+    return { ...common, kind: 'commander', boss: false, midBoss: true };
+  }
+  return { ...common, kind: 'patrol', boss: false, midBoss: false };
+}
+
 const markVisited = (journey, id) => {
   if (!journey.visited.includes(id)) journey.visited.push(id);
 };

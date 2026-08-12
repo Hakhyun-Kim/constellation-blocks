@@ -79,7 +79,56 @@ const put = (st, cls, tier, pad) => {
   ok('journey: party growth survives a trial', next.field.length === 3 && carried.level === 2 && carried.skills.knight_edge === 1);
 }
 
-/* ---------- named hero actives: one engine command for UI and bots ---------- */
+/* ---------- 지역 조우: 지휘관+졸개 → 지역 보스+지휘관 호위 ---------- */
+{
+  const st = E.createGame({ difficulty: 'normal', rng: Bot.mulberry32(812) });
+  E.travelJourney(st, 'meadow');
+  E.prepareJourneyBattle(st);
+  const commander = E.journeyEncounter(st);
+  const commanderWave = st.pendingWave;
+  const mid = commanderWave.find((spawn) => D.ENEMY_TYPES[spawn.type]?.midBoss);
+  const commanderMinions = commanderWave.filter((spawn) =>
+    spawn.type && !D.ENEMY_TYPES[spawn.type]?.midBoss && !D.ENEMY_TYPES[spawn.type]?.boss
+    && Math.abs(spawn.t - mid.t) <= 0.5);
+  ok('지역 조우: 마지막 전 방어는 지휘관전', commander.kind === 'commander' && !commander.boss);
+  ok('지역 조우: 중간보스는 세 길의 졸개와 함께 등장', !!mid && new Set(commanderMinions.map((spawn) => spawn.route)).size === 3);
+
+  E.completeJourneyWave(st);
+  st.wave++;
+  const regionBoss = E.journeyEncounter(st);
+  const bossWave = E.buildWave(st);
+  const bosses = bossWave.filter((spawn) => D.ENEMY_TYPES[spawn.type]?.boss);
+  const lieutenants = bossWave.filter((spawn) => spawn.lieutenant);
+  ok('지역 조우: 지역의 마지막 방어가 대보스전', regionBoss.kind === 'regional-boss' && regionBoss.boss);
+  ok('지역 조우: 첫 지역 보스는 중간보스 호위와 동시에 등장', bosses.length === 1 && lieutenants.length === 1
+    && Math.abs(bosses[0].t - lieutenants[0].t) < 0.5);
+  st.pendingWave = bossWave;
+  const started = E.startWave(st);
+  ok('지역 조우: 웨이브 시작 결과도 지역 보스를 알림', started.ok && started.boss && started.encounter.kind === 'regional-boss');
+
+  const legacy = E.createGame({ difficulty: 'normal', fixedSquad: true, journey: false, rng: Bot.mulberry32(813) });
+  legacy.wave = 5;
+  const fifth = E.buildWave(legacy);
+  ok('지역 조우: 5의 배수만으로 대보스가 나오지 않음', !fifth.some((spawn) => D.ENEMY_TYPES[spawn.type]?.boss));
+
+  const finale = E.createGame({ difficulty: 'normal', rng: Bot.mulberry32(814) });
+  finale.journey.current = 'boss';
+  finale.journey.activeBattle = 'boss';
+  finale.journey.wavesInBattle = 4;
+  finale.wave = 11;
+  const finalWave = E.buildWave(finale);
+  const finalBosses = finalWave.filter((spawn) => D.ENEMY_TYPES[spawn.type]?.boss);
+  const finalLieutenants = finalWave.filter((spawn) => spawn.lieutenant);
+  ok('지역 조우: 최종 지역 보스는 좌우 중간보스 둘과 편대 등장', finalBosses.length === 1
+    && finalLieutenants.length === 2
+    && finalLieutenants.map((spawn) => spawn.route).join(',') === '0,2'
+    && finalLieutenants.every((spawn) => Math.abs(spawn.t - finalBosses[0].t) < 0.5));
+  const regionClearAchievement = D.ACHIEVEMENTS.find((achievement) => achievement.key === 'boss3');
+  finale.bossKills = 2;
+  ok('지역 조우: 두 지역 보스를 잡으면 보스 업적 달성', regionClearAchievement.check({ state: finale }));
+}
+
+      /* ---------- named hero actives: one engine command for UI and bots ---------- */
 function heroActiveState(heroKey) {
   const st = E.createGame({
     difficulty: 'normal', fixedSquad: true, journey: false,

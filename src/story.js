@@ -186,8 +186,6 @@ const WAVE_QUIPS = [
 ];
 
 export function waveQuip(wave, rng = Math.random) {
-  /* 보스가 오는 판은 따로 경고가 뜨니 잡담을 겹치지 않는다 */
-  if (wave % 5 === 0) return null;
   return WAVE_QUIPS[Math.floor(rng() * WAVE_QUIPS.length) % WAVE_QUIPS.length];
 }
 
