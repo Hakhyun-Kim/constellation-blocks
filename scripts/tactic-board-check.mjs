@@ -72,7 +72,7 @@ const judgeState = { pendingWave: [{ t: 1.2, type: 'slime', route: 0 }] };
 check(prepareJudgeWave(judgeState), 'judge wave can author its first threat');
 check(judgeState.pendingWave[0].route === JUDGE_OPENING.lane && judgeState.pendingWave[0].t === 0.15,
   'judge wave puts the first threat promptly on the taught lane');
-check(judgeState.pendingWave[0].type === 'troll',
+check(judgeState.pendingWave[0].type === 'ogrelord',
   'judge wave keeps the taught target alive long enough for a first-time player to cast');
 
 if (failures) process.exitCode = 1;

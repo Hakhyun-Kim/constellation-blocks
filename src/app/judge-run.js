@@ -31,6 +31,6 @@ export function prepareJudgeWave(state) {
   if (!first) return false;
   first.route = JUDGE_OPENING.lane;
   first.t = 0.15;
-  first.type = 'troll';
+  first.type = 'ogrelord';
   return true;
 }
