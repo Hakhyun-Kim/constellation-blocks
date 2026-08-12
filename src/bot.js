@@ -119,6 +119,14 @@ export function nextHeroSkill(state) {
   return null;
 }
 
+export function nextJourneyHeroSkill(state) {
+  const node = E.journeyNode(state?.journey?.current);
+  if (state?.phase !== 'journey' || node?.kind !== 'town') return null;
+  const choice = nextHeroSkill(state);
+  if (!choice) return null;
+  return node.facilities?.includes(D.facilityForHero(choice.hero.heroKey)) ? choice : null;
+}
+
 export function wantsStar(state, P) {
   const c = state.champ;
   if (!c || c.ko || c.spellCd > 0) return false;
@@ -200,8 +208,6 @@ export function nextPrepAction(state, P, rng = Math.random) {
   if (sk) return { type: 'skill', key: sk, skill: D.CHAMP_SKILLS[sk] };
 
   if (state.squad) {
-    const heroSkill = nextHeroSkill(state);
-    if (heroSkill) return { type: 'heroSkill', ...heroSkill };
     const squadPlan = castlePlan(state, P);
     return squadPlan.length ? { type: 'castle', key: squadPlan[0] } : null;
   }

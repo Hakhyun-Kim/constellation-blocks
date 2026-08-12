@@ -118,10 +118,15 @@ export const demo = {
           A.journeyRecruit(key);
         }
       } else {
-        const node = Bot.nextJourneyNode(state);
-        if (node) {
-          this.say(`🧭 ${node.name}(으)로 별길을 따라갑니다`);
-          A.journeyTravel(node.id);
+        const heroSkill = Bot.nextJourneyHeroSkill(state);
+        if (heroSkill) {
+          this.doAction({ type: 'heroSkill', ...heroSkill }, state);
+        } else {
+          const node = Bot.nextJourneyNode(state);
+          if (node) {
+            this.say(`🧭 ${node.name}(으)로 별길을 따라갑니다`);
+            A.journeyTravel(node.id);
+          }
         }
       }
       this.t = 1.05;
