@@ -16,6 +16,7 @@ export function createSquadHero(state, spec) {
     x: 0,
     y: 0,
     cd: 0,
+    activeCd: 0,
   };
   refreshHeroDamage(state, hero);
   return hero;

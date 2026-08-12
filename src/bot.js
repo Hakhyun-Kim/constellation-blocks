@@ -34,9 +34,9 @@ export function mulberry32(a) {
  * tacticSloppy   더 낮은 기대값의 유효 스왑을 고를 확률
  */
 export const PROFILES = {
-  '초보': { combineChance: 0.15, reserve: 0,   useCastle: false,        midWave: false, sloppy: 0.5, spellUse: 0.3, tacticUse: 0.32, tacticSloppy: 0.65 },
-  '보통': { combineChance: 0.70, reserve: 50,  useCastle: 'repairOnly', midWave: false, sloppy: 0.3, spellUse: 0.6, tacticUse: 0.68, tacticSloppy: 0.22 },
-  '고수': { combineChance: 1.00, reserve: 100, useCastle: true,         midWave: true,  sloppy: 0,   spellUse: 0.95, tacticUse: 0.96, tacticSloppy: 0.03 },
+  '초보': { combineChance: 0.15, reserve: 0,   useCastle: false,        midWave: false, sloppy: 0.5, spellUse: 0.3, activeUse: 0.3, tacticUse: 0.32, tacticSloppy: 0.65 },
+  '보통': { combineChance: 0.70, reserve: 50,  useCastle: 'repairOnly', midWave: false, sloppy: 0.3, spellUse: 0.6, activeUse: 0.68, tacticUse: 0.68, tacticSloppy: 0.22 },
+  '고수': { combineChance: 1.00, reserve: 100, useCastle: true,         midWave: true,  sloppy: 0,   spellUse: 0.95, activeUse: 0.96, tacticUse: 0.96, tacticSloppy: 0.03 },
 };
 
 /* ---------- 배치 정책 ----------
@@ -138,6 +138,13 @@ export function wantsUlt(state, P) {
   const boss = state.enemies.some(e => (e.boss || e.midBoss) && !e.dead);
   const horde = state.enemies.filter(e => !e.dead).length >= 10;
   return (boss || horde) && state.rng() < P.spellUse;
+}
+
+export function nextHeroActive(state, P, rng = state.rng || Math.random) {
+  if (state?.phase !== 'wave' || !state.enemies.some((enemy) => !enemy.dead)) return null;
+  if (rng() > (P.activeUse || 0)) return null;
+  const hero = state.field.find((entry) => D.heroActiveSpec(entry.heroKey) && (entry.activeCd || 0) <= 0);
+  return hero ? { heroId: hero.id, hero, spec: D.heroActiveSpec(hero.heroKey) } : null;
 }
 
 /* 지도에서도 사람과 봇이 같은 공개 정보만 사용한다. 영입 가능한 동료가

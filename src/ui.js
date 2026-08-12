@@ -45,6 +45,11 @@ export function describeHero(hero, state, preview) {
   if (m.cleave) rows.push(`🌀 <b>회전베기</b>: 사거리 안 전부 타격`);
   if (m.healOnKill) rows.push(`💚 처치 시 성 회복 <b>+${m.healOnKill}</b>`);
 
+  const active = D.heroActiveSpec(hero.heroKey);
+  const activeMarkup = active
+    ? `<div class="tt-active">${active.emoji} <b>${active.name}</b> · ${active.desc} <small>재사용 ${active.cooldown}초</small></div>`
+    : '';
+
   let ability = '';
   const MA = !hero.level && hero.tier >= 4 ? D.MYTHIC_ABILITIES[hero.cls] : null;
   const LA = D.LEGEND_ABILITIES[hero.cls];
@@ -66,7 +71,7 @@ export function describeHero(hero, state, preview) {
     : `⬆ ${D.TIERS[cap].name}까지 성장 가능`;
   const foot = preview
     ? '🔮 조합하면 이렇게 나와요 (미리보기)'
-    : `${onField ? '배치됨 · 발판 클릭으로 이동(다른 용사면 교환) · 우클릭 회수' : '벤치 · 발판을 눌러 배치(찬 자리면 교환)'} · ${capNote}`;
+    : `${onField ? (hero.level ? '배치됨 · 선택 후 액티브 버튼 또는 발판 클릭으로 이동' : '배치됨 · 발판 클릭으로 이동(다른 용사면 교환) · 우클릭 회수') : '벤치 · 발판을 눌러 배치(찬 자리면 교환)'} · ${capNote}`;
 
   return `
     <div class="tt-head">
@@ -81,7 +86,7 @@ export function describeHero(hero, state, preview) {
       <div class="tt-rbar"><div class="tt-rfill ${rl.cls}" style="width:${barPct}%"></div></div>
     </div>
     <div class="tt-rows">${rows.map(r => `<div>${r}</div>`).join('')}</div>
-    ${ability}${recipe}
+    ${activeMarkup}${ability}${recipe}
     <div class="tt-desc">${C.desc}</div>
     <div class="tt-foot">${foot}</div>
   `;
@@ -96,7 +101,7 @@ export class UI {
       'waveBtn', 'coachChip', 'toasts', 'gold', 'waveNo', 'waveLabel', 'speedBtn',
       'summonBtn', 'benchHint', 'bench', 'combineRows', 'sfxBtn', 'bgmBtn',
       'placeBar', 'placeBarText', 'placeBarCancel',
-      'castleRows', 'heroPanel', 'hpTitle', 'hpInfo', 'recallBtn', 'sellBtn', 'moveHint',
+      'castleRows', 'heroPanel', 'hpTitle', 'hpInfo', 'heroActiveBtn', 'recallBtn', 'sellBtn', 'moveHint',
       'diffRow',
       'storyModal', 'storyIcon', 'storyTitle', 'storyLines', 'storyNext', 'storyOff',
       'demoBtn', 'spectateBtn', 'demoBar', 'demoCaption', 'demoDetail', 'demoExit',
@@ -135,7 +140,7 @@ export class UI {
       <p>🛡️ <b>영웅단</b> 아린과 루나로 시작해 원정 중 동료를 영입합니다. 영웅 카드를 눌러 선택한 뒤 빈 발판이나 다른 영웅을 눌러 위치를 옮기거나 교환하세요.</p>
       <p>✦ <b>성장</b> 처치와 웨이브 완료로 영웅 경험치를 얻습니다. 레벨업 포인트가 생기면 <b>영웅 성장</b> 탭에서 그 영웅의 전문화를 고르세요. <b>S</b> 키로 바로 열 수 있어요.</p>
       <p>☄️ <b>별자리 전술</b> 전투 중 6×6 보드에서 이웃 별을 바꾸세요. Flare는 공격, Tide는 감속, Bloom은 회복·후퇴를 맡고, 맞춘 열이 대상 길을 정합니다.</p>
-      <p>🌠 <b>루나</b>는 영웅단의 별자리 마도사예요. 별도 단축키 대신 3매치 Flare·Tide·Bloom 전술과 함께 길을 지킵니다. <b>D</b>는 밸런스 봇 관전, <b>B</b>는 기록, <b>7~9</b>는 성 강화입니다.</p>`;
+      <p>🌠 <b>영웅 액티브</b> 전투 중 영웅 카드를 누른 뒤 용사 패널의 큰 기술 버튼을 누르세요. 다섯 영웅이 서로 다른 처형·폭발·저지·연사·감속 기술을 씁니다. <b>D</b>는 밸런스 봇 관전, <b>B</b>는 기록입니다.</p>`;
     document.body.insertAdjacentHTML('beforeend', `
       <section id="journeyModal" class="journey-modal hidden" aria-live="polite">
         <div id="journeyBody" class="journey-shell"></div>
@@ -614,6 +619,7 @@ export class UI {
     el.shareBtn.addEventListener('click', h.onShare);
     el.recallBtn.addEventListener('click', () => h.onRecall());
     el.sellBtn.addEventListener('click', () => h.onSell());
+    el.heroActiveBtn.addEventListener('click', () => h.onHeroActive(Number(el.heroActiveBtn.dataset.heroId)));
     /* 저장/불러오기 — "간단한 파일" 하나로 오간다 */
     el.saveBtn.addEventListener('click', () => h.onSave());
     el.loadBtn.addEventListener('click', () => el.loadFile.click());
@@ -1183,6 +1189,7 @@ export class UI {
       el.hpTitle.textContent = '🧍 선택한 용사';
       el.hpInfo.innerHTML = '<div class="empty-msg">전장의 용사나 벤치 카드를 클릭하면<br>자세한 정보가 여기 나와요.</div>';
       el.moveHint.classList.add('hidden');
+      el.heroActiveBtn.classList.add('hidden');
       el.recallBtn.classList.add('hidden');
       el.sellBtn.classList.add('hidden');
       return;
@@ -1197,6 +1204,24 @@ export class UI {
     el.recallBtn.classList.toggle('hidden', !onField);
     el.sellBtn.textContent = `💰 판매 +${D.SELL_PRICE[hero.tier]} (X)`;
     el.moveHint.classList.toggle('hidden', !onField);
+    const active = D.heroActiveSpec(hero.heroKey);
+    if (active && onField) {
+      const left = Math.max(0, hero.activeCd || 0);
+      const wave = state.phase === 'wave';
+      const hasTarget = state.enemies.some((enemy) => !enemy.dead);
+      el.heroActiveBtn.classList.remove('hidden');
+      el.heroActiveBtn.dataset.heroId = String(hero.id);
+      el.heroActiveBtn.disabled = !wave || left > 0 || !hasTarget;
+      el.heroActiveBtn.classList.toggle('ready', wave && left <= 0 && hasTarget);
+      el.heroActiveBtn.textContent = left > 0
+        ? `${active.emoji} ${active.name} · ${left.toFixed(1)}초`
+        : !wave ? `${active.emoji} ${active.name} · 전투 중 사용`
+        : !hasTarget ? `${active.emoji} ${active.name} · 적을 기다리는 중`
+        : `${active.emoji} ${active.name} 발동!`;
+      el.heroActiveBtn.title = `${active.desc} · 재사용 ${active.cooldown}초`;
+    } else {
+      el.heroActiveBtn.classList.add('hidden');
+    }
     /* Fixed squad members cannot be recalled or sold. Position is the only roster action. */
     el.recallBtn.classList.add('hidden');
     el.sellBtn.classList.add('hidden');

@@ -156,6 +156,9 @@ export function playRun(profileName, difficulty, seed, options = {}) {
       if (Bot.wantsUlt(state, profile)) E.castUlt(state);
       else if (Bot.wantsStar(state, profile)) E.castStar(state);
 
+      const heroActive = Bot.nextHeroActive(state, profile, state.rng);
+      if (heroActive) E.castHeroActive(state, heroActive.heroId);
+
       if (profile.midWave && Bot.wantsSummon(state, profile)) {
         if (E.summon(state).ok) Bot.placeAll(state, profile.sloppy || 0);
       }

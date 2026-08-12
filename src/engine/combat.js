@@ -91,6 +91,7 @@ export function startWave(state) {
   state.spawnQueue = [...(state.pendingWave || buildWave(state))];
   state.waveT = 0;
   state.waveDmgTaken = 0;                  // 완벽 방어 판정 재료 (수리로 되돌려도 완벽은 아니다)
+  for (const hero of state.field) hero.activeCd = 0;
   if (state.champ) {                       // 별지기는 성문 앞에서 웨이브를 맞는다
     state.champ.x = D.CHAMP_HOME.x;
     state.champ.y = D.CHAMP_HOME.y;
@@ -170,6 +171,7 @@ function meleeStrike(state, h, mods, e, events) {
 
 function updateHeroes(state, dt, events) {
   for (const h of state.field) {
+    if (h.activeCd > 0) h.activeCd = Math.max(0, h.activeCd - dt);
     const mods = heroMods(h);
 
     /* 방패 장벽: 주기적으로 사거리 안 모든 적을 잠시 멈춘다 */

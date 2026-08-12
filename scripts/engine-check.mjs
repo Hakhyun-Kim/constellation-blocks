@@ -79,6 +79,51 @@ const put = (st, cls, tier, pad) => {
   ok('journey: party growth survives a trial', next.field.length === 3 && carried.level === 2 && carried.skills.knight_edge === 1);
 }
 
+/* ---------- named hero actives: one engine command for UI and bots ---------- */
+function heroActiveState(heroKey) {
+  const st = E.createGame({
+    difficulty: 'normal', fixedSquad: true, journey: false,
+    partyKeys: [heroKey], rng: Bot.mulberry32(731),
+  });
+  E.startWave(st);
+  st.spawnQueue = [0, 1, 2, 0, 1, 2].map((route) => ({ t: 0, type: 'troll', route }));
+  st.spawnQueue.push({ t: 999, type: 'troll', route: 1 });
+  E.tick(st, .001);
+  return st;
+}
+
+for (const spec of D.SQUAD) {
+  const st = heroActiveState(spec.key);
+  const hero = st.field[0];
+  const active = D.heroActiveSpec(spec.key);
+  const hpBefore = st.enemies.reduce((sum, enemy) => sum + enemy.hp, 0);
+  const result = E.castHeroActive(st, hero.id);
+  const hpAfter = st.enemies.reduce((sum, enemy) => sum + enemy.hp, 0);
+  ok(`영웅 액티브: ${spec.name} ${active.name}`, result.ok
+    && result.events[0]?.type === 'heroActive'
+    && result.events[0]?.kind === active.kind
+    && hero.activeCd === active.cooldown
+    && hpAfter < hpBefore
+    && st.heroActiveCasts === 1);
+  const cooldown = E.castHeroActive(st, hero.id);
+  ok(`영웅 액티브: ${spec.name} 쿨다운`, !cooldown.ok && cooldown.reason === 'cd');
+}
+
+{
+  const prep = E.createGame({ fixedSquad: true, journey: false, partyKeys: ['arin'] });
+  const hero = prep.field[0];
+  ok('영웅 액티브: 준비 단계 잠금', E.castHeroActive(prep, hero.id).reason === 'phase');
+  E.startWave(prep);
+  prep.spawnQueue = [{ t: 999, type: 'troll', route: 0 }];
+  ok('영웅 액티브: 적이 없으면 보존', E.castHeroActive(prep, hero.id).reason === 'none' && hero.activeCd === 0);
+  hero.activeCd = 5;
+  E.tick(prep, 1.25);
+  ok('영웅 액티브: 전투 시간만큼 쿨다운 감소', Math.abs(hero.activeCd - 3.75) < 1e-9);
+  prep.phase = 'prep';
+  E.startWave(prep);
+  ok('영웅 액티브: 다음 방어 시작 때 준비 완료', hero.activeCd === 0);
+}
+
 function padIndexSane(st, label) {
   const bad = [];
   for (const h of st.bench) if (h.padIndex !== -1) bad.push(`bench ${h.cls}#${h.id} padIndex=${JSON.stringify(h.padIndex)}`);

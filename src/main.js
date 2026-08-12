@@ -325,6 +325,18 @@ function doUlt() {
   handleEvents(r.events);
   refreshAll();
 }
+function doHeroActive(heroId) {
+  const r = E.castHeroActive(state, heroId);
+  if (!r.ok) {
+    if (r.reason === 'phase') ui.toast('✦ 영웅 액티브는 전투 중에만 사용할 수 있어요.', 'bad');
+    else if (r.reason === 'cd') ui.toast(`${r.spec.emoji} ${r.spec.name} 재사용까지 ${Math.ceil(r.left)}초`, 'bad');
+    else if (r.reason === 'none') ui.toast('✦ 기술을 쓸 적이 아직 도착하지 않았어요.');
+    return;
+  }
+  renderer.onEvents(state, r.events);
+  handleEvents(r.events);
+  ui.renderHeroPanel(state, heroId);
+}
 function openSkills() {
   if (!state.champ) return;
   if (state.phase === 'over') return;
@@ -626,6 +638,12 @@ function handleEvents(events) {
         else if (ev.kind === 'crit') SFX.crit(ev.x);
         break;
       case 'block': SFX.block(ev.x); break;
+      case 'heroActive':
+        if (ev.kind === 'ward') SFX.block(ev.x);
+        else if (ev.kind === 'volley') SFX.shoot(ev.x);
+        else SFX.explode(ev.x);
+        ui.toast(`${ev.emoji} ${ev.heroName} · ${ev.ability}!`, 'good');
+        break;
       case 'kill':
         if (!demo.active) codexAddKill(ev.etype);   // 몬스터 도감 — 봇의 사냥은 세지 않는다
         if (ev.boss) {
@@ -889,6 +907,7 @@ const handlers = {
     refreshAll();
     autoSave();
   },
+  onHeroActive(heroId) { doHeroActive(heroId); },
   onSceneClick(cx, cy) {
     const pad = renderer.screenToPad(cx, cy);
     if (pad == null) { deselectAll(); return; }
@@ -1544,6 +1563,7 @@ demo.attach({
   ult: doUlt,
   skill(key) { handlers.onSkillPick(key); },
   heroSkill(heroId, key) { handlers.onHeroSkill(heroId, key); },
+  heroActive: doHeroActive,
   feast: doFeast,
   journeyTravel(id) { handlers.onJourneyTravel(id); },
   journeyRecruit(key) { handlers.onJourneyRecruit(key); },

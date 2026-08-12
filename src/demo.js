@@ -177,6 +177,12 @@ export const demo = {
         A.spell();
         return;
       }
+      const heroActive = Bot.nextHeroActive(state, P, state.rng || Math.random);
+      if (heroActive) {
+        this.say(`${heroActive.spec.emoji} ${heroActive.hero.name} · ${heroActive.spec.name}!`);
+        A.heroActive(heroActive.heroId);
+        return;
+      }
       const act = Bot.midWaveAction(state, P);
       if (act) this.doAction(act, state);
       else {

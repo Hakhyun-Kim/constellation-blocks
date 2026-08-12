@@ -822,6 +822,26 @@ export class Renderer3D {
           this.addShake(0.2);
           break;
         }
+        case 'heroActive': {
+          const palette = {
+            strike: [0xffd66b, '#ffe8a3'], nova: [0xbd8cff, '#e6caff'],
+            ward: [0x85c9ff, '#b9e2ff'], volley: [0xffb66e, '#ffd5a6'],
+            frost: [0x8de8ff, '#c6f5ff'],
+          };
+          const [color, textColor] = palette[ev.kind] || [0xd8b4ff, '#eadcff'];
+          const first = ev.hits?.[0];
+          this._heroAttackAnim(ev.heroId, first?.x, first?.y);
+          this._shockRing(x3, z3, 1.15, color, .5, .18);
+          this.burst(x3, 1.05, z3, color, 14, 2.8, { grav: 1.2, ttl: .44 });
+          this.showNumber(x3, 2.45, z3, `${ev.emoji} ${ev.ability}`, textColor, 1.02);
+          for (const hit of (ev.hits || []).slice(0, 7)) {
+            const hx = wx(hit.x), hz = wz(hit.y);
+            this._shockRing(hx, hz, ev.kind === 'nova' ? 1.15 : .58, color, .42, .12);
+            this.burst(hx, .75, hz, color, ev.kind === 'nova' ? 10 : 5, 2.2, { grav: .8, ttl: .38 });
+          }
+          this.addShake(.1);
+          break;
+        }
         case 'kill': {
           const col = ev.boss ? 0xffd93d : (ev.midBoss ? 0xffa040
             : ({ goblin: 0x7fd45e, wolf: 0x9aa7ba, orc: 0xd46e5e, troll: 0x5ea7d4, shaman: 0xb08bff }[ev.etype] || 0xffffff));

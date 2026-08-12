@@ -11,6 +11,33 @@ export const SQUAD_MAX = 5;
 export const STARTING_SQUAD_KEYS = SQUAD.filter((hero) => hero.starts).map((hero) => hero.key);
 export const squadSpec = (key) => SQUAD.find((hero) => hero.key === key) || null;
 
+/* Named combat actives. Values live beside the rest of the squad balance so
+ * UI copy, bots, and the pure engine all describe the same button. */
+export const HERO_ACTIVES = Object.freeze({
+  arin: Object.freeze({
+    kind: 'strike', name: '성광 일섬', emoji: '⚔️', cooldown: 10,
+    damageMul: 3.2, desc: '가장 위험한 적 하나를 강하게 베고 잠깐 멈춥니다.',
+  }),
+  luna: Object.freeze({
+    kind: 'nova', name: '성운 폭발', emoji: '💥', cooldown: 14,
+    damageMul: 2.0, radius: 86, desc: '선두 적을 중심으로 뭉친 적에게 별빛 폭발을 일으킵니다.',
+  }),
+  doyun: Object.freeze({
+    kind: 'ward', name: '수호 장벽', emoji: '🛡️', cooldown: 16,
+    damageMul: 0.75, stun: 1.8, desc: '가장 밀린 길 전체를 밀어내듯 타격하고 멈춥니다.',
+  }),
+  sera: Object.freeze({
+    kind: 'volley', name: '유성 연사', emoji: '🏹', cooldown: 12,
+    damageMul: 1.7, targets: 5, desc: '가장 밀린 길을 관통하며 선두부터 연속 사격합니다.',
+  }),
+  yuna: Object.freeze({
+    kind: 'frost', name: '서리 성운', emoji: '❄️', cooldown: 15,
+    damageMul: 1.05, slow: Object.freeze({ mul: 0.48, dur: 3.2 }), desc: '가장 밀린 길 전체에 피해를 주고 오래 감속합니다.',
+  }),
+});
+
+export const heroActiveSpec = (heroKey) => HERO_ACTIVES[heroKey] || null;
+
 export const HERO_XP = {
   kill: 1,
   elite: 3,
