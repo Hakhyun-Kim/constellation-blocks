@@ -1415,6 +1415,7 @@ function frame(now) {
   }
 
   if (ui.isVillageActive()) {
+    if (!isPaused()) ui.updateVillage(realDt);
     villageRenderer.frame(isPaused() ? 0 : realDt);
   } else {
     renderer.sync(state);

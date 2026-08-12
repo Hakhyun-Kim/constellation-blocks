@@ -5,6 +5,7 @@ import {
   VILLAGE_FACILITY_SPOTS,
   VILLAGE_RECRUITER_SPOTS,
   VILLAGE_START,
+  advanceVillage,
   isNearVillageTarget,
   villageWalkPoint,
 } from '../src/app/village-layout.js';
@@ -33,6 +34,24 @@ test('a building blocks walking but a facility marker remains reachable', () => 
   const approach = villageWalkPoint(VILLAGE_START, target);
   assert.deepEqual(approach, target);
   assert.equal(isNearVillageTarget(approach, target), true);
+});
+
+test('diagonal movement slides along a blocked building edge', () => {
+  const start = { x: -2.5, z: 2.4 };
+  const next = villageWalkPoint(start, { x: -1.7, z: 1.6 });
+  assert.equal(next.x, start.x);
+  assert.equal(next.z, 1.6);
+});
+
+test('continuous movement normalizes diagonals and preserves facing', () => {
+  const next = advanceVillage(VILLAGE_START, { x: 1, z: -1 }, .05);
+  const distance = Math.hypot(next.x - VILLAGE_START.x, next.z - VILLAGE_START.z);
+  assert.ok(Math.abs(distance - 6.5 * .05) < 1e-9);
+  assert.ok(Math.abs(next.dirX - Math.SQRT1_2) < 1e-9);
+  const stopped = advanceVillage(next, { x: 0, z: 0 }, .05);
+  assert.equal(stopped.moving, false);
+  assert.equal(stopped.dirX, next.dirX);
+  assert.equal(stopped.dirZ, next.dirZ);
 });
 
 test('recruit NPCs have independent plaza locations', () => {

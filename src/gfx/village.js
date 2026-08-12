@@ -24,22 +24,33 @@ function labelSprite(text, color = '#fff4c4') {
   return sprite;
 }
 
-function villager({ body, hair, skin = 0xf0cfab, cloak = null }) {
+function villager({ body, hair, skin = 0xf0cfab, cloak = null, accent = 0xffd37a }) {
   const group = new THREE.Group();
   const shadow = new THREE.Mesh(new THREE.CircleGeometry(.42, 18), new THREE.MeshBasicMaterial({ color: 0x18232b, transparent: true, opacity: .28, depthWrite: false }));
   shadow.rotation.x = -Math.PI / 2; shadow.position.y = .012; shadow.scale.set(1.2, .7, 1);
-  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(.27, .43, 4, 8), mat(body));
-  torso.position.y = .62;
-  const head = new THREE.Mesh(new THREE.SphereGeometry(.25, 12, 10), mat(skin));
-  head.position.y = 1.23;
-  const fringe = new THREE.Mesh(new THREE.BoxGeometry(.43, .12, .38), mat(hair));
-  fringe.position.set(0, 1.39, .01);
+  const torso = new THREE.Mesh(new THREE.BoxGeometry(.58, .67, .38), mat(body));
+  torso.position.y = .73;
+  const belt = new THREE.Mesh(new THREE.BoxGeometry(.62, .12, .42), mat(accent));
+  belt.position.set(0, .55, .015);
+  const head = new THREE.Mesh(new THREE.BoxGeometry(.46, .45, .42), mat(skin));
+  head.position.y = 1.3;
+  const hairTop = new THREE.Mesh(new THREE.BoxGeometry(.5, .14, .46), mat(hair));
+  hairTop.position.set(0, 1.56, -.015);
+  const hairBack = new THREE.Mesh(new THREE.BoxGeometry(.5, .34, .12), mat(hair));
+  hairBack.position.set(0, 1.35, -.24);
+  const eyeMat = new THREE.MeshBasicMaterial({ color: 0x292538 });
+  const eyeA = new THREE.Mesh(new THREE.BoxGeometry(.055, .065, .025), eyeMat);
+  const eyeB = eyeA.clone();
+  eyeA.position.set(-.105, 1.32, .225); eyeB.position.set(.105, 1.32, .225);
   const legMat = mat(cloak || 0x3d4658);
-  const legA = new THREE.Mesh(new THREE.BoxGeometry(.13, .36, .14), legMat);
-  const legB = legA.clone(); legA.position.set(-.12, .21, 0); legB.position.set(.12, .21, 0);
-  const armA = new THREE.Mesh(new THREE.CapsuleGeometry(.07, .3, 3, 6), mat(body));
-  const armB = armA.clone(); armA.position.set(-.34, .72, 0); armB.position.set(.34, .72, 0);
-  group.add(shadow, legA, legB, torso, armA, armB, head, fringe);
+  const legA = new THREE.Mesh(new THREE.BoxGeometry(.16, .4, .18), legMat);
+  const legB = legA.clone(); legA.position.set(-.15, .25, 0); legB.position.set(.15, .25, 0);
+  const armA = new THREE.Mesh(new THREE.BoxGeometry(.14, .48, .16), mat(body));
+  const armB = armA.clone(); armA.position.set(-.37, .76, 0); armB.position.set(.37, .76, 0);
+  const cape = new THREE.Mesh(new THREE.BoxGeometry(.5, .62, .08), mat(cloak || body));
+  cape.position.set(0, .76, -.24);
+  group.add(shadow, legA, legB, cape, torso, belt, armA, armB, head, hairBack, hairTop, eyeA, eyeB);
+  group.userData.rig = { shadow, legA, legB, armA, armB, torso, head };
   return group;
 }
 
@@ -124,6 +135,30 @@ function guildSet() {
   return group;
 }
 
+function wellSet() {
+  const group = new THREE.Group();
+  const stone = mat(0x737b83);
+  for (let i = 0; i < 12; i++) {
+    const angle = i / 12 * Math.PI * 2;
+    const block = new THREE.Mesh(new THREE.BoxGeometry(.42, .34, .32), stone);
+    block.position.set(Math.cos(angle) * .78, .2, Math.sin(angle) * .78);
+    block.rotation.y = -angle;
+    group.add(block);
+  }
+  const water = new THREE.Mesh(new THREE.CircleGeometry(.62, 24), new THREE.MeshBasicMaterial({ color: 0x5cb4cd, transparent: true, opacity: .72 }));
+  water.rotation.x = -Math.PI / 2; water.position.y = .25; group.add(water);
+  for (const x of [-.83, .83]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(.12, 1.35, .12), mat(0x76523b));
+    post.position.set(x, .76, 0); group.add(post);
+  }
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(1.86, .14, .14), mat(0x76523b));
+  beam.position.y = 1.42; group.add(beam);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.22, .62, 4), mat(0x5c4050));
+  roof.rotation.y = Math.PI / 4; roof.position.y = 1.78; roof.scale.z = .62; group.add(roof);
+  group.userData.water = water;
+  return group;
+}
+
 export class VillageRenderer {
   constructor(opts = {}) {
     this.active = false;
@@ -131,6 +166,9 @@ export class VillageRenderer {
     this.time = 0;
     this.targetViews = new Map();
     this.playerTarget = new THREE.Vector3(VILLAGE_START.x, 0, VILLAGE_START.z);
+    this.playerMotion = { x: 0, z: -1, moving: false };
+    this.cameraGoal = new THREE.Vector3();
+    this.cameraLookGoal = new THREE.Vector3();
     this._raycaster = new THREE.Raycaster();
     this._plane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     this._pointer = new THREE.Vector2();
@@ -167,6 +205,18 @@ export class VillageRenderer {
       const ring = new THREE.Mesh(new THREE.RingGeometry(radius - .045, radius + .045, 40), new THREE.MeshBasicMaterial({ color: 0xe8c98e }));
       ring.rotation.x = -Math.PI / 2; ring.position.y = .025; this.scene.add(ring);
     }
+    /* 광장 위의 짧은 돌길은 목적지를 읽게 해 주고, dungeon100 마을의
+     * 작은 디오라마 같은 밀도를 외부 텍스처 없이 만든다. */
+    const paving = mat(0xd7b47d);
+    for (const [axis, offset] of [['x', -3.2], ['x', 3.2], ['z', 0]]) {
+      for (let i = -5; i <= 5; i++) {
+        const stone = new THREE.Mesh(new THREE.BoxGeometry(.68, .055, .48), paving);
+        stone.position.set(axis === 'x' ? offset : i * .72, .035, axis === 'x' ? i * .72 : offset);
+        stone.rotation.y = (i % 2) * .08;
+        stone.receiveShadow = true;
+        this.scene.add(stone);
+      }
+    }
     const forge = house({ ...VILLAGE_BUILDINGS.forge, wall: 0x6d4d47, roof: 0x343847, sign: '별무기 대장간' });
     const shrine = house({ ...VILLAGE_BUILDINGS.shrine, wall: 0x6b719c, roof: 0x373660, width: 3.35, sign: '별빛 신전' });
     const guild = house({ ...VILLAGE_BUILDINGS.guild, wall: 0x7b5d4d, roof: 0x70404d, sign: '탐험가 길드' });
@@ -174,6 +224,7 @@ export class VillageRenderer {
     const forgeDecor = forgeSet(); forgeDecor.position.set(VILLAGE_BUILDINGS.forge.x, 0, VILLAGE_BUILDINGS.forge.z); this.scene.add(forgeDecor); this.forgeFire = forgeDecor.userData.fire;
     const shrineDecor = shrineSet(); shrineDecor.position.set(0, 0, 4.4); this.scene.add(shrineDecor); this.shrineCrystal = shrineDecor.userData.crystal;
     const guildDecor = guildSet(); guildDecor.position.set(VILLAGE_BUILDINGS.guild.x, 0, VILLAGE_BUILDINGS.guild.z); this.scene.add(guildDecor);
+    const well = wellSet(); well.position.set(VILLAGE_BUILDINGS.well.x, 0, VILLAGE_BUILDINGS.well.z); this.scene.add(well); this.wellWater = well.userData.water;
     for (const [x, z, scale, leaf] of [[-11, 8, 1.2, 0x315d42], [10.6, 8.8, 1.05, 0x315d42], [-11.4, -6.8, .9, 0x426a43], [11.5, -5.4, 1.25, 0x315d42], [-2.8, -11.2, .8, 0x4b7045]]) {
       const item = tree(scale, leaf); item.position.set(x, 0, z); this.scene.add(item);
     }
@@ -181,7 +232,11 @@ export class VillageRenderer {
       const fence = new THREE.Mesh(new THREE.BoxGeometry(1.8, .45, .12), mat(0x795a3e));
       fence.position.set(x, .28, -10.8); this.scene.add(fence);
     }
-    this.player = villager({ body: 0x5b62aa, hair: 0x3c2d3a, cloak: 0x383a77 });
+    this.destinationMarker = new THREE.Mesh(new THREE.RingGeometry(.3, .43, 24), new THREE.MeshBasicMaterial({ color: 0xffe19a, transparent: true, opacity: .82, side: THREE.DoubleSide, depthWrite: false }));
+    this.destinationMarker.rotation.x = -Math.PI / 2; this.destinationMarker.position.y = .045; this.destinationMarker.visible = false; this.scene.add(this.destinationMarker);
+    this.player = villager({ body: 0x5b62aa, hair: 0x3c2d3a, cloak: 0x383a77, accent: 0xffcf67 });
+    this.playerLabel = labelSprite('아린 · 수호단장', '#fff2ba');
+    this.playerLabel.position.y = 2.1; this.player.add(this.playerLabel);
     this.player.position.copy(this.playerTarget); this.scene.add(this.player);
   }
 
@@ -201,11 +256,14 @@ export class VillageRenderer {
     this.host = null;
   }
 
-  setPresentation({ active, host, player, targets, nearby }) {
+  setPresentation({ active, host, player, motion, destination, targets, nearby }) {
     this.active = !!active;
     if (!this.active) { this.deactivate(); return; }
     this.attach(host);
     this.playerTarget.set(player.x, 0, player.z);
+    if (motion) this.playerMotion = { x: motion.x, z: motion.z, moving: !!motion.moving };
+    this.destinationMarker.visible = !!destination;
+    if (destination) this.destinationMarker.position.set(destination.x, .045, destination.z);
     const keep = new Set();
     for (const target of targets) {
       keep.add(target.id);
@@ -218,11 +276,12 @@ export class VillageRenderer {
         const label = labelSprite(`${target.emoji} ${target.label}`, colors.label);
         label.position.y = 2.15;
         group.add(ring, label);
-        view = { group, ring, label }; this.targetViews.set(target.id, view); this.scene.add(group);
+        view = { group, ring, label, near: false }; this.targetViews.set(target.id, view); this.scene.add(group);
       }
       view.group.position.set(target.x, 0, target.z);
       view.group.visible = true;
-      view.ring.material.color.setHex(target.id === nearby?.id ? 0xffdf79 : target.type === 'recruit' ? 0xdba6ec : 0x85b7ff);
+      view.near = target.id === nearby?.id;
+      view.ring.material.color.setHex(view.near ? 0xffdf79 : target.type === 'recruit' ? 0xdba6ec : 0x85b7ff);
     }
     for (const [id, view] of this.targetViews) if (!keep.has(id)) view.group.visible = false;
   }
@@ -240,19 +299,41 @@ export class VillageRenderer {
 
   frame(dt) {
     if (!this.active || !this.host) return;
-    this.time += Math.min(dt, .05);
-    this.player.position.lerp(this.playerTarget, Math.min(1, dt * 10));
-    this.player.position.y = Math.sin(this.time * 6) * .025;
-    this.cameraLook.lerp(new THREE.Vector3(this.player.position.x * .18, 0, this.player.position.z * .13), Math.min(1, dt * 2.5));
-    this.camera.position.x += ((this.player.position.x * .24) - this.camera.position.x) * Math.min(1, dt * 1.5);
-    this.camera.position.z += ((12.8 + this.player.position.z * .18) - this.camera.position.z) * Math.min(1, dt * 1.5);
+    const frameDt = Math.min(dt, .05);
+    this.time += frameDt;
+    this.player.position.lerp(this.playerTarget, 1 - Math.pow(.0001, frameDt));
+    const rig = this.player.userData.rig;
+    const stride = this.playerMotion.moving ? Math.sin(this.time * 10) : 0;
+    const bounce = this.playerMotion.moving ? Math.abs(stride) * .08 : 0;
+    this.player.position.y = bounce;
+    this.player.rotation.y = Math.atan2(this.playerMotion.x, this.playerMotion.z);
+    if (rig) {
+      rig.legA.rotation.x = stride * .62;
+      rig.legB.rotation.x = -stride * .62;
+      rig.armA.rotation.x = -stride * .48;
+      rig.armB.rotation.x = stride * .48;
+      rig.torso.rotation.z = stride * .025;
+    }
+    const follow = 1 - Math.pow(.001, frameDt);
+    this.cameraGoal.set(this.player.position.x * .7, 12.4, this.player.position.z + 10.3);
+    this.cameraLookGoal.set(this.player.position.x * .48, .58, this.player.position.z - 1.25);
+    this.camera.position.lerp(this.cameraGoal, follow);
+    this.cameraLook.lerp(this.cameraLookGoal, follow);
     this.camera.lookAt(this.cameraLook);
     if (this.forgeFire) { const s = 1 + Math.sin(this.time * 8) * .22; this.forgeFire.scale.setScalar(s); }
     if (this.shrineCrystal) { this.shrineCrystal.rotation.y += dt * .9; this.shrineCrystal.position.y = .9 + Math.sin(this.time * 2) * .08; }
+    if (this.wellWater) this.wellWater.material.opacity = .68 + Math.sin(this.time * 2.3) * .07;
+    if (this.destinationMarker.visible) {
+      this.destinationMarker.rotation.z -= frameDt * 1.7;
+      this.destinationMarker.scale.setScalar(1 + Math.sin(this.time * 5) * .1);
+    }
     for (const view of this.targetViews.values()) {
       if (!view.group.visible) continue;
       view.group.position.y = Math.sin(this.time * 2.5 + view.group.position.x) * .025;
       view.ring.rotation.z += dt * 1.2;
+      const scale = view.near ? 1.1 + Math.sin(this.time * 4) * .025 : 1;
+      const easedScale = view.group.scale.x + (scale - view.group.scale.x) * Math.min(1, frameDt * 8);
+      view.group.scale.setScalar(easedScale);
       view.label.material.rotation = 0;
     }
     this.renderer.render(this.scene, this.camera);

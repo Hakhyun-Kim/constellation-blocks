@@ -4,7 +4,7 @@
 import * as D from './data.js';
 import * as E from './engine.js';
 import { heroCardClass, heroCardMarkup } from './app/hero-card.js';
-import { VILLAGE_FACILITY_SPOTS, VILLAGE_RECRUITER_SPOTS, VILLAGE_START, isNearVillageTarget, villageWalkPoint } from './app/village-layout.js';
+import { VILLAGE_FACILITY_SPOTS, VILLAGE_RECRUITER_SPOTS, VILLAGE_START, advanceVillage, isNearVillageTarget, villageWalkPoint } from './app/village-layout.js';
 
 const $ = (id) => document.getElementById(id);
 
@@ -143,11 +143,20 @@ export class UI {
     this.el.journeyModal = $('journeyModal');
     this.el.journeyBody = $('journeyBody');
     this._journeyState = null;
-    this._village = { open: false, nodeId: null, ...VILLAGE_START, dialog: null };
-    this._villageKeyHandler = (event) => this._handleVillageKey(event);
+    this._village = { open: false, nodeId: null, ...VILLAGE_START, dirX: 0, dirZ: -1, moving: false, destination: null, dialog: null };
+    this._villageKeys = new Set();
+    this._villagePointerKeys = new Set();
+    this._villageKeyDownHandler = (event) => this._handleVillageKey(event, true);
+    this._villageKeyUpHandler = (event) => this._handleVillageKey(event, false);
     /* Capture movement keys before the global combat shortcuts.  The village is
      * a presentation layer: all rewards and skill validation remain in engine/. */
-    window.addEventListener('keydown', this._villageKeyHandler, true);
+    window.addEventListener('keydown', this._villageKeyDownHandler, true);
+    window.addEventListener('keyup', this._villageKeyUpHandler, true);
+    window.addEventListener('blur', () => {
+      this._villageKeys.clear();
+      this._villagePointerKeys.clear();
+      this._village.moving = false;
+    });
   }
 
   _activeVillageNode(state) {
@@ -160,7 +169,7 @@ export class UI {
 
   _ensureVillage(node) {
     if (this._village.nodeId === node.id) return;
-    this._village = { open: true, nodeId: node.id, ...VILLAGE_START, dialog: null };
+    this._village = { open: true, nodeId: node.id, ...VILLAGE_START, dirX: 0, dirZ: -1, moving: false, destination: null, dialog: null };
   }
 
   _villageTargets(state, node) {
@@ -189,14 +198,63 @@ export class UI {
   _moveVillage(x, z) {
     const next = villageWalkPoint(this._village, { x, z });
     if (next.x === this._village.x && next.z === this._village.z) return;
+    const dx = next.x - this._village.x;
+    const dz = next.z - this._village.z;
+    const length = Math.hypot(dx, dz) || 1;
     this._village.x = next.x;
     this._village.z = next.z;
+    this._village.dirX = dx / length;
+    this._village.dirZ = dz / length;
+    this._village.moving = true;
     this._village.dialog = null;
     this._syncVillagePresentation();
   }
 
+  _setVillageDestination(point) {
+    this._village.destination = point ? { x: point.x, z: point.z } : null;
+    this._village.dialog = null;
+    this._syncVillagePresentation();
+  }
+
+  updateVillage(dt) {
+    if (!this.isVillageActive()) return;
+    if (this._village.dialog) {
+      if (this._village.moving) {
+        this._village.moving = false;
+        this._syncVillagePresentation();
+      }
+      return;
+    }
+    const pressed = (key) => this._villageKeys.has(key) || this._villagePointerKeys.has(key);
+    let input = {
+      x: (pressed('right') ? 1 : 0) - (pressed('left') ? 1 : 0),
+      z: (pressed('down') ? 1 : 0) - (pressed('up') ? 1 : 0),
+    };
+    const manual = input.x !== 0 || input.z !== 0;
+    if (manual) this._village.destination = null;
+    else if (this._village.destination) {
+      const dx = this._village.destination.x - this._village.x;
+      const dz = this._village.destination.z - this._village.z;
+      if (Math.hypot(dx, dz) <= .16) this._village.destination = null;
+      else input = { x: dx, z: dz };
+    }
+    const wasMoving = this._village.moving;
+    const next = advanceVillage(this._village, input, dt);
+    this._village.x = next.x;
+    this._village.z = next.z;
+    this._village.dirX = next.dirX;
+    this._village.dirZ = next.dirZ;
+    this._village.moving = next.moving;
+    if (this._village.destination && !manual && !next.moving) this._village.destination = null;
+    if (next.moving || wasMoving !== next.moving) this._syncVillagePresentation();
+  }
+
   _openVillageTarget(target) {
     if (!this._nearVillageTarget(target)) return;
+    this._villageKeys.clear();
+    this._villagePointerKeys.clear();
+    this._village.destination = null;
+    this._village.moving = false;
     this._village.dialog = { type: target.type, key: target.key };
     this.renderJourney(this._journeyState);
   }
@@ -228,15 +286,34 @@ export class UI {
       active: true,
       host: this.el.journeyBody.querySelector('#village3d'),
       player: { x: this._village.x, z: this._village.z },
+      motion: { x: this._village.dirX, z: this._village.dirZ, moving: this._village.moving },
+      destination: this._village.destination,
       targets,
       nearby,
     });
   }
 
-  _handleVillageKey(event) {
+  _handleVillageKey(event, pressed) {
+    const direction = {
+      ArrowLeft: 'left', a: 'left', A: 'left',
+      ArrowRight: 'right', d: 'right', D: 'right',
+      ArrowUp: 'up', w: 'up', W: 'up',
+      ArrowDown: 'down', s: 'down', S: 'down',
+    }[event.key];
+    if (!pressed && direction) this._villageKeys.delete(direction);
     const state = this._journeyState;
     const node = this._activeVillageNode(state);
     if (!node || state?.phase !== 'journey' || !this._village.open) return;
+    if (direction) {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (pressed && !this._village.dialog) {
+        this._villageKeys.add(direction);
+        this._village.destination = null;
+      }
+      return;
+    }
+    if (!pressed) return;
     if (event.key === 'Escape' && this._village.dialog) {
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -250,18 +327,6 @@ export class UI {
       event.stopImmediatePropagation();
       this._village.open = false;
       this.renderJourney(state);
-      return;
-    }
-    const move = {
-      ArrowLeft: [-.9, 0], a: [-.9, 0], A: [-.9, 0],
-      ArrowRight: [.9, 0], d: [.9, 0], D: [.9, 0],
-      ArrowUp: [0, -.9], w: [0, -.9], W: [0, -.9],
-      ArrowDown: [0, .9], s: [0, .9], S: [0, .9],
-    }[event.key];
-    if (move) {
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      this._moveVillage(this._village.x + move[0], this._village.z + move[1]);
       return;
     }
     if ((event.key === 'Enter' || event.key === ' ') && !this._village.dialog) {
@@ -327,14 +392,27 @@ export class UI {
     };
     this.el.journeyBody.querySelectorAll('[data-village-action]').forEach((button) =>
       button.addEventListener('click', openNearby));
-    const steps = { up: [0, -.9], down: [0, .9], left: [-.9, 0], right: [.9, 0] };
-    this.el.journeyBody.querySelectorAll('[data-village-step]').forEach((button) =>
-      button.addEventListener('click', () => {
-        const step = steps[button.dataset.villageStep];
+    const steps = { up: [0, -.18], down: [0, .18], left: [-.18, 0], right: [.18, 0] };
+    this.el.journeyBody.querySelectorAll('[data-village-step]').forEach((button) => {
+      const direction = button.dataset.villageStep;
+      const stop = () => this._villagePointerKeys.delete(direction);
+      button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        this._village.destination = null;
+        this._villagePointerKeys.add(direction);
+        const step = steps[direction];
         if (step) this._moveVillage(this._village.x + step[0], this._village.z + step[1]);
-      }));
+        button.setPointerCapture?.(event.pointerId);
+      });
+      button.addEventListener('pointerup', stop);
+      button.addEventListener('pointercancel', stop);
+      button.addEventListener('lostpointercapture', stop);
+    });
     this.el.journeyBody.querySelectorAll('[data-village-leave]').forEach((button) =>
-      button.addEventListener('click', () => { this._village.open = false; this._village.dialog = null; this.renderJourney(state); }));
+      button.addEventListener('click', () => {
+        this._villageKeys.clear(); this._villagePointerKeys.clear();
+        this._village.open = false; this._village.destination = null; this._village.dialog = null; this.renderJourney(state);
+      }));
     this.el.journeyBody.querySelectorAll('[data-village-recruit]').forEach((button) =>
       button.addEventListener('click', () => this.h.onJourneyRecruit(button.dataset.villageRecruit)));
     this.el.journeyBody.querySelectorAll('[data-village-skill]').forEach((button) =>
@@ -344,7 +422,7 @@ export class UI {
     const surface = this.el.journeyBody.querySelector('#village3d');
     surface?.addEventListener('click', (event) => {
       const point = this.h?.onVillagePick?.(event.clientX, event.clientY);
-      if (point) this._moveVillage(point.x, point.z);
+      if (point) this._setVillageDestination(point);
     });
   }
 
