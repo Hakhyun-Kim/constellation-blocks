@@ -16,8 +16,9 @@
     "tactics:check": "node scripts/tactic-board-check.mjs",
     "ui:check": "node scripts/hero-card-check.mjs",
     "village:check": "node scripts/village-check.mjs",
+    "weekly:check": "node scripts/weekly-check.mjs",
     "storage:check": "node scripts/storage-check.mjs",
-    "check": "npm run engine:check && npm run tactics:check && npm run ui:check && npm run village:check && npm run build"
+    "check": "npm run engine:check && npm run tactics:check && npm run ui:check && npm run village:check && npm run weekly:check && npm run build"
   },
   "dependencies": {
     "three": "^0.166.0"

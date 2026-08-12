@@ -18,6 +18,7 @@ import {
 import { createTacticFlow } from './app/tacticflow.js';
 import { createTacticFeedback } from './app/tacticfeedback.js';
 import { JUDGE_OPENING, prepareJudgeWave } from './app/judge-run.js';
+import { createSwapReplay, createWeeklyChallenge, seededRandom } from './challenges/weekly.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
 
@@ -28,6 +29,15 @@ const tacticFeedback = createTacticFeedback();
 const urlParams = new URLSearchParams(location.search);
 const urlGfx = urlParams.get('gfx');
 const judgeMode = urlParams.has('judge');
+const weeklyChallenge = urlParams.has('weekly') ? createWeeklyChallenge(urlParams.get('weekly')) : null;
+const weeklyReplay = weeklyChallenge ? createSwapReplay(weeklyChallenge.id) : null;
+if (weeklyChallenge) {
+  document.body.classList.add('weekly-mode');
+  const badge = document.createElement('div');
+  badge.className = 'weekly-badge';
+  badge.textContent = `✦ ${weeklyChallenge.label}`;
+  ui.el.scene3d.closest('.left')?.querySelector('.topbar')?.appendChild(badge);
+}
 /* 자동화로 열었거나 ?mute를 붙였으면 소리 없이 시작한다.
  * 검증을 돌릴 때마다 옆에서 효과음이 터지면 사람이 못 견딘다.
  * (설정을 저장하지 않으므로 사용자가 평소 쓰던 소리 설정은 그대로 남는다) */
@@ -146,7 +156,12 @@ function giveStarters() {
 
 function newGame(difficulty, opts = {}) {
   gameOverToken++;                 // 게임오버 연출 예약이 새 판을 덮지 않게
-  state = E.createGame({ difficulty, metaLevels: store.meta });
+  weeklyReplay?.clear();
+  state = E.createGame({
+    difficulty,
+    metaLevels: store.meta,
+    rng: weeklyChallenge ? seededRandom(weeklyChallenge.seed) : undefined,
+  });
   if (tactics) tactics.reset();
   tacticFeedback.reset();
   giveStarters();
@@ -1437,8 +1452,9 @@ tactics = createTacticFlow({
     SFX.match(type, size);
     tacticFeedback.announceMatch(type, lane, size);
   },
-  onSwap() {
+  onSwap(from, to, groups) {
     if (judgeMode) document.body.classList.remove('judge-opening');
+    weeklyReplay?.record({ wave: state.wave, time: state.time, from, to, groups });
   },
   onPreview(type, lane, size) {
     SFX.tactic(type, size);
@@ -1536,7 +1552,8 @@ if (urlParams.has('demo')) {
 window.__game = {
   get state() { return state; },
   E, D, renderer, ui, SFX, demo,
-  env: { isMobile, decor: useDecor, quality: renderer.quality, judgeMode },
+  env: { isMobile, decor: useDecor, quality: renderer.quality, judgeMode, weeklyChallenge },
+  exportWeeklyReplay() { return weeklyReplay?.export() || null; },
   sfxCore: { getAc, getMaster, isSfxMuted, isMusicMuted },
   records: { codex, earned },
   refresh: refreshAll,
