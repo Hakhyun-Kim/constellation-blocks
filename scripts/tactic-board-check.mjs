@@ -1,5 +1,6 @@
 import * as Board from '../src/tactics/board.js';
 import { describeTacticMove } from '../src/demo.js';
+import { JUDGE_OPENING, judgeOpeningMatch, prepareJudgeWave } from '../src/app/judge-run.js';
 
 let failures = 0;
 function check(condition, message) {
@@ -58,6 +59,21 @@ check(crossGroups.length === 1 && crossGroups[0].length === 5, 'cross-shaped mat
 const refilled = Board.refillCells(source, [0, 5], () => 0);
 check(source[0] === 'cell-0' && source[5] === 'cell-5', 'refill does not mutate the source board');
 check(refilled[0] === 'flare' && refilled[5] === 'flare', 'refill uses the injected random source');
+
+const judgeMatch = judgeOpeningMatch();
+check(!!judgeMatch, 'judge opening begins stable and creates a match with its highlighted swap');
+check(judgeMatch?.kind === 'flare' && judgeMatch?.lane === 1 && judgeMatch?.group.length === 3,
+  'judge opening teaches a three-flare cast on the middle lane');
+const judgeAfterRefill = Board.swapCells(JUDGE_OPENING.cells, JUDGE_OPENING.from, JUDGE_OPENING.to);
+judgeMatch.group.forEach((index, offset) => { judgeAfterRefill[index] = JUDGE_OPENING.refill[offset]; });
+check(Board.findMatchGroups(judgeAfterRefill).length === 0,
+  'judge opening refill does not hide the taught cast behind an accidental cascade');
+const judgeState = { pendingWave: [{ t: 1.2, type: 'slime', route: 0 }] };
+check(prepareJudgeWave(judgeState), 'judge wave can author its first threat');
+check(judgeState.pendingWave[0].route === JUDGE_OPENING.lane && judgeState.pendingWave[0].t === 0.15,
+  'judge wave puts the first threat promptly on the taught lane');
+check(judgeState.pendingWave[0].type === 'troll',
+  'judge wave keeps the taught target alive long enough for a first-time player to cast');
 
 if (failures) process.exitCode = 1;
 else console.log('Tactic board checks passed.');

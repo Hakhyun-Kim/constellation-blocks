@@ -17,6 +17,7 @@ import {
 } from './app/store.js';
 import { createTacticFlow } from './app/tacticflow.js';
 import { createTacticFeedback } from './app/tacticfeedback.js';
+import { JUDGE_OPENING, prepareJudgeWave } from './app/judge-run.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
 
@@ -26,6 +27,7 @@ const tacticFeedback = createTacticFeedback();
 /* URL로 강제 지정 가능: ?gfx=high|lite|min (min은 테스트/초저사양용) */
 const urlParams = new URLSearchParams(location.search);
 const urlGfx = urlParams.get('gfx');
+const judgeMode = urlParams.has('judge');
 /* 자동화로 열었거나 ?mute를 붙였으면 소리 없이 시작한다.
  * 검증을 돌릴 때마다 옆에서 효과음이 터지면 사람이 못 견딘다.
  * (설정을 저장하지 않으므로 사용자가 평소 쓰던 소리 설정은 그대로 남는다) */
@@ -1409,7 +1411,7 @@ function frame(now) {
  * 자동 저장이 있으면 "이어하기 / 처음부터"를 먼저 묻는다.
  * 데모 링크(?demo=)는 구경이 목적이니 메뉴 없이 바로 시작한다. */
 const bootSave = (() => {
-  if (urlParams.has('demo')) return null;
+  if (urlParams.has('demo') || judgeMode) return null;
   const s = store.autosave;
   return s && Number.isFinite(s.wave) && Array.isArray(s.bench) ? s : null;
 })();
@@ -1435,6 +1437,9 @@ tactics = createTacticFlow({
     SFX.match(type, size);
     tacticFeedback.announceMatch(type, lane, size);
   },
+  onSwap() {
+    if (judgeMode) document.body.classList.remove('judge-opening');
+  },
   onPreview(type, lane, size) {
     SFX.tactic(type, size);
     renderer.tacticCast(state, null, type, lane, size);
@@ -1442,6 +1447,18 @@ tactics = createTacticFlow({
     ui.toast(`✨ 테스트 연출 · ${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} ${size}개`, 'good');
   },
 });
+if (judgeMode) {
+  /* Skip menus and story, but keep the real journey, wave, swap, and tactic paths. */
+  ui.hideStory();
+  ui.hideStart();
+  E.travelJourney(state, 'meadow');
+  E.prepareJourneyBattle(state);
+  prepareJudgeWave(state);
+  refreshAll();
+  tryStartWave();
+  tactics.setOpening(JUDGE_OPENING);
+  document.body.classList.add('judge-mode', 'judge-opening');
+}
 if (bootSave) ui.showStart(bootSave);
 /* 별지기 꾸미기 적용 — 옷장에서 고른 모습·이름으로 시작한다 (초상 실패 시 이모지) */
 {
@@ -1519,7 +1536,7 @@ if (urlParams.has('demo')) {
 window.__game = {
   get state() { return state; },
   E, D, renderer, ui, SFX, demo,
-  env: { isMobile, decor: useDecor, quality: renderer.quality },
+  env: { isMobile, decor: useDecor, quality: renderer.quality, judgeMode },
   sfxCore: { getAc, getMaster, isSfxMuted, isMusicMuted },
   records: { codex, earned },
   refresh: refreshAll,

@@ -21,13 +21,14 @@ const ICON = { flare: '✦', tide: '✧', bloom: '❋' };
 const LABEL = { flare: '유성 폭격', tide: '서리 결계', bloom: '수호 회복' };
 const ROUTE_LABEL = ['왼쪽', '가운데', '오른쪽'];
 
-export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onMatch, onPreview, toast }) {
+export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onMatch, onPreview, onSwap, toast }) {
   const board = document.getElementById('tacticBoard');
   const status = document.getElementById('tacticStatus');
   const card = board.closest('.tactic-card');
   let cells = [];
   let selected = null;
   let resolving = false;
+  let openingRefill = null;
   let generation = 0;
   const timers = new Set();
   const ix = (row, col) => cellIndex(row, col, BOARD_SIZE);
@@ -136,6 +137,8 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onMa
     /* 교환된 보드를 먼저 보여 준다. 이전 셀을 그대로 두면 매치 강조가 실제 바뀐 별과
      * 어긋나 보여 전술의 원인을 읽기 어려워진다. */
     draw();
+    card.classList.remove('guided-opening');
+    onSwap?.(first, index, matches);
     resolveQueue(matches);
     return true;
   }
@@ -199,7 +202,11 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onMa
       try {
         if (token !== generation) return;
         const result = resolveTactic(lane, type, size);
-        cells = refillCells(cells, hit, random);
+        if (openingRefill && openingRefill.length === hit.length) {
+          cells = [...cells];
+          hit.forEach((index, offset) => { cells[index] = openingRefill[offset]; });
+          openingRefill = null;
+        } else cells = refillCells(cells, hit, random);
         clearVisuals();
         if (result.ok) {
           status.textContent = `${ROUTE_LABEL[lane]} 길 · ${LABEL[type]} ${size >= 5 ? '별똥별!' : size === 4 ? '강화!' : '발동!'}`;
@@ -219,6 +226,7 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onMa
   function reset() {
     cancelPending();
     selected = null;
+    openingRefill = null;
     clearVisuals();
     make();
   }
@@ -251,6 +259,23 @@ export function createTacticFlow({ getPhase, random, resolveTactic, onCast, onMa
   return {
     reset,
     preview,
+    setOpening(opening) {
+      if (!opening || !Array.isArray(opening.cells) || opening.cells.length !== BOARD_SIZE * BOARD_SIZE) return false;
+      if (findMatchGroups(opening.cells, BOARD_SIZE).length) return false;
+      cancelPending();
+      selected = null;
+      cells = [...opening.cells];
+      openingRefill = Array.isArray(opening.refill) ? [...opening.refill] : null;
+      clearVisuals();
+      draw();
+      card.classList.add('guided-opening');
+      const from = board.querySelector(`button[data-i="${opening.from}"]`);
+      const to = board.querySelector(`button[data-i="${opening.to}"]`);
+      from?.classList.add('guided-from');
+      to?.classList.add('guided-to');
+      status.textContent = '첫 지휘 · 빛나는 두 별을 바꿔 가운데 길에 유성을 내리세요.';
+      return !!from && !!to;
+    },
     getBoard: () => [...cells],
     swap(first, second) {
       if (!Number.isInteger(first) || !Number.isInteger(second)) return false;

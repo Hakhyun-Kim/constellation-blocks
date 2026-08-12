@@ -2427,6 +2427,26 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 .tactic-star.flare { background: radial-gradient(circle at 40% 33%, #ffe4a3, #ee8b5e 46%, #9e4767); }
 .tactic-star.tide { background: radial-gradient(circle at 40% 33%, #d7f8ff, #78bce8 46%, #4f6eb6); }
 .tactic-star.bloom { background: radial-gradient(circle at 40% 33%, #e6ffd0, #8bd582 46%, #518f7c); }
+.guided-opening .tactic-star.guided-from,
+.guided-opening .tactic-star.guided-to {
+  z-index: 5;
+  outline: 3px solid #fff3a6;
+  box-shadow: 0 0 0 5px #ffd55a55, 0 0 24px 9px #ffd55aaa;
+  animation: judge-star-pulse .8s ease-in-out infinite alternate;
+}
+.guided-opening .tactic-star.guided-from::after {
+  content: '→';
+  position: absolute;
+  left: 72%;
+  top: 50%;
+  z-index: 7;
+  color: #fff8c7;
+  font-size: 24px;
+  text-shadow: 0 2px 5px #342453;
+  transform: translateY(-50%);
+  pointer-events: none;
+}
+@keyframes judge-star-pulse { to { filter: brightness(1.35); transform: scale(1.06); } }
 .tactic-star.matched { z-index: 4; border-color: #fff; animation: tacticmatch .22s cubic-bezier(.18, 1.55, .42, 1) both; }
 .tactic-star.matched.flare { box-shadow: 0 0 0 2px #ffe4a3, 0 0 20px 7px #f48559; }
 .tactic-star.matched.tide { box-shadow: 0 0 0 2px #e7fbff, 0 0 20px 7px #6bd9ff; }
@@ -2440,6 +2460,9 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 .tactic-beam::after { content: ''; position: absolute; right: -4px; top: 50%; width: 10px; height: 10px; border-radius: 50%; background: #fff; transform: translateY(-50%); box-shadow: 0 0 10px 4px currentColor; }
 .tactic-key { display: flex; justify-content: space-around; margin-top: 7px; color: #615e85; font-size: 10.5px; font-weight: 700; }
 .tactic-status { margin-top: 6px; min-height: 18px; border-radius: 7px; padding: 4px 7px; background: #e7e8f8; color: #59567a; text-align: center; font-size: 10.5px; font-weight: 700; }
+body.judge-opening .tactic-status { background: #302a61; color: #fff4b5; font-size: 13px; box-shadow: 0 0 18px #8e72ff66; }
+body.judge-mode #coachChip,
+body.judge-mode #diffRow { display: none !important; }
 .tactic-card[data-match-size="4"] .tactic-status { background: #fff0bf; color: #81591e; }
 .tactic-card[data-match-size="5"] .tactic-status { background: #ffdce8; color: #8c3159; box-shadow: 0 0 14px #ff8ebd88; }
 @keyframes tacticmatch { 0% { transform: scale(.76); filter: brightness(1); } 58% { transform: scale(1.25); filter: brightness(1.7); } 100% { transform: scale(1.08); filter: brightness(1.35); } }
