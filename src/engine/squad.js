@@ -61,6 +61,20 @@ export function heroGrowthMods(hero) {
   return {};
 }
 
+/* Town specializations also shape the live board commands.  These bonuses are
+ * intentionally small but behavioral: builds change which color is valuable,
+ * not only the hero-card DPS number. */
+export function squadTacticMods(state) {
+  const total = (key) => (state?.field || []).reduce((sum, hero) => sum + (hero.skills?.[key] || 0), 0);
+  return {
+    flareDamageMul: 1 + total('knight_edge') * 0.08 + total('mage_nova') * 0.08,
+    flareTargetBonus: total('archer_pierce'),
+    tideDurationMul: 1 + total('guard_tide') * 0.12 + total('mage_frost') * 0.18,
+    bloomHealBonus: total('guard_mend') * 4,
+    bloomPushBonus: total('knight_vow') * 8,
+  };
+}
+
 export function gainHeroXp(state, hero, amount, events = []) {
   if (!hero || !(amount > 0) || hero.level >= D.HERO_XP.maxLevel) return;
   hero.xp += amount;

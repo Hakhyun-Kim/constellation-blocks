@@ -425,6 +425,26 @@ function tacticState(route = 0, count = 1) {
   const empty = tacticState(0, 1);
   const none = E.castTactic(empty, 1, 'tide', 3);
   ok('전술: 적 없는 길은 상태를 바꾸지 않고 거부한다', !none.ok && none.reason === 'none' && empty.tacticCasts === 0);
+
+  const skilledFlare = tacticState(0, 6);
+  skilledFlare.field.push({ skills: { knight_edge: 1, archer_pierce: 1 } });
+  const sfr = E.castTactic(skilledFlare, 0, 'flare', 3);
+  ok('전문화: 별날은 Flare 피해를 높인다', sfr.events.find(e => e.type === 'starfall').dmg > fr.events.find(e => e.type === 'starfall').dmg);
+  ok('전문화: 관통 성시는 3매치 Flare 대상을 늘린다', sfr.events.filter(e => e.type === 'starfall').length === 4);
+
+  const skilledTide = tacticState(1, 1);
+  skilledTide.field.push({ skills: { guard_tide: 1, mage_frost: 1 } });
+  E.castTactic(skilledTide, 1, 'tide', 3);
+  ok('전문화: 파도 방패와 성운 냉기는 Tide 지속시간을 늘린다', skilledTide.enemies[0].slowT > D.TACTICS.tide.slow[3].dur);
+
+  const skilledBloom = tacticState(2, 1);
+  skilledBloom.castleHp = skilledBloom.castleMax - 40;
+  skilledBloom.enemies[0].s = 160;
+  skilledBloom.field.push({ skills: { guard_mend: 1, knight_vow: 1 } });
+  const bloomStart = skilledBloom.enemies[0].s;
+  const sbr = E.castTactic(skilledBloom, 2, 'bloom', 3);
+  ok('전문화: 별빛 수리는 Bloom 회복을 높인다', sbr.events.find(e => e.type === 'castleHeal').amount > D.TACTICS.bloom.baseHeal + 3 * D.TACTICS.bloom.healPerStar);
+  ok('전문화: 수호 맹세는 Bloom 후퇴 거리를 늘린다', bloomStart - skilledBloom.enemies[0].s > D.TACTICS.bloom.pushDistance[3]);
 }
 
 /* ---------- ✦ 성좌 공명: 조합은 정상 완료, 정확한 합만 한 웨이브 길 보너스 ---------- */

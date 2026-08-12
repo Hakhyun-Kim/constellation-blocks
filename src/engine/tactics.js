@@ -6,6 +6,7 @@
  * ===================================================== */
 import * as D from '../data.js';
 import { damageEnemy, applySlow } from './effects.js';
+import { squadTacticMods } from './squad.js';
 
 const validSize = (size) => (size >= 5 ? 5 : size === 4 ? 4 : 3);
 
@@ -20,10 +21,12 @@ export function castTactic(state, route, kind, size = 3) {
 
   const events = [];
   const power = D.tacticPower(stars);
+  const mods = squadTacticMods(state);
   if (kind === 'flare') {
-    const count = rule.targetCount[stars];
+    const baseCount = rule.targetCount[stars];
+    const count = Number.isFinite(baseCount) ? baseCount + mods.flareTargetBonus : baseCount;
     for (const enemy of targets.slice(0, count)) {
-      const dmg = Math.round((rule.baseDamage + state.wave * rule.waveDamage) * power);
+      const dmg = Math.round((rule.baseDamage + state.wave * rule.waveDamage) * power * mods.flareDamageMul);
       events.push({
         type: 'starfall', x: enemy.x, y: enemy.y, radius: rule.impactRadius[stars],
         tactic: 'flare', stars, dmg, lethal: enemy.hp <= dmg,
@@ -31,19 +34,20 @@ export function castTactic(state, route, kind, size = 3) {
       damageEnemy(state, enemy, dmg, events, 'star', 0, { tactic: 'flare' });
     }
   } else if (kind === 'tide') {
-    const slow = rule.slow[stars];
+    const baseSlow = rule.slow[stars];
+    const slow = { ...baseSlow, dur: baseSlow.dur * mods.tideDurationMul };
     for (const enemy of targets) {
       applySlow(enemy, slow);
       events.push({ type: 'enemyHit', x: enemy.x, y: enemy.y - enemy.size / 2, dmg: 0, kind: 'slow' });
     }
   } else if (kind === 'bloom') {
-    const amount = Math.round((rule.baseHeal + stars * rule.healPerStar) * power);
+    const amount = Math.round((rule.baseHeal + stars * rule.healPerStar) * power + mods.bloomHealBonus);
     state.castleHp = Math.min(state.castleMax, state.castleHp + amount);
     const near = targets[0];
     events.push({ type: 'castleHeal', amount, x: near.x, y: near.y });
     for (const enemy of targets.slice(0, rule.pushCount[stars])) {
       const from = { x: enemy.x, y: enemy.y };
-      enemy.s = Math.max(0, enemy.s - rule.pushDistance[stars]);
+      enemy.s = Math.max(0, enemy.s - rule.pushDistance[stars] - mods.bloomPushBonus);
       const point = D.routePoint(enemy.route, enemy.s);
       enemy.x = point.x; enemy.y = point.y;
       events.push({ type: 'tacticPush', fromX: from.x, fromY: from.y, x: enemy.x, y: enemy.y });
