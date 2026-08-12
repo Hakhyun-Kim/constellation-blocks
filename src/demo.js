@@ -41,6 +41,7 @@ export const demo = {
   midT: 0,           // 전투 중 판단 주기
   api: null,
   caption: '',
+  overSeen: false,
 
   /* main.js가 자기 함수들을 넘겨 준다 — 데모는 게임 내부를 직접 만지지 않는다 */
   attach(api) { this.api = api; },
@@ -62,6 +63,7 @@ export const demo = {
     this.active = true;
     this.t = 0.6;
     this.midT = 0;
+    this.overSeen = false;
     this.api.onStart(this.profileName, Bot.PROFILES[this.profileName]);
     this.say(`🎬 데모 — ${this.profileName} 플레이어가 대신 플레이합니다`);
     return true;
@@ -98,15 +100,21 @@ export const demo = {
 
     /* ③ 게임오버 — 잠깐 보여 주고 새 판 */
     if (state.phase === 'over') {
+      if (!this.overSeen) {
+        this.overSeen = true;
+        this.t = PACE.restart;
+        this.say(`🎬 ${state.wave}웨이브 수호의 기억 — 결과를 확인해 보세요`);
+        return;
+      }
       if (this.t <= 0) {
         this.say(`🎬 ${state.wave}웨이브에서 성이 무너졌어요 — 다시 시작합니다`);
         A.newGame();
+        this.overSeen = false;
         this.t = 1.0;
-      } else if (this.t > PACE.restart) {
-        this.t = PACE.restart;
       }
       return;
     }
+    this.overSeen = false;
 
     /* ④ 준비 단계 — 봇의 판단을 하나씩 소비한다 */
     if (state.phase === 'journey') {
