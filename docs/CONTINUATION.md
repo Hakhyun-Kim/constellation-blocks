@@ -1,6 +1,6 @@
 # Cross-machine continuation guide
 
-Last updated: 2026-08-12
+Last updated: 2026-08-13
 
 This document is the starting point for a developer or Codex session picking
 up `Constellation Defense` on another computer.
@@ -8,11 +8,11 @@ up `Constellation Defense` on another computer.
 ## Current handoff state
 
 - Branch: `main`
-- Latest feature/fix commit: `3e75b23 fix: guarantee a readable spectate recap`
+- Latest feature/fix commit: `03f53dc fix: keep game effects easy on the eyes`
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
-  passed on 2026-08-12. The latest 60-run balance gate passed after the hero
-  specialization/tactics integration on the same date.
+  passed on 2026-08-13. The 60-run balance gate also passed with the real
+  match-3 policy and named hero actives on the same date.
 
 The current campaign is an authored constellation expedition. It starts with
 Arin and Luna, uses a fixed five-hero party, and connects short defense stages
@@ -28,6 +28,27 @@ The prize-focused presentation pass now also includes:
 - Hero specializations that modify the matching Flare, Tide, or Bloom tactic.
 - Cinematic five-star feedback and a saved run memory for largest constellation,
   most-defended lane, decisive recovery, and the expedition route.
+
+## Current play-feel implementation
+
+The 2026-08-13 pass translated direct player feedback into six independent
+commits:
+
+- `b2206ad` keeps daily difficulty measurement, town feel, phase flow, hero
+  agency, and eye comfort as persistent project priorities.
+- `5fff739` eases the opening enemy curve and adds a daily GitHub Actions job
+  for the deterministic, storage, and 60-seed balance gates.
+- `ed530be` gives the town continuous delta-time movement, normalized diagonal
+  input, axis-separated collision sliding, click-to-walk, held mobile controls,
+  animated procedural characters, and camera follow.
+- `48775b8` starts a completed encounter's next defense after a visible
+  four-second countdown. The first defense remains deliberate and overlays
+  pause the clock.
+- `2d49fd0` gives all five named heroes an engine-owned active command with
+  cooldown, UI selection, bot use, deterministic tests, and localized effects.
+- `03f53dc` makes reduced effects the default, respects the OS reduced-motion
+  preference, persists the player's choice, disables bloom and camera shake,
+  and limits particles, flashing, and repeated village/HUD motion.
 
 ## Fresh-machine setup
 
@@ -103,6 +124,13 @@ Final local mobile evidence includes all three tactics, four- and five-star
 matches, a readable wave-10 run-memory modal with no horizontal overflow, and
 a successfully downloaded and visually inspected 720×960 PNG share card.
 
+On 2026-08-13, the final local desktop judge route opened defense 1/2 directly,
+advanced to defense 2/2 without another click, and allowed Arin's `성광 일섬`.
+The button immediately displayed a `9.8초` cooldown. `🌙 저자극` was active by
+default and the browser console had no errors. The same release gate then
+passed `npm.cmd run check`, `npm.cmd run storage:check`, and
+`node scripts/balance-check.mjs 60`.
+
 ## Change discipline
 
 - Read `AGENTS.md`, this guide, and the relevant design note before changing a
@@ -126,6 +154,7 @@ material untouched.
 
 ## Suggested next task
 
-Finish the remaining manual sequence in step 6, then run the full deterministic,
-storage, 60-run balance, and deployed-page checks. Record exact browser evidence
-for the result-memory modal and downloaded share card before release.
+Push `main`, wait for GitHub Pages to publish `03f53dc` or the later handoff
+commit, then recheck the exact deployed judge URL without prior storage. Record
+the final deployment SHA and browser evidence. After that, prioritize the real
+60--90 second gameplay video and no-instruction playtests over new game systems.
