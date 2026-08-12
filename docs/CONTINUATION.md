@@ -8,7 +8,7 @@ up `Constellation Defense` on another computer.
 ## Current handoff state
 
 - Branch: `main`
-- Latest feature/fix commit: `01b3e9b fix: leave time to read the run recap`
+- Latest feature/fix commit: `3e75b23 fix: guarantee a readable spectate recap`
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-12. The latest 60-run balance gate passed after the hero
@@ -95,6 +95,13 @@ and the demo repeatedly attempting town-only specialization from battle prep
 a cascade, castle recovery from 29 to 100, and a clean automatic restart.
 The spectate recap now remains visible for 12 seconds (`01b3e9b`) so a judge
 can read the run memory or use the share-card button before the next run.
+`3e75b23` fixes the actual game-over transition so that window is guaranteed
+even when the combat action timer was already exhausted, and adds `demo:check`
+to the main deterministic gate.
+
+Final local mobile evidence includes all three tactics, four- and five-star
+matches, a readable wave-10 run-memory modal with no horizontal overflow, and
+a successfully downloaded and visually inspected 720×960 PNG share card.
 
 ## Change discipline
 
