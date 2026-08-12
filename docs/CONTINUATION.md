@@ -131,6 +131,14 @@ default and the browser console had no errors. The same release gate then
 passed `npm.cmd run check`, `npm.cmd run storage:check`, and
 `node scripts/balance-check.mjs 60`.
 
+GitHub Pages build `1147977267` then published public SHA `1ae41e2`. The exact
+deployed judge URL opened without authentication, exposed the two authored
+opening cells, and accepted real pointer input on cells 3→4. The UI reported
+`가운데 길 · 유성 폭격 발동!`, then advanced from defense 1/2 to 2/2 through
+the automatic countdown. In a fresh deployed session, Arin's active changed
+immediately to a `9.7초` cooldown. Reduced effects were active by default,
+desktop horizontal overflow was absent, and browser console errors were empty.
+
 ## Change discipline
 
 - Read `AGENTS.md`, this guide, and the relevant design note before changing a
@@ -154,7 +162,7 @@ material untouched.
 
 ## Suggested next task
 
-Push `main`, wait for GitHub Pages to publish `03f53dc` or the later handoff
-commit, then recheck the exact deployed judge URL without prior storage. Record
-the final deployment SHA and browser evidence. After that, prioritize the real
-60--90 second gameplay video and no-instruction playtests over new game systems.
+Prioritize the real 60--90 second gameplay video and three to five
+no-instruction first-play observations over new game systems. Only change the
+game when those observations reveal a repeated blocker; otherwise keep the
+verified submission build stable.
