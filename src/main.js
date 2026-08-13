@@ -23,6 +23,7 @@ import { JUDGE_OPENING, prepareJudgeWave } from './app/judge-run.js';
 import { createSwapReplay, createWeeklyChallenge, seededRandom } from './challenges/weekly.js';
 import { advanceAutoPhase, createAutoPhaseClock } from './app/phase-flow.js';
 import { summarizeFrameDurations } from './app/perf-probe.js';
+import { captureCanvasVideo, captureFilename } from './app/visual-capture.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
 
@@ -92,6 +93,7 @@ const audioProbe = urlParams.has('audioProbe') ? (() => {
   void assetPreload.then(() => { output.textContent = JSON.stringify(sfxSampleSnapshot()); });
   return output;
 })() : null;
+const captureMode = perfMode && urlParams.has('capture');
 
 const renderer = new Renderer3D(ui.el.scene3d, {
   /* 폰은 처음부터 lite 로 시작한다. high 로 켰다가 7초 뒤에 떨어뜨리면
@@ -105,6 +107,50 @@ const renderer = new Renderer3D(ui.el.scene3d, {
 });
 const villageRenderer = new VillageRenderer({ quality: renderer.quality, touch: isMobile, reducedEffects });
 window.addEventListener('pagehide', () => assetLoader.dispose(), { once: true });
+
+if (captureMode) {
+  const link = document.createElement('a');
+  const media = document.createElement('video');
+  const data = document.createElement('output');
+  link.id = 'visual-capture';
+  link.hidden = true;
+  link.textContent = 'preparing';
+  media.id = 'visual-capture-media';
+  media.hidden = true;
+  media.muted = true;
+  media.preload = 'metadata';
+  data.id = 'visual-capture-data';
+  data.hidden = true;
+  document.body.appendChild(link);
+  document.body.appendChild(media);
+  document.body.appendChild(data);
+  void assetPreload.then(async () => {
+    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    try {
+      const blob = await captureCanvasVideo(ui.el.scene3d.querySelector('canvas'));
+      link.href = URL.createObjectURL(blob);
+      media.src = link.href;
+      link.download = captureFilename({ artMode, quality: renderer.quality, mobile: isMobile });
+      link.dataset.bytes = String(blob.size);
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let binary = '';
+      for (let offset = 0; offset < bytes.length; offset += 0x8000) {
+        binary += String.fromCharCode(...bytes.subarray(offset, offset + 0x8000));
+      }
+      const encoded = btoa(binary);
+      for (let offset = 0; offset < encoded.length; offset += 0x10000) {
+        const chunk = document.createElement('span');
+        chunk.textContent = encoded.slice(offset, offset + 0x10000);
+        data.appendChild(chunk);
+      }
+      link.textContent = 'ready';
+      window.addEventListener('pagehide', () => URL.revokeObjectURL(link.href), { once: true });
+    } catch (error) {
+      link.dataset.error = error.message;
+      link.textContent = 'failed';
+    }
+  });
+}
 
 /* ?perf=1은 같은 시드 장면의 10초 렌더링을 기계적으로 비교하는 숨은 probe다.
  * DOM output을 쓰므로 브라우저 자동화가 게임 내부 객체를 직접 조작하지 않는다. */

@@ -196,11 +196,10 @@ material untouched.
 
 ## Suggested next task
 
-Continue P0-4 of the production roadmap: capture the same frozen seeded scene
-before/after at desktop-high and mobile-lite, then produce the remaining 10-second
-visual comparison evidence and make the final art-pilot go/no-go decision. P0-3
-now registers and decodes ten Kenney CC0 combat samples behind `?art=v2`, with
-role-based -16 to -7 dB mix gains and synthesized fallbacks. Browser smoke showed
-10 registered, 10 decoded, zero failures; `audio:pilot:check` is part of the main
-gate. Existing render metrics are in
+Continue P1 of the production roadmap: make the match-3 board, three-lane pressure,
+and selected hero active the only primary combat information. Move hero growth,
+codex, and castle upgrades behind compact collapsed panels or outside combat,
+without changing engine rules. P0 is complete with a GO decision: desktop 10-second
+before/after WebM, desktop/mobile JPEG, render metrics, ten licensed audio samples,
+and deterministic evidence checks are stored under `docs/evidence/art-v2/` and
 [`art-v2-verdant-gate-2026-08-13.md`](performance/art-v2-verdant-gate-2026-08-13.md).

@@ -45,4 +45,23 @@ Quaternius 캐릭터·몬스터 파일럿에 Medieval Village MegaKit 성문, �
   크게 넘는다. 전체 아트 이식 전에는 절차형 환경과 반복 오브젝트의 병합·인스턴싱을
   별도 최적화 단위로 다룬다.
 - 실제 390×844 화면에서 성문 실루엣, 적 3종, 방어로와 전술판을 확인했고 콘솔
-  오류는 없었다. 제출용 전후 정지 화면과 10초 영상은 P0-4에 남겨 둔다.
+  오류는 없었다.
+
+## P0 최종 증거와 판정
+
+- [브라우저 비교 페이지](../evidence/art-v2/index.html)
+- [procedural 데스크톱 10초](../evidence/art-v2/verdant-desktop-high-procedural.webm) /
+  [`art-v2` 데스크톱 10초](../evidence/art-v2/verdant-desktop-high-art-v2.webm)
+- [procedural 데스크톱 JPEG](../evidence/art-v2/verdant-desktop-high-procedural.jpg) /
+  [`art-v2` 데스크톱 JPEG](../evidence/art-v2/verdant-desktop-high-art-v2.jpg)
+- [procedural 모바일 JPEG](../evidence/art-v2/verdant-mobile-lite-procedural.jpg) /
+  [`art-v2` 모바일 JPEG](../evidence/art-v2/verdant-mobile-lite-art-v2.jpg)
+
+판정은 **GO**다. 외부 모델은 성문, 사람형 영웅, 작은 일반 적, 큰 중간보스를
+절차형보다 빠르게 구분하게 하고, 같은 제작자 계열이라 장면의 비례와 색이 크게
+갈라지지 않는다. 데스크톱·모바일 평균 FPS와 p95는 병합 기준을 통과했고, 실제
+효과음까지 포함한 초기 정적 예산은 3.91MiB다. 전체 화면 점멸도 다시 생기지 않았다.
+
+다만 이 결과가 곧바로 기본 모드 전환을 뜻하지는 않는다. `?art=v2` 격리를 유지한
+채 같은 에셋 계열을 다른 영웅·지역으로 확장하고, P1 정보 계층 정리와 모바일
+드로우콜 최적화를 거친 뒤 기본값 전환 여부를 다시 판단한다.

@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Constellation Defense · art-v2 전후 비교</title>
+  <style>
+    :root { color-scheme: dark; font: 16px/1.55 system-ui, sans-serif; background: #10152a; color: #eef2ff; }
+    body { max-width: 1180px; margin: auto; padding: 32px 20px 64px; }
+    h1 { margin-bottom: 6px; } p { color: #bcc6e8; }
+    .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; margin-top: 24px; }
+    figure { margin: 0; padding: 12px; background: #1a2240; border: 1px solid #35416e; border-radius: 14px; }
+    figcaption { font-weight: 700; margin-bottom: 9px; }
+    video, img { display: block; width: 100%; height: auto; border-radius: 9px; background: #080b17; }
+    .mobile img { max-width: 390px; margin: auto; }
+    @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+  <h1>푸른 초원 art-v2 전후 비교</h1>
+  <p>같은 시드·카메라·고정 전투 상태를 기록했다. 영상은 데스크톱 high 10초, 정지 화면은 데스크톱 high와 모바일 lite다.</p>
+  <section class="grid">
+    <figure><figcaption>Procedural · 10초</figcaption><video controls muted preload="metadata" src="verdant-desktop-high-procedural.webm"></video></figure>
+    <figure><figcaption>art-v2 · 10초</figcaption><video controls muted preload="metadata" src="verdant-desktop-high-art-v2.webm"></video></figure>
+    <figure><figcaption>Procedural · 데스크톱</figcaption><img src="verdant-desktop-high-procedural.jpg" alt="절차형 푸른 초원 데스크톱 장면"></figure>
+    <figure><figcaption>art-v2 · 데스크톱</figcaption><img src="verdant-desktop-high-art-v2.jpg" alt="외부 에셋 푸른 초원 데스크톱 장면"></figure>
+    <figure class="mobile"><figcaption>Procedural · 모바일 390×844</figcaption><img src="verdant-mobile-lite-procedural.jpg" alt="절차형 푸른 초원 모바일 장면"></figure>
+    <figure class="mobile"><figcaption>art-v2 · 모바일 390×844</figcaption><img src="verdant-mobile-lite-art-v2.jpg" alt="외부 에셋 푸른 초원 모바일 장면"></figure>
+  </section>
+</body>
+</html>
