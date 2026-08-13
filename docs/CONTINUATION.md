@@ -55,6 +55,10 @@ commits:
 - The current safety pass removes battlefield bloom, camera shake, and the
   five-match scene brightness flash in every setting. `visual:check` makes this
   an automated release gate; lively mode now changes local particle density only.
+- A follow-up removes the remaining WebGL-wide boss palette/light transition,
+  flash overlay elements, and periodic brightness animations on the opening
+  hint, boss warning, boss bar, and whole tactics board. Boss feedback is now a
+  static banner, health bar, and local world-space particles in every setting.
 
 See [regional-boss-encounters.md](design/regional-boss-encounters.md) for the
 implemented tension curve and its balance budget.

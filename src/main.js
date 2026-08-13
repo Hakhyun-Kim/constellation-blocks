@@ -327,7 +327,6 @@ function doUlt() {
     return;
   }
   SFX.ultimate();
-  ui.flashAccent('mythic');
   renderer.onEvents(state, r.events);
   handleEvents(r.events);
   refreshAll();
@@ -405,7 +404,6 @@ function doFeast() {
   recordHeroBorn(r.hero);              // 잔치 승급도 도감의 새 칸이 될 수 있다
   const C = D.CLASSES[r.hero.cls];
   ui.toast(`🎉 잔치! ${C.emoji} ${C.name}가 신나게 먹고 ${D.TIERS[r.hero.tier].name}(으)로 승급! (💰-${r.cost})`, 'good');
-  if (r.hero.tier >= 3) ui.flashCombine(r.hero.tier);
   renderer.onEvents(state, r.events);
   handleEvents(r.events);
   refreshAll();
@@ -452,7 +450,7 @@ function doCombineDirect(action) {
   let msg = `✨ 성좌 조합! ${D.TIERS[r.hero.tier].name} ${C.name} ${C.emoji} 탄생! (💰-${r.cost})`;
   if (r.lucky) msg = `🍀 성좌 공명! ${D.TIERS[r.hero.tier].name} ${C.name} ${C.emoji} 탄생! (💰-${r.cost})`;
   if (action.kind === 'recipe') ui.toast(`📖 도감 해금! ✨ [${C.name}] ${C.desc}`, 'good');
-  if (r.hero.tier >= 2) { renderer.combineFlourish(r.pad, r.hero.tier); ui.flashCombine(r.hero.tier); }
+  if (r.hero.tier >= 2) renderer.combineFlourish(r.pad, r.hero.tier);
   if (r.pad >= 0) renderer.burst((D.PADS[r.pad].x - D.FIELD_W / 2) / 36, 0.5, (D.PADS[r.pad].y - D.FIELD_H / 2) / 36, 0x7fff9e, 12, 2.4);
   ui.toast(msg, 'good');
   if (r.resonance?.activated) {
@@ -675,7 +673,6 @@ function handleEvents(events) {
           setTimeout(() => { if (state.phase !== 'over') playStory('castleHurt'); }, 400);
         }
         SFX.castleHit();
-        ui.flashHit();
         break;
       case 'bossWarn':
         SFX.bossWarn(ev.tier === 'great');
@@ -730,7 +727,6 @@ function handleEvents(events) {
         setTimeout(() => playStory('w30', () => {
           if (state.phase === 'over') return;      // 그 사이 함락됐다면(있을 수 없지만) 겹치지 않게
           SFX.shard();
-          ui.flashAccent('mythic');
           renderer.celebrate(0xffd93d, true);
           ui.showVictory({ loop: vLoop, shards: vShards, state });
           ui.updateHud(state, store.shards, store.best(state.difficulty));
@@ -1433,24 +1429,18 @@ function frame(now) {
       }
       if (isPaused()) { simAcc = 0; break; }
     }
-    /* 저체력 심장박동 & Audio Lowpass Flow */
+    /* 저체력 심장박동 & Audio Lowpass Flow. 시각 오버레이는 사용하지 않는다. */
     const ratio = state.castleMax ? state.castleHp / state.castleMax : 1;
     updateAudioFlow(ratio);
     if (ratio < 0.3 && state.phase === 'wave') {
-      ui.setLowHp(true);
       heartbeatT -= realDt * speed;
       if (heartbeatT <= 0) { heartbeatT = 1.0; SFX.heartbeat(); }
-    } else {
-      ui.setLowHp(false);
     }
   }
 
-  /* 보스 상태 → 음악/분위기/체력바 */
+  /* 보스 상태 → 음악/체력바. 전장 전체의 색·조명은 바꾸지 않는다. */
   const greatBoss = state.enemies.find(e => e.boss && !e.dead);
   const midBoss = greatBoss ? null : state.enemies.find(e => e.midBoss && !e.dead);
-  const bossLevel = greatBoss ? 2 : (midBoss ? 1 : 0);
-  renderer.setBossMode(bossLevel);
-  ui.setBossAtmosphere(state.phase === 'wave' ? bossLevel : 0);
 
   if (!isMusicMuted()) {
     if (state.phase === 'wave') {

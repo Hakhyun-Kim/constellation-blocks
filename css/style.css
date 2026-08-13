@@ -155,39 +155,6 @@ body {
 /* 끌어서 옮기는 중 — 손 모양으로 "잡고 있다"를 알린다 */
 #scene3d.dragging, #scene3d.dragging canvas { cursor: grabbing; }
 
-#hitFlash {
-  position: absolute;
-  width: min(34%, 180px);
-  height: 84px;
-  left: 50%;
-  top: 18px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(255, 205, 185, 0.42) 0%, rgba(255, 58, 58, 0.18) 42%, transparent 74%);
-  opacity: 0;
-  z-index: 5;
-}
-#hitFlash.on { animation: hitflash 0.28s ease-out; }
-@keyframes hitflash { 0% { opacity: 0.8; transform: translateX(-50%) scale(0.82); } 100% { opacity: 0; transform: translateX(-50%) scale(1.1); } }
-
-#lowHpVignette {
-  position: absolute;
-  width: min(38%, 210px);
-  height: 74px;
-  left: 50%;
-  top: 14px;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, rgba(255, 54, 54, 0.3) 0%, transparent 72%);
-  opacity: 0;
-  transition: opacity 0.4s;
-  z-index: 4;
-}
-#lowHpVignette.on { animation: lowhp 1s ease-in-out infinite; }
-@keyframes lowhp { 0%, 100% { opacity: 0.16; transform: translateX(-50%) scale(0.94); } 50% { opacity: 0.42; transform: translateX(-50%) scale(1.04); } }
-
 #bossBanner {
   position: absolute;
   top: 16%;
@@ -228,7 +195,7 @@ body {
   padding: 8px 22px;
   z-index: 8;
   white-space: nowrap;
-  animation: warnblink 0.65s ease-in-out infinite;
+  box-shadow: 0 0 0 2px rgba(255, 154, 61, 0.18);
 }
 #bossWarnBanner.great {
   color: #ff5252;
@@ -236,33 +203,6 @@ body {
   border-style: solid;
   font-size: 21px;
 }
-@keyframes warnblink { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
-
-/* 보스 분위기는 배너 주변의 작은 기운만 쓴다. 전장을 덮거나 반복 점멸하지 않는다. */
-#bossVignette {
-  position: absolute;
-  width: min(46%, 260px);
-  height: 120px;
-  left: 50%;
-  top: 13%;
-  transform: translateX(-50%);
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.6s;
-  z-index: 3;
-  background: radial-gradient(ellipse at center, rgba(120, 20, 40, 0.3), transparent 72%);
-}
-.stage.boss-mid #bossVignette { opacity: 0.32; }
-.stage.boss-great #bossVignette {
-  opacity: 0.46;
-  background: radial-gradient(ellipse at center, rgba(150, 10, 10, 0.44), transparent 72%);
-}
-.stage.warning #bossVignette {
-  opacity: 0.5;
-  background: radial-gradient(ellipse at center, rgba(255, 120, 0, 0.38), transparent 72%);
-}
-
 #comboChip {
   position: absolute;
   top: 10px;
@@ -329,7 +269,6 @@ body {
   width: 48px;
   height: 48px;
   font-size: 32px;
-  animation: tactic-climax-icon .42s ease-in-out infinite alternate;
 }
 .tactic-impact[data-match-size="5"] .tactic-impact-copy b {
   color: #fff2b5;
@@ -338,8 +277,6 @@ body {
   text-shadow: 0 0 12px #ffdf75;
 }
 .tactic-impact[data-match-size="5"] .tactic-impact-copy small { color: #fff; font-size: 12px; }
-body.tactic-climax .tactic-card { box-shadow: 0 0 0 2px #ffe99d, 0 0 30px #b787ff99; }
-@keyframes tactic-climax-icon { to { transform: scale(1.14) rotate(5deg); filter: brightness(1.28); } }
 @keyframes tactic-impact-in { 0% { opacity: 0; transform: translateY(-12px) scale(.78); } 65% { opacity: 1; transform: translateY(1px) scale(1.07); } 100% { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes tactic-impact-out { to { opacity: 0; transform: translateY(-7px) scale(.96); } }
 
@@ -382,7 +319,6 @@ body.tactic-climax .tactic-card { box-shadow: 0 0 0 2px #ffe99d, 0 0 30px #b787f
 #wavePreview .wchip.boss {
   background: #ffe3e3;
   border: 1.5px solid #ff8a8a;
-  animation: lowhp 1.2s ease-in-out infinite;
 }
 #wavePreview .wchip.midboss {
   background: #fff0e0;
@@ -413,7 +349,7 @@ body.tactic-climax .tactic-card { box-shadow: 0 0 0 2px #ffe99d, 0 0 30px #b787f
   color: #ffdcb0;
   width: min(52%, 360px);
 }
-#bossBar.enraged { animation: warnblink 0.5s ease-in-out infinite; }
+#bossBar.enraged { border-color: #ff3030; box-shadow: 0 0 0 2px rgba(255, 48, 48, .2); }
 #bossBarName { white-space: nowrap; }
 #bossBar .bossbar-track {
   flex: 1;
@@ -710,24 +646,7 @@ button { font-family: inherit; }
 }
 .grades button.on { border-color: #2478e0; background: #e3f0ff; color: #1a5cb0; }
 
-/* ===== 소환 공개 카드 / 등급 국소 강조 ===== */
-#rarityFlash {
-  position: absolute;
-  width: min(46%, 260px);
-  height: 160px;
-  left: 50%;
-  top: 43%;
-  transform: translate(-50%, -50%);
-  border-radius: 50%;
-  pointer-events: none;
-  opacity: 0;
-  z-index: 7;
-}
-#rarityFlash.on { animation: rarityaccent 0.38s ease-out; }
-#rarityFlash.hero { background: radial-gradient(ellipse at center, rgba(168, 85, 247, 0.28) 0%, transparent 72%); }
-#rarityFlash.legend { background: radial-gradient(ellipse at center, rgba(255, 217, 61, 0.34) 0%, transparent 72%); }
-@keyframes rarityaccent { 0% { opacity: 0.78; transform: translate(-50%, -50%) scale(0.74); } 100% { opacity: 0; transform: translate(-50%, -50%) scale(1.12); } }
-
+/* ===== 소환 공개 카드 ===== */
 .reveal {
   position: absolute;
   top: 34%;
@@ -1523,7 +1442,6 @@ button { font-family: inherit; }
   from { box-shadow: 0 0 32px rgba(255, 77, 157, 0.7); }
   to   { box-shadow: 0 0 68px rgba(255, 77, 157, 1); }
 }
-#rarityFlash.mythic { background: radial-gradient(ellipse at center, rgba(255, 77, 157, 0.38) 0%, transparent 74%); }
 .prob.t4 { background: var(--t4); }
 
 /* 신화 조합 섹션 */
@@ -2490,7 +2408,7 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 .tactic-routes span.active.tide { background: #4e84c5; box-shadow: 0 0 13px #8de6ff; }
 .tactic-routes span.active.bloom { background: #4c9b72; box-shadow: 0 0 13px #aef58f; }
 .tactic-board { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; padding: 5px; border-radius: 11px; background: linear-gradient(135deg, #2a2255, #151938); box-shadow: inset 0 2px 6px #07071d77; }
-.tactic-board.casting { box-shadow: inset 0 2px 6px #07071d77, 0 0 18px var(--tactic-glow, #d8b4ff); animation: tacticboardflash .22s ease-out both; }
+.tactic-board.casting { outline: 2px solid var(--tactic-glow, #d8b4ff); outline-offset: 1px; }
 .tactic-star { position: relative; z-index: 2; min-width: 0; aspect-ratio: 1; border: 1px solid #ffffff55; border-radius: 8px; cursor: pointer; font-size: clamp(15px, 2.1vw, 23px); line-height: 1; transition: transform .13s, filter .13s, outline .13s; background: #4d4185; }
 .tactic-star:hover { transform: translateY(-2px); filter: brightness(1.15); }
 .tactic-star.picked { outline: 3px solid #ffe985; transform: scale(.9); z-index: 1; }
@@ -2501,8 +2419,7 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 .guided-opening .tactic-star.guided-to {
   z-index: 5;
   outline: 3px solid #fff3a6;
-  box-shadow: 0 0 0 5px #ffd55a55, 0 0 24px 9px #ffd55aaa;
-  animation: judge-star-pulse .8s ease-in-out infinite alternate;
+  box-shadow: 0 0 0 4px #ffd55a55;
 }
 .guided-opening .tactic-star.guided-from::after {
   content: '→';
@@ -2516,7 +2433,6 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
   transform: translateY(-50%);
   pointer-events: none;
 }
-@keyframes judge-star-pulse { to { filter: brightness(1.35); transform: scale(1.06); } }
 .tactic-star.matched { z-index: 4; border-color: #fff; animation: tacticmatch .22s cubic-bezier(.18, 1.55, .42, 1) both; }
 .tactic-star.matched.flare { box-shadow: 0 0 0 2px #ffe4a3, 0 0 20px 7px #f48559; }
 .tactic-star.matched.tide { box-shadow: 0 0 0 2px #e7fbff, 0 0 20px 7px #6bd9ff; }
@@ -2538,7 +2454,6 @@ body.judge-mode #diffRow { display: none !important; }
 @keyframes tacticmatch { 0% { transform: scale(.76); filter: brightness(1); } 58% { transform: scale(1.25); filter: brightness(1.7); } 100% { transform: scale(1.08); filter: brightness(1.35); } }
 @keyframes tacticroute { 0% { filter: brightness(.8); } 55% { filter: brightness(1.45); } 100% { filter: brightness(1); } }
 @keyframes tacticbeam { 0% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(0); } 22% { opacity: 1; } 76% { opacity: 1; transform: rotate(var(--beam-angle)) scaleX(1); } 100% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(1.08); } }
-@keyframes tacticboardflash { 0% { transform: scale(.985); filter: brightness(.9); } 62% { transform: scale(1.012); filter: brightness(1.12); } 100% { transform: scale(1); filter: brightness(1); } }
 @media (max-width: 720px) {
   .tactic-star { font-size: 23px; }
   .tactic-head { align-items: flex-start; }
@@ -2556,16 +2471,6 @@ body.judge-mode #diffRow { display: none !important; }
 
 /* ===== 저자극 연출 =====
  * 기본값이며 운영체제의 모션 감소 설정도 같은 안전한 표현을 강제한다. */
-.reduced-effects #hitFlash,
-.reduced-effects #rarityFlash,
-.reduced-effects #bossVignette {
-  display: none !important;
-}
-.reduced-effects #lowHpVignette.on {
-  animation: none;
-  opacity: .14;
-  transform: translateX(-50%);
-}
 .reduced-effects #bossWarnBanner,
 .reduced-effects #bossBanner,
 .reduced-effects #comboChip.pop,
@@ -2583,16 +2488,6 @@ body.judge-mode #diffRow { display: none !important; }
 .reduced-effects .tactic-beam.run { animation-duration: .13s; }
 
 @media (prefers-reduced-motion: reduce) {
-  #hitFlash,
-  #rarityFlash,
-  #bossVignette {
-    display: none !important;
-  }
-  #lowHpVignette.on {
-    animation: none;
-    opacity: .14;
-    transform: translateX(-50%);
-  }
   #bossWarnBanner,
   #bossBanner,
   #comboChip.pop,

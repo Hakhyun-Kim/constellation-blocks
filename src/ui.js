@@ -97,7 +97,7 @@ export class UI {
     this.el = {};
     [
       'bestWave', 'shards', 'metaBtn', 'castleText', 'castleFill', 'castleGhost',
-      'scene3d', 'hitFlash', 'lowHpVignette', 'bossBanner', 'comboChip', 'waveInfo', 'remainN',
+      'scene3d', 'bossBanner', 'comboChip', 'waveInfo', 'remainN',
       'waveBtn', 'coachChip', 'toasts', 'gold', 'waveNo', 'waveLabel', 'speedBtn',
       'summonBtn', 'benchHint', 'bench', 'combineRows', 'sfxBtn', 'bgmBtn', 'effectsBtn',
       'placeBar', 'placeBarText', 'placeBarCancel',
@@ -115,7 +115,7 @@ export class UI {
       'bookBtn', 'bookDot', 'bookModal', 'bookTabs', 'bookBody', 'bookClose',
       'victoryModal', 'victoryTitle', 'victoryStats', 'victoryShards', 'victoryMsg',
       'victoryTrialBtn', 'victoryContinueBtn', 'victoryShareBtn', 'loopChip',
-      'revealCard', 'rarityFlash',
+      'revealCard',
       'tabs', 'heroDot', 'combineDot', 'helpBtn', 'helpBox',
       'champChip', 'champFace', 'champName', 'champLv', 'champKoTag', 'champHpFill', 'champXpFill',
       'spellBtn', 'spellCdFill', 'ultBtn', 'ultFill', 'skillBtn', 'spBadge',
@@ -1300,11 +1300,6 @@ export class UI {
     el.classList.remove('hidden');
     clearTimeout(this._warnT);
     this._warnT = setTimeout(() => el.classList.add('hidden'), 2600);
-    /* 화면 가장자리 붉은 경고 점멸 */
-    const stage = this.el.scene3d.parentElement;
-    stage.classList.add('warning');
-    clearTimeout(this._warnStageT);
-    this._warnStageT = setTimeout(() => stage.classList.remove('warning'), 2600);
   }
 
   /* 보스 등장/분노 배너 */
@@ -1325,13 +1320,6 @@ export class UI {
     clearTimeout(this._bossT);
     this._bossT = setTimeout(() => el.classList.add('hidden'), 2200);
   }
-  /* 보스 전투 중 화면 분위기 */
-  setBossAtmosphere(level) {
-    const stage = this.el.scene3d.parentElement;
-    stage.classList.toggle('boss-mid', level === 1);
-    stage.classList.toggle('boss-great', level === 2);
-  }
-
   /* ---------- 별의 축복 (메타) ---------- */
   renderMeta(shards, levels) {
     this.el.metaShards.textContent = shards;
@@ -1767,20 +1755,6 @@ export class UI {
     clearTimeout(this._revealT);
     this._revealT = setTimeout(() => { el.classList.add('hidden'); el.classList.remove('pop'); },
       tier >= 3 ? 1800 : tier >= 2 ? 1500 : 900);
-    if (tier >= 2) this.flashAccent(tier >= 4 ? 'mythic' : tier === 3 ? 'legend' : 'hero');
-  }
-
-  flashCombine(tier) { this.flashAccent(tier >= 4 ? 'mythic' : tier === 3 ? 'legend' : 'hero'); }
-
-  /* 전체 화면을 번쩍이지 않는다. 발동 중심의 작은 빛만 짧게 표시한다. */
-  flashAccent(kind) {
-    if (document.body.classList.contains('reduced-effects')) return;
-    const el = this.el.rarityFlash;
-    el.className = kind;
-    void el.offsetWidth;
-    el.classList.add('on');
-    clearTimeout(this._flashT);
-    this._flashT = setTimeout(() => el.classList.remove('on'), 380);
   }
 
   /* ---------- 연출 ---------- */
@@ -1791,14 +1765,6 @@ export class UI {
     this.el.toasts.appendChild(d);
     setTimeout(() => d.remove(), 2700);
   }
-  flashHit() {
-    if (document.body.classList.contains('reduced-effects')) return;
-    const el = this.el.hitFlash;
-    el.classList.remove('on');
-    void el.offsetWidth;
-    el.classList.add('on');
-  }
-  setLowHp(on) { this.el.lowHpVignette.classList.toggle('on', on); }
   coachChip() {
     if (localStorage.getItem('constellation-defense.coach')) return;
     localStorage.setItem('constellation-defense.coach', '1');

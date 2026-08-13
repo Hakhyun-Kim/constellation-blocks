@@ -55,7 +55,7 @@ export class Renderer3D {
     else { this.fogNear = 24; this.fogFar = 44; }
     this.scene.fog = new THREE.Fog(0xcfe9ff, this.fogNear, this.fogFar);
     this.scene.background = new THREE.Color(0xcfe9ff);
-    /* 시간대(실제 시각) → 조명·안개·물빛. 보스 분위기는 이 위에 덧칠된다. */
+    /* 시간대(실제 시각) → 조명·안개·물빛. 전투 이벤트는 이 전역 팔레트를 바꾸지 않는다. */
     this.palette = makePalette();
     /* ?hour=18.5 로 시간대를 강제할 수 있다 (확인용 · 다른 시간대 구경용) */
     const hp = new URLSearchParams(location.search).get('hour');
@@ -66,12 +66,8 @@ export class Renderer3D {
     daylightPalette(this.dayPhase, this.palette);
     this.baseFog = this.palette.fog.clone();
     this.baseClear = this.palette.sky.clone();
-    this.bossMode = 0;        // 0 없음 · 1 중간보스 · 2 대보스
-    this.bossBlend = 0;
     this.baseSunI = this.palette.sunI;
     this.baseHemiI = this.palette.hemiI;
-    this._tint = new THREE.Color();   // 매 프레임 새 Color 를 만들지 않으려고
-    this._clear = new THREE.Color();
     this.region = regionTheme('verdant-dawn');
     this._regionGroundColor = new THREE.Color(this.region.ground);
     this._regionRoadColor = new THREE.Color(this.region.road);
@@ -433,9 +429,6 @@ export class Renderer3D {
     v.bar.quaternion.copy(this.camera.quaternion);
   }
 
-  /* 보스 분위기: 하늘·안개·조명을 어둡게 (0 없음 / 1 중간 / 2 대보스) */
-  setBossMode(level) { this.bossMode = level; }
-
   setRegionTheme(id) {
     const theme = regionTheme(id);
     if (this.region?.id === theme.id && this.regions) return;
@@ -456,8 +449,7 @@ export class Renderer3D {
    * 이제 **실제 시각**이 정한다 — 낮에 켜면 낮, 밤에 켜면 밤. 달도 진짜 위상을 따른다.
    * (?hour=18.5 로 강제할 수 있다 — 확인용이자 "다른 시간대를 보고 싶을 때"용)
    *
-   * 팔레트가 "기준값"을 만들고 보스 분위기가 그 위에 덧칠한다.
-   * 순서가 중요하다 — 반대로 하면 보스 연출이 시간대에 덮여 사라진다. */
+   * 전투 이벤트나 보스 등장으로 이 팔레트를 덮어쓰지 않는다. */
   _updateDaylight(dt, state) {
     /* 시계는 1초에 한 번만 본다 — 매 프레임 Date를 만들 이유가 없다 */
     this._clockT = (this._clockT || 0) - dt;
@@ -479,28 +471,16 @@ export class Renderer3D {
     this.sun.position.copy(p.sunPos).setLength(17);
     this.baseSunI = p.sunI;
     this.baseHemiI = p.hemiI;
+    this.scene.fog.color.copy(this.baseFog);
+    this.scene.background.copy(this.baseClear);
+    this.renderer.setClearColor(this.baseClear);
+    this.scene.fog.far = this.fogFar;
+    this.hemi.intensity = this.baseHemiI;
+    this.sun.intensity = this.baseSunI;
     /* 밤에는 땅도 같이 가라앉아야 한다 — 조명만으로는 잔디가 형광으로 뜬다 */
     const n = p.night;
     this.ground.material.color.setRGB(0.82 - n * 0.65, 0.89 - n * 0.71, 0.76 - n * 0.56);
     this.ground.material.color.lerp(this._regionGroundColor, 0.38);
-  }
-
-  _updateBossMood(dt) {
-    const target = this.bossMode;
-    this.bossBlend += (target - this.bossBlend) * Math.min(1, dt * 1.6);
-    const k = this.bossBlend;
-    /* 중간보스는 보랏빛, 대보스는 핏빛으로 */
-    this._tint.setHex(k > 1.2 ? 0x6b1418 : 0x3a2050);
-    const strength = Math.min(1, k) * (k > 1.2 ? 0.85 : 0.6);
-    this.scene.fog.color.copy(this.baseFog).lerp(this._tint, strength);
-    this._clear.copy(this.baseClear).lerp(this._tint, strength * 0.9);
-    /* scene.background 가 있으면 clearColor 보다 우선한다 — 둘 다 맞춘다 */
-    this.scene.background.copy(this._clear);
-    this.renderer.setClearColor(this._clear);
-    this.scene.fog.far = this.fogFar - Math.min(1, k) * 30;   // 안개가 조여든다
-    /* 시간대 기준값에 곱해서 낮/밤 어디서든 같은 비율로 어두워진다 */
-    this.hemi.intensity = this.baseHemiI * (1 - Math.min(1, k) * 0.40);
-    this.sun.intensity = this.baseSunI * (1 - Math.min(1, k) * 0.45);
   }
 
   _makeEnemyView(e) {
@@ -1166,13 +1146,12 @@ export class Renderer3D {
     this._updatePillars(dt);
     this._updateBubbles(dt);
     this._updateStars(dt);
-    this._updateDaylight(dt, state);    // 먼저 시간대 기준값을 만들고
-    this._updateBossMood(dt);           // 그 위에 보스 분위기를 덧칠한다
+    this._updateDaylight(dt, state);
     this.regions?.frame(t);
 
     if (this.decor) {
-      this.grass.frame(dt, t, this.palette, this.bossBlend);
-      this.sea.frame(dt, t, this.palette, this.bossBlend);
+      this.grass.frame(dt, t, this.palette, 0);
+      this.sea.frame(dt, t, this.palette, 0);
       this.fireflies.frame(dt, t, this.palette);
       this.sky.frame(dt, t, this.palette, this.moonPhase);
     }
