@@ -22,6 +22,7 @@ const MIME = {
   '.md': 'text/markdown; charset=utf-8',
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
+  '.glb': 'model/gltf-binary',
   '.ico': 'image/x-icon',
 };
 

@@ -6,6 +6,7 @@ import * as E from './engine.js';
 import { Renderer3D } from './gfx/renderer.js';
 import { VillageRenderer } from './gfx/village.js';
 import { RuntimeAssetLoader } from './gfx/asset-loader.js';
+import { decodeGltfAsset } from './gfx/gltf-assets.js';
 import { heroPortrait, champPortrait } from './gfx/units3d.js';
 import { UI } from './ui.js';
 import { SFX, toggleSfx, toggleMusic, toggleAll, isSfxMuted, isMusicMuted, forceMute, getAc, getMaster, registerDucker, updateAudioFlow } from './sfx.js';
@@ -77,8 +78,9 @@ const artMode = urlParams.get('art') === 'v2' ? 'v2' : 'procedural';
 const assetLoader = new RuntimeAssetLoader({
   enabled: artMode === 'v2',
   quality: graphicsQuality,
+  decoders: { model: decodeGltfAsset },
 });
-void assetLoader.init();
+void assetLoader.preload();
 
 const renderer = new Renderer3D(ui.el.scene3d, {
   /* 폰은 처음부터 lite 로 시작한다. high 로 켰다가 7초 뒤에 떨어뜨리면

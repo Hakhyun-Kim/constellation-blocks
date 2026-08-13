@@ -22,8 +22,10 @@
     "storage:check": "node scripts/storage-check.mjs",
     "visual:check": "node scripts/visual-safety-check.mjs",
     "asset:runtime:check": "node scripts/asset-loader-check.mjs",
+    "asset:pilot:check": "node scripts/art-pilot-check.mjs",
+    "asset:model:check": "node scripts/glb-check.mjs",
     "asset:check": "node scripts/asset-budget-check.mjs",
-    "check": "npm run engine:check && npm run tactics:check && npm run ui:check && npm run village:check && npm run phase:check && npm run weekly:check && npm run demo:check && npm run visual:check && npm run asset:runtime:check && npm run build && npm run asset:check"
+    "check": "npm run engine:check && npm run tactics:check && npm run ui:check && npm run village:check && npm run phase:check && npm run weekly:check && npm run demo:check && npm run visual:check && npm run asset:runtime:check && npm run asset:pilot:check && npm run asset:model:check && npm run build && npm run asset:check"
   },
   "dependencies": {
     "three": "^0.166.0"

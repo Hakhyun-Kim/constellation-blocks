@@ -14,6 +14,8 @@ import { fxMethods } from './fx.js';
 import { WindGrass, Sea, Fireflies, makePalette, daylightPalette, clockPhase, moonPhaseNow } from './nature.js';
 import { SkyBand } from './sky.js';
 import { RegionScenery, regionTheme } from './regions.js';
+import { ART_PILOT_REGION, enemyPilotSlot, heroPilotSlot } from './art-pilot.js';
+import { instantiateGltfAsset } from './gltf-assets.js';
 
 export class Renderer3D {
   constructor(container, opts = {}) {
@@ -181,6 +183,40 @@ export class Renderer3D {
   }
 
   /* ---------- 뷰 생성 ---------- */
+  _syncPilotVisibility(view) {
+    if (!view?.externalPilot) return;
+    const showExternal = this.region?.id === ART_PILOT_REGION;
+    view.externalPilot.root.visible = showExternal;
+    if (view.pilotFallback) view.pilotFallback.visible = !showExternal;
+  }
+
+  _attachPilotModel(view, slot, parent, fallback, targetHeight) {
+    if (!slot || !this.assets?.enabled) return;
+    view.pilotFallback = fallback;
+    view.pilotSlot = slot;
+    view.pilotAssetId = slot.id;
+    void this.assets.load(slot.id).then((asset) => {
+      if (!asset || view.disposed || view.pilotAssetId !== slot.id) return;
+      const external = instantiateGltfAsset(asset, {
+        targetHeight,
+        idle: slot.idle,
+        hover: slot.hover || 0,
+        yawOffset: slot.yawOffset || 0,
+      });
+      parent.add(external.root);
+      view.externalPilot = external;
+      view.externalAttacking = false;
+      this._syncPilotVisibility(view);
+    });
+  }
+
+  _disposePilotView(view) {
+    if (!view) return;
+    view.disposed = true;
+    view.externalPilot?.dispose();
+    view.externalPilot = null;
+  }
+
   _makeHeroView(hero) {
     const { group, refs } = makeHumanHero(hero.cls, hero.tier);
     group.traverse(o => { if (o.isMesh) o.castShadow = true; });
@@ -228,11 +264,14 @@ export class Renderer3D {
     }
 
     this.scene.add(holder);
-    return {
+    const view = {
       holder, model: group, refs, legendGlow,
       attackT: 0, faceY: Math.PI, targetFaceY: Math.PI,
-      cls: hero.cls,
+      cls: hero.cls, heroKey: hero.heroKey,
     };
+    const slot = heroPilotSlot(this.region?.id, hero);
+    this._attachPilotModel(view, slot, holder, group, slot?.height || 1.58);
+    return view;
   }
 
   /* ---------- 별지기 뷰 ---------- */
@@ -444,6 +483,8 @@ export class Renderer3D {
     if (this.roadMaterial) this.roadMaterial.color.copy(this._regionRoadColor);
     if (this.roadEdgeMaterial) this.roadEdgeMaterial.color.copy(this._regionRoadEdgeColor);
     this.regions?.setTheme(theme.id);
+    for (const view of this.heroViews?.values?.() || []) this._syncPilotVisibility(view);
+    for (const view of this.enemyViews?.values?.() || []) this._syncPilotVisibility(view);
   }
 
   /* ---------- 시간대: 지금 몇 시인가 ----------
@@ -560,7 +601,14 @@ export class Renderer3D {
     g.add(bar);
 
     this.scene.add(g);
-    return { group: g, spr, bar, barFg: fg, barW, baseScale: scale, boss: e.boss, midBoss: e.midBoss, auraRing, eliteRing };
+    const view = {
+      group: g, spr, bar, barFg: fg, barW, baseScale: scale,
+      boss: e.boss, midBoss: e.midBoss, auraRing, eliteRing,
+      faceY: Math.PI, targetFaceY: Math.PI, lastWorld: null,
+    };
+    const slot = enemyPilotSlot(this.region?.id, e);
+    this._attachPilotModel(view, slot, g, spr, scale * (slot?.heightMul || 1));
+    return view;
   }
 
   /* ---------- 상태 동기화 ---------- */
@@ -586,7 +634,11 @@ export class Renderer3D {
       v.holder.position.set(wx(h.x), 0, wz(h.y));
     }
     for (const [id, v] of this.heroViews) {
-      if (!fieldIds.has(id)) { this.scene.remove(v.holder); this.heroViews.delete(id); }
+      if (!fieldIds.has(id)) {
+        this._disposePilotView(v);
+        this.scene.remove(v.holder);
+        this.heroViews.delete(id);
+      }
     }
 
     /* 별지기 — 성장/체력 상태를 뷰에 비춘다 (위치는 _champFrame이 다룬다) */
@@ -610,7 +662,13 @@ export class Renderer3D {
         v = this._makeEnemyView(e);
         this.enemyViews.set(e.id, v);
       }
-      v.group.position.set(wx(e.x), 0, wz(e.y));
+      const nx = wx(e.x), nz = wz(e.y);
+      if (v.lastWorld) {
+        const dx = nx - v.lastWorld.x, dz = nz - v.lastWorld.z;
+        if (dx * dx + dz * dz > 1e-7) v.targetFaceY = Math.atan2(dx, dz);
+      }
+      v.lastWorld = { x: nx, z: nz };
+      v.group.position.set(nx, 0, nz);
       const ratio = Math.max(0, e.hp / e.maxHp);
       v.bar.visible = ratio < 1;
       v.barFg.scale.x = Math.max(0.001, ratio);
@@ -622,7 +680,11 @@ export class Renderer3D {
       v.held = !!e.held;
     }
     for (const [id, v] of this.enemyViews) {
-      if (!enemyIds.has(id)) { this.scene.remove(v.group); this.enemyViews.delete(id); }
+      if (!enemyIds.has(id)) {
+        this._disposePilotView(v);
+        this.scene.remove(v.group);
+        this.enemyViews.delete(id);
+      }
     }
 
     const projIds = new Set();
@@ -966,7 +1028,11 @@ export class Renderer3D {
         case 'feast': {
           /* 승급한 용사의 모델을 새 등급으로 다시 짓는다 (망토 색·왕관이 바뀐다) */
           const hv = this.heroViews.get(ev.heroId);
-          if (hv) { this.scene.remove(hv.holder); this.heroViews.delete(ev.heroId); }
+          if (hv) {
+            this._disposePilotView(hv);
+            this.scene.remove(hv.holder);
+            this.heroViews.delete(ev.heroId);
+          }
           /* 잔치 — 승급한 용사 자리(벤치면 광장)에서 색색 폭죽 + 빛기둥 */
           const fx = ev.pad >= 0 ? wx(D.PADS[ev.pad].x) : 0;
           const fz = ev.pad >= 0 ? wz(D.PADS[ev.pad].y) : 2.6;
@@ -1012,6 +1078,7 @@ export class Renderer3D {
     }
 
     for (const [id, v] of this.heroViews) {
+      const pilotAttacking = v.attackT > 0;
       v.refs.body.scale.y = 1 + Math.sin(t * 2.6 + id) * 0.025;
       v.refs.head.position.y = 0.93 + Math.sin(t * 2.6 + id) * 0.012;
       if (v.refs.cape) v.refs.cape.rotation.x = 0.16 + Math.sin(t * 3 + id) * 0.09;
@@ -1028,6 +1095,14 @@ export class Renderer3D {
       while (dy < -Math.PI) dy += Math.PI * 2;
       v.faceY += dy * Math.min(1, dt * 9);
       v.model.rotation.y = v.faceY;
+      if (v.externalPilot) {
+        v.externalPilot.root.rotation.y = v.faceY + v.externalPilot.yawOffset;
+        if (pilotAttacking !== v.externalAttacking) {
+          v.externalAttacking = pilotAttacking;
+          v.externalPilot.play(pilotAttacking ? v.pilotSlot.attack : v.pilotSlot.idle, { once: pilotAttacking });
+        }
+        v.externalPilot.mixer.update(dt);
+      }
       if (v.attackT > 0) {
         v.attackT = Math.max(0, v.attackT - dt * 3.4);
         const k = Math.sin((1 - v.attackT) * Math.PI);
@@ -1062,6 +1137,15 @@ export class Renderer3D {
       const bossHop = v.boss ? 4.2 : (v.midBoss ? 5.5 : 7);
       const hop = Math.abs(Math.sin(t * bossHop + id)) * (v.boss || v.midBoss ? 0.2 : 0.14);
       v.spr.position.y = v.baseScale * 0.62 + hop;
+      let faceDelta = v.targetFaceY - v.faceY;
+      while (faceDelta > Math.PI) faceDelta -= Math.PI * 2;
+      while (faceDelta < -Math.PI) faceDelta += Math.PI * 2;
+      v.faceY += faceDelta * Math.min(1, dt * 10);
+      if (v.externalPilot) {
+        v.externalPilot.root.rotation.y = v.faceY + v.externalPilot.yawOffset;
+        v.externalPilot.root.position.y = v.externalPilot.baseY + hop * 0.3;
+        v.externalPilot.mixer.update(dt);
+      }
       /* 보스 발밑 기운이 회전·맥동 */
       if (v.group.userData.aura) {
         const a = v.group.userData.aura;
@@ -1085,6 +1169,7 @@ export class Renderer3D {
       } else {
         v.spr.position.x = 0;
       }
+      if (v.externalPilot) v.externalPilot.root.position.x = v.spr.position.x;
       if (v.burning) {
         v.spr.material.color.setRGB(1, 0.72, 0.5);
         if (Math.random() < dt * 7) {
@@ -1210,6 +1295,8 @@ export class Renderer3D {
 
   dispose() {
     this.ro.disconnect();
+    for (const view of this.heroViews.values()) this._disposePilotView(view);
+    for (const view of this.enemyViews.values()) this._disposePilotView(view);
     if (this.decor) {
       this.grass.dispose();
       this.sea.dispose();

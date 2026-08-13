@@ -1,4 +1,57 @@
 {
   "version": 1,
-  "assets": []
+  "assets": [
+    {
+      "id": "quaternius-warrior",
+      "type": "model",
+      "path": "assets/models/quaternius-warrior.glb",
+      "creator": "Quaternius",
+      "sourceUrl": "https://quaternius.com/packs/rpgcharacters.html",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://quaternius.com/faq.html",
+      "acquiredAt": "2026-08-13",
+      "sha256": "464794040bf3ad3d4fe86453f6ad9a296403ea38bd16105b2f7bf488d4ce2338",
+      "preload": true,
+      "profiles": ["high", "lite"]
+    },
+    {
+      "id": "quaternius-green-blob",
+      "type": "model",
+      "path": "assets/models/quaternius-green-blob.glb",
+      "creator": "Quaternius",
+      "sourceUrl": "https://quaternius.com/packs/ultimatemonsters.html",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://quaternius.com/faq.html",
+      "acquiredAt": "2026-08-13",
+      "sha256": "fc68353469e3fe36586b7051a39bfdd0a466e48187f57fb39abf3932ca72447d",
+      "preload": true,
+      "profiles": ["high", "lite"]
+    },
+    {
+      "id": "quaternius-demon",
+      "type": "model",
+      "path": "assets/models/quaternius-demon.glb",
+      "creator": "Quaternius",
+      "sourceUrl": "https://quaternius.com/packs/ultimatemonsters.html",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://quaternius.com/faq.html",
+      "acquiredAt": "2026-08-13",
+      "sha256": "fba1c35d92e8f2d44f6377c7f09c6373aae8e1e47b7ed7f55838a0d77f314ba5",
+      "preload": false,
+      "profiles": ["high", "lite"]
+    },
+    {
+      "id": "quaternius-yeti",
+      "type": "model",
+      "path": "assets/models/quaternius-yeti.glb",
+      "creator": "Quaternius",
+      "sourceUrl": "https://quaternius.com/packs/ultimatemonsters.html",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://quaternius.com/faq.html",
+      "acquiredAt": "2026-08-13",
+      "sha256": "68b26d4793cd1567139a72a009845be1c1f3b09e871653fd254d891bcef69ad9",
+      "preload": false,
+      "profiles": ["high", "lite"]
+    }
+  ]
 }

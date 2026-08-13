@@ -196,8 +196,9 @@ material untouched.
 
 ## Suggested next task
 
-Continue P0-2 of the production roadmap: add the Quaternius decoder and build
-the isolated `verdant-dawn` art pilot behind `?art=v2`. Keep the procedural
-default untouched, register every runtime file in `assets/manifest.json`, and
-capture the same seeded scene at desktop-high and mobile-lite before deciding
-whether to expand the art direction.
+Continue P0-2b of the production roadmap: add a Quaternius Medieval Village
+MegaKit gate landmark to the isolated `verdant-dawn` scene behind `?art=v2`.
+The GLB decoder plus Arin, two regular-enemy silhouettes, and the midboss are
+already connected with procedural fallbacks. After the landmark, capture the
+same seeded scene at desktop-high and mobile-lite and record first-play time,
+transfer size, FPS, p95 frame time, draw calls, triangles, and textures.
