@@ -52,6 +52,66 @@
       "sha256": "68b26d4793cd1567139a72a009845be1c1f3b09e871653fd254d891bcef69ad9",
       "preload": false,
       "profiles": ["high", "lite"]
+    },
+    {
+      "id": "quaternius-gate-wall",
+      "type": "model",
+      "path": "assets/models/quaternius-gate-wall.glb",
+      "creator": "Quaternius",
+      "sourceUrl": "https://quaternius.com/packs/medievalvillagemegakit.html",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://quaternius.com/faq.html",
+      "acquiredAt": "2026-08-13",
+      "sha256": "1ffa484ed7f6ff0af5ee768ff8c2c52ca59822d5f69bbfd83a7e6ffbf6de2a61",
+      "preload": true,
+      "profiles": ["high", "lite"],
+      "sourceAsset": "Wall_UnevenBrick_Door_Round.gltf",
+      "modifications": "Base-color textures resized to 512px JPEG; normal and roughness maps replaced by material constants; packed as GLB."
+    },
+    {
+      "id": "quaternius-gate-wall-straight",
+      "type": "model",
+      "path": "assets/models/quaternius-gate-wall-straight.glb",
+      "creator": "Quaternius",
+      "sourceUrl": "https://quaternius.com/packs/medievalvillagemegakit.html",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://quaternius.com/faq.html",
+      "acquiredAt": "2026-08-13",
+      "sha256": "84813269b16a499a0a40e98085bcc722a3534f188acabbde3b55cdfea1088747",
+      "preload": true,
+      "profiles": ["high", "lite"],
+      "sourceAsset": "Wall_UnevenBrick_Straight.gltf",
+      "modifications": "Base-color textures resized to 512px JPEG; normal and roughness maps replaced by material constants; packed as GLB."
+    },
+    {
+      "id": "quaternius-gate-door",
+      "type": "model",
+      "path": "assets/models/quaternius-gate-door.glb",
+      "creator": "Quaternius",
+      "sourceUrl": "https://quaternius.com/packs/medievalvillagemegakit.html",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://quaternius.com/faq.html",
+      "acquiredAt": "2026-08-13",
+      "sha256": "a5fc1b9a8a7f8737a071807acae40b3f20f90bed85f0e0cc7df215e9ba18e86b",
+      "preload": true,
+      "profiles": ["high", "lite"],
+      "sourceAsset": "Door_4_Round.gltf",
+      "modifications": "Base-color textures resized to 512px JPEG; normal and roughness maps replaced by material constants; packed as GLB."
+    },
+    {
+      "id": "quaternius-gate-tower",
+      "type": "model",
+      "path": "assets/models/quaternius-gate-tower.glb",
+      "creator": "Quaternius",
+      "sourceUrl": "https://quaternius.com/packs/medievalvillagemegakit.html",
+      "license": "CC0 1.0 Universal",
+      "licenseUrl": "https://quaternius.com/faq.html",
+      "acquiredAt": "2026-08-13",
+      "sha256": "253aee058af0ced3a93196b948a0f3351fa6a2a9131debed447a0b2036c02efd",
+      "preload": true,
+      "profiles": ["high", "lite"],
+      "sourceAsset": "Roof_Tower_RoundTiles.gltf",
+      "modifications": "Base-color textures resized to 512px JPEG; normal and roughness maps replaced by material constants; packed as GLB."
     }
   ]
 }

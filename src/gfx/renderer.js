@@ -14,7 +14,7 @@ import { fxMethods } from './fx.js';
 import { WindGrass, Sea, Fireflies, makePalette, daylightPalette, clockPhase, moonPhaseNow } from './nature.js';
 import { SkyBand } from './sky.js';
 import { RegionScenery, regionTheme } from './regions.js';
-import { ART_PILOT_REGION, enemyPilotSlot, heroPilotSlot } from './art-pilot.js';
+import { ART_PILOT_REGION, enemyPilotSlot, heroPilotSlot, landmarkPilotSlot } from './art-pilot.js';
 import { instantiateGltfAsset } from './gltf-assets.js';
 
 export class Renderer3D {
@@ -135,6 +135,11 @@ export class Renderer3D {
     this.heroViews = new Map();
     this.enemyViews = new Map();
     this.projViews = new Map();
+    this.gatePilot = null;
+    this.gatePilotRequest = null;
+    this.castleFortify = 0;
+    this.disposed = false;
+    this._attachGatePilot();
     this.placementMode = false;
     this.placeRange = 0;
     this.selectedHeroId = null;
@@ -171,6 +176,18 @@ export class Renderer3D {
     this._resize();
   }
 
+  performanceSnapshot() {
+    const info = this.renderer.info;
+    return Object.freeze({
+      calls: info.render.calls,
+      triangles: info.render.triangles,
+      points: info.render.points,
+      lines: info.render.lines,
+      textures: info.memory.textures,
+      geometries: info.memory.geometries,
+    });
+  }
+
   _resize() {
     const w = this.container.clientWidth || 700;
     const h = this.container.clientHeight || 430;
@@ -183,6 +200,62 @@ export class Renderer3D {
   }
 
   /* ---------- 뷰 생성 ---------- */
+  _attachGatePilot() {
+    const slot = landmarkPilotSlot(this.region?.id);
+    if (!slot || !this.assets?.enabled || this.gatePilotRequest) return;
+    const request = {};
+    this.gatePilotRequest = request;
+    const ids = [slot.wall, slot.straight, slot.door, slot.tower];
+    void Promise.all(ids.map((id) => this.assets.load(id))).then((loaded) => {
+      if (this.disposed || this.gatePilotRequest !== request || loaded.some((asset) => !asset)) return;
+      const [wallAsset, straightAsset, doorAsset, towerAsset] = loaded;
+      const group = new THREE.Group();
+      group.name = 'art-v2-verdant-gate';
+      const parts = [];
+      const add = (asset, { height, x, y = 0, z, stretchX = 1, rotationY = 0 }) => {
+        const instance = instantiateGltfAsset(asset, { targetHeight: height, centerXZ: true });
+        const anchor = new THREE.Group();
+        anchor.position.set(x, y, z);
+        anchor.rotation.y = rotationY;
+        anchor.scale.x = stretchX;
+        anchor.add(instance.root);
+        group.add(anchor);
+        parts.push(instance);
+        return instance;
+      };
+
+      /* 중앙 문틀은 비율을 지키고, 양옆 모듈만 가로로 늘린다. 카메라에서 먼
+       * 랜드마크라 실루엣은 선명해지고 인스턴스/드로우콜 수는 제한된다. */
+      add(wallAsset, { height: 2.22, x: 0, z: -3.98 });
+      for (const x of [-4.45, -2.05, 2.05, 4.45]) {
+        add(straightAsset, { height: 2.22, x, z: -4.0, stretchX: 1.72 });
+      }
+      const door = add(doorAsset, { height: 1.62, x: 0, z: -3.69 });
+      add(towerAsset, { height: 4.8, x: -5.3, z: -5.18 });
+      add(towerAsset, { height: 4.8, x: 5.3, z: -5.18 });
+
+      this.castle.add(group);
+      this.gatePilot = { group, parts, door };
+      this._syncGatePilotVisibility();
+    }).catch((error) => {
+      console.warn('[art-v2] 성문 랜드마크 조립 실패 · 절차형 성 유지', error);
+    });
+  }
+
+  _syncGatePilotVisibility(fortify = this.castleFortify) {
+    fortify = Number.isFinite(fortify) ? fortify : 0;
+    const show = !!this.gatePilot && this.region?.id === ART_PILOT_REGION;
+    if (this.gatePilot) {
+      this.gatePilot.group.visible = show;
+      this.gatePilot.door.root.visible = show && fortify < 4;
+    }
+    if (this.wall) this.wall.visible = !show;
+    for (const tower of this.castleWatchTowers || []) tower.visible = !show;
+    for (const roof of this.castleWatchRoofs || []) roof.visible = !show;
+    if (this.gate) this.gate.visible = !show && fortify < 4;
+    if (this.steelGate) this.steelGate.visible = fortify >= 4;
+  }
+
   _syncPilotVisibility(view) {
     if (!view?.externalPilot) return;
     const showExternal = this.region?.id === ART_PILOT_REGION;
@@ -483,6 +556,7 @@ export class Renderer3D {
     if (this.roadMaterial) this.roadMaterial.color.copy(this._regionRoadColor);
     if (this.roadEdgeMaterial) this.roadEdgeMaterial.color.copy(this._regionRoadEdgeColor);
     this.regions?.setTheme(theme.id);
+    this._syncGatePilotVisibility();
     for (const view of this.heroViews?.values?.() || []) this._syncPilotVisibility(view);
     for (const view of this.enemyViews?.values?.() || []) this._syncPilotVisibility(view);
   }
@@ -713,11 +787,13 @@ export class Renderer3D {
 
     /* 강화 단계마다 실루엣이 실제로 바뀐다 — 띠만 늘어나면 자란 게 안 보인다 */
     const fo = state.castle.fortify, tw = state.castle.tower;
+    this.castleFortify = fo;
     this.wall.scale.y = 1 + Math.min(fo, 1) * 0.14;
     this.wall.position.y = 1.05 + Math.min(fo, 1) * 0.1;
     for (const m of this.extraMerlons) m.visible = fo >= 2;
     for (const sp of this.spikes) sp.visible = fo >= 3;
     if (this.steelGate) { this.steelGate.visible = fo >= 4; this.gate.visible = fo < 4; }
+    this._syncGatePilotVisibility(fo);
     if (this.wallBaseColor) {
       this.wall.material.color.copy(fo >= 5 ? new THREE.Color(0xe8ecf6) : this.wallBaseColor);
     }
@@ -1294,7 +1370,12 @@ export class Renderer3D {
   setSelectedHero(id) { this.selectedHeroId = id; }
 
   dispose() {
+    this.disposed = true;
+    this.gatePilotRequest = null;
     this.ro.disconnect();
+    for (const part of this.gatePilot?.parts || []) part.dispose();
+    this.gatePilot?.group.removeFromParent();
+    this.gatePilot = null;
     for (const view of this.heroViews.values()) this._disposePilotView(view);
     for (const view of this.enemyViews.values()) this._disposePilotView(view);
     if (this.decor) {

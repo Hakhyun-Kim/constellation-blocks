@@ -9,7 +9,7 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  the regional boss formation and absolute full-screen-effect safety pass.
+  the completed Quaternius `verdant-dawn` art pilot and its performance gate.
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-13. The 60-run balance gate also passed with the real
@@ -65,7 +65,7 @@ implemented tension curve and its balance budget.
 
 ## Post-competition production direction
 
-The next commercial-quality direction has been researched but not implemented.
+The next commercial-quality direction is now in its isolated P0 art pilot.
 See [production-quality-and-act2-roadmap.md](design/production-quality-and-act2-roadmap.md)
 for the proposed single-source low-poly asset pilot, web download/licensing
 budget, recent browser/Steam comparison, and the second hunter-fiction chapter.
@@ -196,9 +196,10 @@ material untouched.
 
 ## Suggested next task
 
-Continue P0-2b of the production roadmap: add a Quaternius Medieval Village
-MegaKit gate landmark to the isolated `verdant-dawn` scene behind `?art=v2`.
-The GLB decoder plus Arin, two regular-enemy silhouettes, and the midboss are
-already connected with procedural fallbacks. After the landmark, capture the
-same seeded scene at desktop-high and mobile-lite and record first-play time,
-transfer size, FPS, p95 frame time, draw calls, triangles, and textures.
+Continue P0-3 of the production roadmap: select 8–12 clearly licensed combat
+sound samples, define their gameplay roles and loudness target, then pilot only
+the smallest useful set behind the same opt-in boundary. Keep synthesized UI
+signals as fallbacks, register every runtime file in `assets/manifest.json` and
+`CREDITS.md`, and preserve the first-load budget. The completed P0-2 gate and
+desktop-high/mobile-lite measurements are recorded in
+[`art-v2-verdant-gate-2026-08-13.md`](performance/art-v2-verdant-gate-2026-08-13.md).

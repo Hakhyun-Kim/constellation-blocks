@@ -34,6 +34,7 @@ export function instantiateGltfAsset(asset, {
   idle = ['Idle'],
   yawOffset = 0,
   hover = 0,
+  centerXZ = false,
 } = {}) {
   const root = cloneSkeleton(asset.scene);
   root.rotation.y = yawOffset;
@@ -49,6 +50,10 @@ export function instantiateGltfAsset(asset, {
   root.scale.setScalar(targetHeight / sourceHeight);
   const fittedBounds = new THREE.Box3().setFromObject(root);
   root.position.y = -fittedBounds.min.y + hover;
+  if (centerXZ) {
+    root.position.x -= (fittedBounds.min.x + fittedBounds.max.x) / 2;
+    root.position.z -= (fittedBounds.min.z + fittedBounds.max.z) / 2;
+  }
 
   const mixer = new THREE.AnimationMixer(root);
   const clips = new Map(asset.animations.map((clip) => [clip.name, clip]));

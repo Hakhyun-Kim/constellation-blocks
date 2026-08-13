@@ -255,12 +255,16 @@ diffuseColor.rgb *= 1.0 - 0.26 * (1.0 - smoothstep(0.0, 0.8, vShoreW.y - shoreEd
     }
 
     this.flags = [];
+    this.castleWatchTowers = [];
+    this.castleWatchRoofs = [];
     for (const dx of [-5.2, 5.2]) {
       const tower = new THREE.Mesh(new THREE.CylinderGeometry(0.78, 0.88, 3.1, 8), stone(0x99a0b6));
       tower.position.set(dx, 1.55, -5.1);
+      this.castleWatchTowers.push(tower);
       g.add(tower);
       const roof = new THREE.Mesh(new THREE.ConeGeometry(1.05, 1.25, 8), roofMat);
       roof.position.set(dx, 3.72, -5.1);
+      this.castleWatchRoofs.push(roof);
       g.add(roof);
       const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 1.0), lam(0x6b4c2a));
       pole.position.set(dx, 4.8, -5.1);

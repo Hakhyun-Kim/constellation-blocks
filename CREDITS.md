@@ -9,8 +9,9 @@
 
 - [RPG Character Pack](https://quaternius.com/packs/rpgcharacters.html) by Quaternius — Warrior model and animations, CC0 1.0 Universal.
 - [Ultimate Monsters](https://quaternius.com/packs/ultimatemonsters.html) by Quaternius — Green Blob, Demon, and Yeti models and animations, CC0 1.0 Universal.
+- [Medieval Village MegaKit](https://quaternius.com/packs/medievalvillagemegakit.html) by Quaternius — modular gate wall, straight wall, round door, and tower landmark pieces, CC0 1.0 Universal.
 
-Quaternius explains the packs' commercial use, modification, and redistribution terms in its [FAQ](https://quaternius.com/faq.html). The selected self-contained glTF files were acquired on 2026-08-13 and repacked as GLB without changing geometry, materials, textures, or animation data. Runtime hashes and quality profiles are recorded in `assets/manifest.json`.
+Quaternius explains the packs' commercial use, modification, and redistribution terms in its [FAQ](https://quaternius.com/faq.html). The character and monster glTF files were acquired on 2026-08-13 and repacked as GLB without changing geometry, materials, textures, or animation data. The distant gate landmark keeps the original geometry and base colors while resizing base-color textures to 512px JPEG, replacing normal and roughness maps with material constants, and packing each selected module as GLB. Runtime hashes, source filenames, transformations, and quality profiles are recorded in `assets/manifest.json`.
 
 ## Development
 

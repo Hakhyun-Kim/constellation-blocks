@@ -22,6 +22,7 @@ import { createTacticFeedback } from './app/tacticfeedback.js';
 import { JUDGE_OPENING, prepareJudgeWave } from './app/judge-run.js';
 import { createSwapReplay, createWeeklyChallenge, seededRandom } from './challenges/weekly.js';
 import { advanceAutoPhase, createAutoPhaseClock } from './app/phase-flow.js';
+import { summarizeFrameDurations } from './app/perf-probe.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
 
@@ -75,12 +76,13 @@ const graphicsQuality = urlGfx || (store.gfx === 'lite' || (isMobile && store.gf
 /* 외부 아트는 검증 중인 한 장면에만 opt-in 한다. 기본/심사 URL은 manifest조차
  * 요청하지 않으므로 현재 첫 플레이 시간과 절차형 폴백이 그대로 유지된다. */
 const artMode = urlParams.get('art') === 'v2' ? 'v2' : 'procedural';
+const perfMode = urlParams.has('perf');
 const assetLoader = new RuntimeAssetLoader({
   enabled: artMode === 'v2',
   quality: graphicsQuality,
   decoders: { model: decodeGltfAsset },
 });
-void assetLoader.preload();
+const assetPreload = assetLoader.preload();
 
 const renderer = new Renderer3D(ui.el.scene3d, {
   /* 폰은 처음부터 lite 로 시작한다. high 로 켰다가 7초 뒤에 떨어뜨리면
@@ -94,6 +96,76 @@ const renderer = new Renderer3D(ui.el.scene3d, {
 });
 const villageRenderer = new VillageRenderer({ quality: renderer.quality, touch: isMobile, reducedEffects });
 window.addEventListener('pagehide', () => assetLoader.dispose(), { once: true });
+
+/* ?perf=1은 같은 시드 장면의 10초 렌더링을 기계적으로 비교하는 숨은 probe다.
+ * DOM output을 쓰므로 브라우저 자동화가 게임 내부 객체를 직접 조작하지 않는다. */
+const perfProbe = perfMode ? (() => {
+  const output = document.createElement('output');
+  output.id = 'perf-probe';
+  output.hidden = true;
+  document.body.appendChild(output);
+  const bootAt = 0; // performance.now() 기준점은 navigationStart다.
+  const probe = {
+    output, bootAt, firstFrameMs: null, assetsReadyMs: null,
+    sampleStart: null, lastSample: null, durations: [], complete: false,
+  };
+  void assetPreload.then(() => { probe.assetsReadyMs = performance.now() - bootAt; });
+  return probe;
+})() : null;
+
+function recordPerformanceProbe(now) {
+  const probe = perfProbe;
+  if (!probe || probe.complete) return;
+  if (probe.firstFrameMs == null) probe.firstFrameMs = now - probe.bootAt;
+  if (probe.assetsReadyMs == null) return;
+  const readyAt = probe.bootAt + probe.assetsReadyMs + 500;
+  if (now < readyAt) return;
+  if (probe.sampleStart == null) {
+    probe.sampleStart = now;
+    probe.lastSample = now;
+    return;
+  }
+  probe.durations.push(now - probe.lastSample);
+  probe.lastSample = now;
+  if (now - probe.sampleStart < 10000) return;
+
+  const frame = summarizeFrameDurations(probe.durations);
+  const resources = performance.getEntriesByType('resource');
+  const bytesOf = (entry) => entry.transferSize || entry.encodedBodySize || 0;
+  const assetResources = resources.filter((entry) => /\/assets\//.test(entry.name));
+  const round = (value) => Math.round(value * 100) / 100;
+  const report = {
+    complete: true,
+    artMode,
+    quality: renderer.quality,
+    mobile: isMobile,
+    viewport: {
+      width: window.innerWidth,
+      height: window.innerHeight,
+      dpr: round(window.devicePixelRatio || 1),
+    },
+    scene: {
+      phase: state.phase,
+      wave: state.wave,
+      enemies: state.enemies.filter((enemy) => !enemy.dead).length,
+      pendingEnemies: state.pendingWave?.filter((enemy) => !enemy.warnOnly).length || 0,
+      region: E.journeyBattleProgress(state)?.node.region || 'verdant-dawn',
+    },
+    firstPlayMs: round(probe.firstFrameMs),
+    assetsReadyMs: round(probe.assetsReadyMs),
+    transferBytes: resources.reduce((sum, entry) => sum + bytesOf(entry), 0),
+    assetTransferBytes: assetResources.reduce((sum, entry) => sum + bytesOf(entry), 0),
+    resourceCount: resources.length,
+    assetResourceCount: assetResources.length,
+    frames: frame.frames,
+    avgFps: round(frame.avgFps),
+    avgFrameMs: round(frame.avgFrameMs),
+    p95FrameMs: round(frame.p95FrameMs),
+    render: renderer.performanceSnapshot(),
+  };
+  probe.complete = true;
+  probe.output.textContent = JSON.stringify(report);
+}
 
 let state = null;
 let speed = 1;
@@ -1431,7 +1503,7 @@ function frame(now) {
   /* 데모는 모달이 열려도 흐름을 관리해야 한다. */
   if (demo.active) demo.step(realDt);
 
-  if (!isPaused()) {
+  if (!isPaused() && !perfMode) {
     /* 고정 타임스텝: fps가 낮아도 게임 속도는 유지 */
     simAcc = Math.min(simAcc + realDt * speed, STEP * MAX_STEPS);
     while (simAcc >= STEP) {
@@ -1490,6 +1562,7 @@ function frame(now) {
   } else {
     renderer.sync(state);
     renderer.frame(isPaused() ? 0 : realDt * speed, state);
+    recordPerformanceProbe(now);
   }
 }
 
@@ -1543,6 +1616,12 @@ if (judgeMode) {
   prepareJudgeWave(state);
   refreshAll();
   tryStartWave();
+  /* 성능 비교는 로딩 시간 차이 때문에 서로 다른 전투 시점을 재지 않도록
+   * 같은 시드의 초반 전투를 고정 틱만큼 진행한 뒤 엔진 상태를 멈춘다. */
+  if (perfMode) {
+    for (let tick = 0; tick < 120; tick++) E.tick(state, STEP);
+    refreshAll();
+  }
   tactics.setOpening(JUDGE_OPENING);
   document.body.classList.add('judge-mode', 'judge-opening');
 }

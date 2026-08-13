@@ -3,6 +3,17 @@ export const ART_PILOT_REGION = 'verdant-dawn';
 
 const BLOB_TYPES = new Set(['goblin', 'wolf']);
 
+const GATE_LANDMARK = Object.freeze({
+  wall: 'quaternius-gate-wall',
+  straight: 'quaternius-gate-wall-straight',
+  door: 'quaternius-gate-door',
+  tower: 'quaternius-gate-tower',
+});
+
+export function landmarkPilotSlot(regionId) {
+  return regionId === ART_PILOT_REGION ? GATE_LANDMARK : null;
+}
+
 export function heroPilotSlot(regionId, hero) {
   if (regionId !== ART_PILOT_REGION || hero?.heroKey !== 'arin') return null;
   return Object.freeze({
