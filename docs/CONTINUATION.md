@@ -69,9 +69,11 @@ The next commercial-quality direction has been researched but not implemented.
 See [production-quality-and-act2-roadmap.md](design/production-quality-and-act2-roadmap.md)
 for the proposed single-source low-poly asset pilot, web download/licensing
 budget, recent browser/Steam comparison, and the second hunter-fiction chapter.
-The existing no-external-asset rule remains active until that isolated pilot has
-measurable visual, performance, accessibility, and provenance evidence; this
-document does not authorize silently mixing asset packs into the stable build.
+External assets are now allowed and encouraged when their commercial game
+license and provenance are explicit. The isolated pilot still comes first:
+every asset must be registered, fit the download budget, and show measured
+visual, rendering, and accessibility evidence before it replaces the stable
+procedural presentation.
 
 ## Fresh-machine setup
 
@@ -179,8 +181,10 @@ desktop horizontal overflow was absent, and browser console errors were empty.
   `npm.cmd run check`; rerun the 60-run balance gate whenever gameplay numbers
   or the bot policy changes.
 - Run `npm.cmd run build` instead of editing `dist/game.js` directly.
-- Keep all art, terrain, models, VFX, and sound procedural. Do not add external
-  game assets.
+- Prefer licensed external assets when they materially improve the game. Record
+  each runtime file in `assets/manifest.json` and `CREDITS.md`, run
+  `npm.cmd run asset:check`, and compare desktop-high/mobile-lite loading and
+  rendering metrics against the same seeded scene before merging.
 
 ## Public/private boundary
 
