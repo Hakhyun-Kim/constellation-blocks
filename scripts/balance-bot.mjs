@@ -43,7 +43,7 @@ function prepActions(state, profile) {
  * authored town.  Mirror that restriction here so balance results never use
  * a hidden out-of-combat advantage. */
 function spendTownSpecializations(state) {
-  const node = E.journeyNode(state?.journey?.current);
+  const node = E.journeyNode(state?.journey?.current, state);
   if (state.phase !== 'journey' || node?.kind !== 'town' || state.journey.pendingRecruit) return;
   for (let choice = Bot.nextHeroSkill(state); choice; choice = Bot.nextHeroSkill(state)) {
     if (!E.takeHeroSkill(state, choice.heroId, choice.key).ok) break;

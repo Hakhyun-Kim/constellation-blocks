@@ -1,13 +1,23 @@
 import * as D from '../data.js';
 import { createSquadHero } from './squad.js';
 
-const chapter = () => D.JOURNEY_CHAPTER;
-export const journeyNode = (id) => chapter().nodes.find((node) => node.id === id) || null;
+const chapterIdOf = (value) => typeof value === 'string'
+  ? value
+  : value?.journey?.chapter || value?.chapter;
 
-export function createJourney() {
-  const start = chapter().start;
+export function journeyChapter(value = null) {
+  const id = chapterIdOf(value);
+  return D.JOURNEY_CHAPTERS.find((entry) => entry.id === id) || D.JOURNEY_CHAPTERS[0];
+}
+
+export const journeyNode = (id, value = null) =>
+  journeyChapter(value).nodes.find((node) => node.id === id) || null;
+
+export function createJourney(chapterId = null) {
+  const chapter = journeyChapter(chapterId);
+  const start = chapter.start;
   return {
-    chapter: chapter().id,
+    chapter: chapter.id,
     current: start,
     visited: [start],
     cleared: [],
@@ -20,14 +30,14 @@ export function createJourney() {
 
 export function journeyChoices(state) {
   const journey = state.journey;
-  const current = journey && journeyNode(journey.current);
+  const current = journey && journeyNode(journey.current, journey);
   if (!journey || !current || journey.pendingRecruit || journey.activeBattle || journey.complete) return [];
-  return current.next.map(journeyNode).filter(Boolean);
+  return current.next.map((id) => journeyNode(id, journey)).filter(Boolean);
 }
 
 /* UI·봇 모두 "이 노드의 몇 번째 방어인가"를 같은 순수 상태에서 읽는다. */
 export function journeyBattleProgress(state) {
-  const node = journeyNode(state?.journey?.activeBattle);
+  const node = journeyNode(state?.journey?.activeBattle, state);
   if (!node || (node.kind !== 'battle' && node.kind !== 'boss')) return null;
   const total = Math.max(1, Math.round(node.waves || 1));
   const step = Math.max(1, Math.min(total, Math.round(state.journey.wavesInBattle || 0) + 1));
@@ -68,8 +78,8 @@ function applySupply(state, node) {
 
 export function travelJourney(state, id) {
   if (!state.journey || state.phase !== 'journey') return { ok: false, reason: 'phase' };
-  const from = journeyNode(state.journey.current);
-  const node = journeyNode(id);
+  const from = journeyNode(state.journey.current, state);
+  const node = journeyNode(id, state);
   if (!from || !node || !from.next.includes(id)) return { ok: false, reason: 'path' };
 
   state.journey.current = id;
@@ -88,7 +98,7 @@ export function travelJourney(state, id) {
 
 export function recruitJourneyHero(state, key) {
   const journey = state.journey;
-  const node = journey && journeyNode(journey.pendingRecruit);
+  const node = journey && journeyNode(journey.pendingRecruit, journey);
   const spec = D.squadSpec(key);
   if (!journey || !node || !spec || !node.offers?.includes(key)) return { ok: false, reason: 'offer' };
   if (state.field.some((hero) => hero.heroKey === key)) return { ok: false, reason: 'owned' };
@@ -106,7 +116,7 @@ export function recruitJourneyHero(state, key) {
 }
 
 export function beginJourneyBattle(state) {
-  const node = journeyNode(state.journey?.activeBattle);
+  const node = journeyNode(state.journey?.activeBattle, state);
   if (!node || (node.kind !== 'battle' && node.kind !== 'boss')) return { ok: false, reason: 'node' };
   state.wave = node.threat;
   state.phase = 'prep';
@@ -115,7 +125,7 @@ export function beginJourneyBattle(state) {
 
 export function completeJourneyWave(state) {
   const journey = state.journey;
-  const node = journeyNode(journey?.activeBattle);
+  const node = journeyNode(journey?.activeBattle, journey);
   if (!journey || !node) return { complete: false };
   journey.wavesInBattle++;
   if (journey.wavesInBattle < node.waves) return { complete: false, node };
@@ -142,9 +152,12 @@ export function serializeJourney(journey) {
 }
 
 export function restoreJourney(raw) {
-  const fresh = createJourney();
+  const requested = raw && typeof raw === 'object' && typeof raw.chapter === 'string'
+    ? D.JOURNEY_CHAPTERS.find((entry) => entry.id === raw.chapter)?.id
+    : null;
+  const fresh = createJourney(requested);
   if (!raw || typeof raw !== 'object' || raw.chapter !== fresh.chapter) return fresh;
-  const valid = (id) => typeof id === 'string' && !!journeyNode(id);
+  const valid = (id) => typeof id === 'string' && !!journeyNode(id, fresh);
   fresh.current = valid(raw.current) ? raw.current : fresh.current;
   fresh.visited = Array.isArray(raw.visited) ? [...new Set(raw.visited.filter(valid))] : [fresh.current];
   if (!fresh.visited.includes(fresh.current)) fresh.visited.push(fresh.current);

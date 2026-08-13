@@ -167,8 +167,8 @@ export class UI {
   }
 
   _activeVillageNode(state) {
-    const pending = E.journeyNode(state?.journey?.pendingRecruit);
-    const current = E.journeyNode(state?.journey?.current);
+    const pending = E.journeyNode(state?.journey?.pendingRecruit, state);
+    const current = E.journeyNode(state?.journey?.current, state);
     if (pending?.kind === 'town') return pending;
     if (this._village.open && current?.kind === 'town') return current;
     return null;
@@ -437,12 +437,13 @@ export class UI {
     this._journeyState = state;
     const journey = state?.journey;
     if (!journey) { this.el.journeyModal.classList.add('hidden'); return; }
-    const nodes = D.JOURNEY_CHAPTER.nodes;
+    const chapter = E.journeyChapter(state);
+    const nodes = chapter.nodes;
     const byId = new Map(nodes.map((node) => [node.id, node]));
     const current = byId.get(journey.current);
     const choices = E.journeyChoices(state);
     const choiceIds = new Set(choices.map((node) => node.id));
-    const pending = E.journeyNode(journey.pendingRecruit);
+    const pending = E.journeyNode(journey.pendingRecruit, journey);
     if (pending?.kind === 'town') this._village.open = true;
     if (!pending && current?.kind !== 'town') {
       this._village.open = false;
@@ -510,7 +511,7 @@ export class UI {
     }
     this.el.journeyBody.innerHTML = `
       <header class="journey-header">
-        <div><span class="journey-kicker">CONSTELLATION EXPEDITION · CHAPTER 01</span><h1>${D.JOURNEY_CHAPTER.title}</h1><p>${D.JOURNEY_CHAPTER.subtitle}</p></div>
+        <div><span class="journey-kicker">CONSTELLATION EXPEDITION · CHAPTER ${String(chapter.number || 1).padStart(2, '0')}</span><h1>${chapter.title}</h1><p>${chapter.subtitle}</p></div>
         <div class="journey-resources"><span>🏰 ${Math.ceil(state.castleHp)}/${state.castleMax}</span><span>💰 ${state.gold}</span><span>✦ ${state.field.length}/${D.SQUAD_MAX}</span></div>
       </header>
       <div class="journey-party-row">${party}</div>
@@ -870,7 +871,7 @@ export class UI {
 
   renderSquadGrowth(state) {
     const ready = state.field.filter((hero) => hero.sp > 0);
-    const currentNode = E.journeyNode(state.journey?.current);
+    const currentNode = E.journeyNode(state.journey?.current, state);
     this.el.combineDot.classList.toggle('hidden', this._tab === 'squad' || !ready.length);
     const rows = state.field.map((hero) => {
       const C = D.CLASSES[hero.cls];
@@ -1761,7 +1762,7 @@ export class UI {
     const memory = E.summarizeRun(state);
     const lanes = ['왼쪽 길', '가운데 길', '오른쪽 길'];
     const kinds = { flare: 'Flare', tide: 'Tide', bloom: 'Bloom' };
-    const route = state.journey?.visited?.map((id) => E.journeyNode(id)?.name).filter(Boolean).join(' → ');
+    const route = state.journey?.visited?.map((id) => E.journeyNode(id, state)?.name).filter(Boolean).join(' → ');
     const constellation = memory.largest.size
       ? `${memory.largest.size}개 ${kinds[memory.largest.kind]} · ${lanes[memory.largest.lane]}`
       : '아직 기록되지 않음';

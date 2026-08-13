@@ -9,8 +9,8 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  the completed P1 combat information hierarchy after the Quaternius
-  `verdant-dawn` art pilot and performance gate.
+  P2-1 chapter-registry generalization after the completed P1 combat
+  information hierarchy and Quaternius `verdant-dawn` performance gate.
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-13. The 60-run balance gate also passed with the real
@@ -200,9 +200,9 @@ material untouched.
 
 ## Suggested next task
 
-Continue P2 of the production roadmap. Generalize the single chapter into a
-chapter list first, then make the Act 1 → Act 2 transition, save/restore, and
-ending choice deterministic before adding the eight authored nodes. P0 and P1
+Continue P2-2 of the production roadmap. The chapter list now exists; make the
+Act 1 → Act 2 transition, save/restore, and ending choice deterministic before
+adding the eight authored nodes. P0 and P1
 are complete: the art/audio evidence remains under `docs/evidence/art-v2/`, and
 `combat:ui:check` now locks the three-lane pressure projection used by the live
 combat hierarchy.

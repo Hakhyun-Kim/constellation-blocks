@@ -120,7 +120,7 @@ export function nextHeroSkill(state) {
 }
 
 export function nextJourneyHeroSkill(state) {
-  const node = E.journeyNode(state?.journey?.current);
+  const node = E.journeyNode(state?.journey?.current, state);
   if (state?.phase !== 'journey' || node?.kind !== 'town') return null;
   const choice = nextHeroSkill(state);
   if (!choice) return null;
@@ -166,7 +166,7 @@ export function nextJourneyNode(state) {
 }
 
 export function nextJourneyRecruit(state) {
-  const node = E.journeyNode(state?.journey?.pendingRecruit);
+  const node = E.journeyNode(state?.journey?.pendingRecruit, state);
   if (!node?.offers) return null;
   const owned = new Set(state.field.map((hero) => hero.heroKey));
   return node.offers

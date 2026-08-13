@@ -34,6 +34,11 @@ const put = (st, cls, tier, pad) => {
 /* ---------- journey party: recruit rules and deterministic node progress ---------- */
 {
   const st = E.createGame({ difficulty: 'normal' });
+  ok('journey: chapter registry starts with a unique authored chapter', D.JOURNEY_CHAPTERS.length === 1
+    && new Set(D.JOURNEY_CHAPTERS.map((chapter) => chapter.id)).size === D.JOURNEY_CHAPTERS.length
+    && E.journeyChapter(st).id === 'dawn-road');
+  ok('journey: node lookup is scoped to the saved chapter', E.journeyNode('meadow', st)?.name === '푸른 초원'
+    && E.journeyNode('missing', st) === null);
   const classes = st.field.map((hero) => hero.cls).join(',');
   ok('journey: Arin and Luna start as the first two heroes', st.phase === 'journey' && st.bench.length === 0 && classes === 'knight,mage' && st.field[1].heroKey === 'luna', classes);
   ok('journey: Luna is no longer a separate champion', st.champ === null);

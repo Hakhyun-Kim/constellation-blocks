@@ -101,7 +101,8 @@ export function takeHeroSkill(state, heroId, key) {
   const skill = D.HERO_SKILLS[key];
   if (!hero || !skill || skill.cls !== hero.cls) return { ok: false, reason: 'hero' };
   if (state.squad) {
-    const node = state.journey && D.JOURNEY_CHAPTER.nodes.find((entry) => entry.id === state.journey.current);
+    const chapter = state.journey && D.JOURNEY_CHAPTERS.find((entry) => entry.id === state.journey.chapter);
+    const node = chapter?.nodes.find((entry) => entry.id === state.journey.current);
     const facility = D.facilityForHero(hero.heroKey);
     if (state.phase !== 'journey' || node?.kind !== 'town' || !node.facilities?.includes(facility)) {
       return { ok: false, reason: 'facility', facility };

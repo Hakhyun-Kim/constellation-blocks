@@ -1,7 +1,8 @@
 /* Authored first chapter.  Coordinates are presentation hints only; all
  * movement and rewards are resolved by engine/journey.js. */
-export const JOURNEY_CHAPTER = {
+const DAWN_ROAD_CHAPTER = {
   id: 'dawn-road',
+  number: 1,
   title: '여명의 성도',
   subtitle: '성문 밖, 흩어진 별의 동료를 찾아라',
   start: 'gate',
@@ -15,6 +16,11 @@ export const JOURNEY_CHAPTER = {
     { id: 'boss', kind: 'boss', icon: '♜', name: '붉은 성문', text: '성도를 노리는 군세의 지휘관이 길을 막는다.', x: 89, y: 56, waves: 5, threat: 7, region: 'ember-gate', next: [] },
   ],
 };
+
+/* Chapters are ordered campaign data. Keep the legacy single-chapter export
+ * during the migration, but new engine/UI code resolves by the saved id. */
+export const JOURNEY_CHAPTERS = Object.freeze([DAWN_ROAD_CHAPTER]);
+export const JOURNEY_CHAPTER = JOURNEY_CHAPTERS[0];
 
 export const JOURNEY_KIND = {
   start: { label: '출발', color: '#aab9ff' },
