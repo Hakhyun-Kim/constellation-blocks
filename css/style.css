@@ -2401,8 +2401,28 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 .tactic-spectate.on span { background: #ffd0d0; color: #a33; }
 .tactic-lanes { display: flex; gap: 3px; color: #7652b8; font-size: 15px; }
 .tactic-lanes b { display: grid; place-items: center; width: 23px; height: 23px; border-radius: 8px; background: #e5d9ff; }
-.tactic-routes { display: grid; grid-template-columns: repeat(3, 1fr); margin: 8px 0 3px; text-align: center; color: #77739a; font-size: 10px; font-weight: 800; }
+.combat-hero-bar { display: flex; align-items: center; gap: 8px; min-height: 42px; margin-top: 7px; padding: 5px 6px 5px 9px; border: 1px solid #b9b1dc; border-radius: 10px; background: #fff; box-shadow: inset 3px 0 #7252b8; }
+.combat-hero-copy { display: grid; min-width: 0; flex: 1; }
+.combat-hero-copy b, .combat-hero-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.combat-hero-copy b { color: #403279; font-size: 12px; }
+.combat-hero-copy small { color: #797895; font-size: 9.5px; }
+.combat-hero-bar > button { flex: none; min-width: 83px; border: 1px solid #aaa3c8; border-radius: 8px; padding: 6px 8px; background: #e8e7ef; color: #7b7890; font-size: 11px; font-weight: 900; cursor: default; }
+.combat-hero-bar > button.ready { border-color: #cc7e22; background: linear-gradient(180deg, #ffd66b, #f0a737); color: #4d3200; box-shadow: 0 2px 0 #b87219; cursor: pointer; }
+.combat-hero-bar.is-empty { box-shadow: inset 3px 0 #b8b6c5; }
+.tactic-routes { display: grid; grid-template-columns: repeat(3, 1fr); margin: 6px 0 4px; text-align: center; color: #77739a; font-size: 10px; font-weight: 800; }
 .tactic-routes span { position: relative; z-index: 3; border-radius: 7px; transition: color .15s, background .15s, box-shadow .15s, transform .15s; }
+.lane-pressure { gap: 4px; }
+.lane-pressure > span { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 1px 5px; padding: 3px 5px; border: 1px solid #d4d1e6; background: #f8f8fc; }
+.lane-pressure > span > b { color: #57536f; font-size: 9.5px; text-align: left; }
+.lane-pressure > span > em { color: #7d7993; font-size: 8.5px; font-style: normal; text-align: right; white-space: nowrap; }
+.lane-pressure > span > i { grid-column: 1 / -1; display: block; height: 4px; overflow: hidden; border-radius: 99px; background: #e2e2eb; }
+.lane-pressure > span > i > i { display: block; width: 0; height: 100%; border-radius: inherit; background: #85b88b; transition: width .18s linear; }
+.lane-pressure > span.watch > i > i { background: #d3a848; }
+.lane-pressure > span.pressed { border-color: #de9a55; background: #fff5e8; }
+.lane-pressure > span.pressed > i > i { background: #e07a3f; }
+.lane-pressure > span.critical { border-color: #df655c; background: #fff0ef; }
+.lane-pressure > span.critical > b, .lane-pressure > span.critical > em { color: #9b2f31; }
+.lane-pressure > span.critical > i > i { background: #d94c52; }
 .tactic-routes span.active { color: #fff; transform: translateY(-1px) scale(1.06); text-shadow: 0 1px 2px #161530; animation: tacticroute .28s ease-out both; }
 .tactic-routes span.active.flare { background: #d66656; box-shadow: 0 0 13px #f4a159; }
 .tactic-routes span.active.tide { background: #4e84c5; box-shadow: 0 0 13px #8de6ff; }
@@ -2459,6 +2479,35 @@ body.judge-mode #diffRow { display: none !important; }
   .tactic-head { align-items: flex-start; }
   .tactic-spectate { padding: 4px 5px; font-size: 9px; }
   .tactic-lanes { display: none; }
+  .combat-hero-copy small { max-width: 190px; }
+}
+
+/* During a live defense, management recedes and the fixed party becomes a
+ * compact selector. Preparation and towns restore every growth/control panel. */
+body.combat-focus #bookBtn,
+body.combat-focus #metaBtn,
+body.combat-focus .right > .tabs,
+body.combat-focus .right > .tabbody,
+body.combat-focus .under-row,
+body.combat-focus #helpBox { display: none !important; }
+body.combat-focus .hero-card-grid { gap: 5px; }
+body.combat-focus .hero-card { min-height: 69px; grid-template-columns: 46px minmax(0, 1fr); grid-template-areas: 'art copy'; align-items: center; padding: 6px; }
+body.combat-focus .hero-card.sel { padding: 5px; }
+body.combat-focus .hero-card-art { width: 43px; height: 43px; border-radius: 14px; }
+body.combat-focus .hero-card-crest { font-size: 23px; }
+body.combat-focus .hero-card-ability,
+body.combat-focus .hero-card-stats,
+body.combat-focus .hero-card-growth { display: none; }
+body.combat-focus .squad-intro { margin-bottom: 4px; }
+body.combat-focus .squad-intro span { display: none; }
+body.combat-focus #benchCard { padding: 7px 8px; }
+body.combat-focus #benchCard .bench { margin-top: 4px; }
+
+@media (max-width: 560px) {
+  body.combat-focus .hero-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  body.combat-focus .hero-card-name { font-size: 13px; }
+  body.combat-focus .hero-card-role { font-size: 8px; }
+  body.combat-focus .hero-card-title { display: none; }
 }
 
 /* 옷장 잠금 */

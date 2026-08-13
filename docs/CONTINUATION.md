@@ -9,7 +9,8 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  the completed Quaternius `verdant-dawn` art pilot and its performance gate.
+  the completed P1 combat information hierarchy after the Quaternius
+  `verdant-dawn` art pilot and performance gate.
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-13. The 60-run balance gate also passed with the real
@@ -31,6 +32,9 @@ The prize-focused presentation pass now also includes:
   most-defended lane, decisive recovery, and the expedition route.
 - Region-owned encounter pacing: a commander with minions before each regional
   finale, then a great boss arriving in formation with mid-boss lieutenants.
+- A combat-focus projection that keeps the three live lane pressures and the
+  selected hero active beside the match-3 board, while growth, codex, and castle
+  management automatically recede until preparation resumes.
 
 ## Current play-feel implementation
 
@@ -196,10 +200,9 @@ material untouched.
 
 ## Suggested next task
 
-Continue P1 of the production roadmap: make the match-3 board, three-lane pressure,
-and selected hero active the only primary combat information. Move hero growth,
-codex, and castle upgrades behind compact collapsed panels or outside combat,
-without changing engine rules. P0 is complete with a GO decision: desktop 10-second
-before/after WebM, desktop/mobile JPEG, render metrics, ten licensed audio samples,
-and deterministic evidence checks are stored under `docs/evidence/art-v2/` and
-[`art-v2-verdant-gate-2026-08-13.md`](performance/art-v2-verdant-gate-2026-08-13.md).
+Continue P2 of the production roadmap. Generalize the single chapter into a
+chapter list first, then make the Act 1 → Act 2 transition, save/restore, and
+ending choice deterministic before adding the eight authored nodes. P0 and P1
+are complete: the art/audio evidence remains under `docs/evidence/art-v2/`, and
+`combat:ui:check` now locks the three-lane pressure projection used by the live
+combat hierarchy.

@@ -4,6 +4,7 @@
 import * as D from './data.js';
 import * as E from './engine.js';
 import { heroCardClass, heroCardMarkup } from './app/hero-card.js';
+import { combatLanePressure } from './app/combat-focus.js';
 import { VILLAGE_FACILITY_SPOTS, VILLAGE_RECRUITER_SPOTS, VILLAGE_START, advanceVillage, isNearVillageTarget, villageWalkPoint } from './app/village-layout.js';
 
 const $ = (id) => document.getElementById(id);
@@ -102,6 +103,7 @@ export class UI {
       'summonBtn', 'benchHint', 'bench', 'combineRows', 'sfxBtn', 'bgmBtn', 'effectsBtn',
       'placeBar', 'placeBarText', 'placeBarCancel',
       'castleRows', 'heroPanel', 'hpTitle', 'hpInfo', 'heroActiveBtn', 'recallBtn', 'sellBtn', 'moveHint',
+      'combatHeroBar', 'combatHeroName', 'combatHeroRole', 'combatHeroActiveBtn', 'lanePressure',
       'diffRow',
       'storyModal', 'storyIcon', 'storyTitle', 'storyLines', 'storyNext', 'storyOff',
       'demoBtn', 'spectateBtn', 'demoBar', 'demoCaption', 'demoDetail', 'demoExit',
@@ -621,6 +623,7 @@ export class UI {
     el.recallBtn.addEventListener('click', () => h.onRecall());
     el.sellBtn.addEventListener('click', () => h.onSell());
     el.heroActiveBtn.addEventListener('click', () => h.onHeroActive(Number(el.heroActiveBtn.dataset.heroId)));
+    el.combatHeroActiveBtn.addEventListener('click', () => h.onHeroActive(Number(el.combatHeroActiveBtn.dataset.heroId)));
     /* 저장/불러오기 — "간단한 파일" 하나로 오간다 */
     el.saveBtn.addEventListener('click', () => h.onSave());
     el.loadBtn.addEventListener('click', () => el.loadFile.click());
@@ -729,6 +732,7 @@ export class UI {
   /* ---------- HUD ---------- */
   updateHud(state, shards, best) {
     const el = this.el;
+    document.body.classList.toggle('combat-focus', state.phase === 'wave');
     el.gold.textContent = state.gold;
     const journeyProgress = E.journeyBattleProgress(state);
     el.waveNo.textContent = journeyProgress ? `${journeyProgress.step}/${journeyProgress.total}` : state.wave;
@@ -747,6 +751,7 @@ export class UI {
     const pct = state.castleMax ? (state.castleHp / state.castleMax) * 100 : 0;
     el.castleFill.style.width = `${pct}%`;
     el.castleGhost.style.width = `${pct}%`;
+    this.updateLanePressure(state);
     /* 소환 버튼도 "왜 안 눌리는지"를 버튼 얼굴에 적는다 — 회색이 된 이유가 돈인지 자리인지 보이게 */
     const canPay = state.gold >= D.SUMMON_COST;
     const benchFull = state.bench.length >= D.BENCH_MAX;
@@ -757,6 +762,22 @@ export class UI {
       : canPay ? `🎲 용사 소환 (💰 ${D.SUMMON_COST} · S)`
         : `💰${D.SUMMON_COST - state.gold} 더 모으면 소환! (💰${D.SUMMON_COST} 필요 · 지금 💰${state.gold})`;
 
+  }
+
+  updateLanePressure(state) {
+    const pressure = combatLanePressure(state);
+    const signature = pressure.map((lane) => `${lane.count}:${lane.fill}:${lane.tier}`).join('|');
+    if (signature === this._lanePressureSignature) return;
+    this._lanePressureSignature = signature;
+    for (const lane of pressure) {
+      const element = this.el.lanePressure.querySelector(`[data-route="${lane.route}"]`);
+      if (!element) continue;
+      element.classList.remove('clear', 'watch', 'pressed', 'critical');
+      element.classList.add(lane.tier);
+      element.querySelector(':scope > i > i').style.width = `${lane.fill}%`;
+      element.querySelector('em').textContent = lane.count ? `${lane.label} · ${lane.count}` : lane.label;
+      element.title = `${lane.name} 길 · ${lane.count ? `적 ${lane.count}기 · 최전선 ${Math.round(lane.maxProgress * 100)}%` : '적 없음'}`;
+    }
   }
 
   setWaveUI(state, autoStartSeconds = null) {
@@ -1195,6 +1216,13 @@ export class UI {
       el.heroActiveBtn.classList.add('hidden');
       el.recallBtn.classList.add('hidden');
       el.sellBtn.classList.add('hidden');
+      el.combatHeroBar.classList.add('is-empty');
+      el.combatHeroName.textContent = '영웅 액티브';
+      el.combatHeroRole.textContent = '오른쪽 영웅 카드를 선택하세요';
+      el.combatHeroActiveBtn.disabled = true;
+      el.combatHeroActiveBtn.classList.remove('ready');
+      el.combatHeroActiveBtn.textContent = '카드 선택';
+      delete el.combatHeroActiveBtn.dataset.heroId;
       return;
     }
     el.sellBtn.classList.remove('hidden');
@@ -1208,6 +1236,8 @@ export class UI {
     el.sellBtn.textContent = `💰 판매 +${D.SELL_PRICE[hero.tier]} (X)`;
     el.moveHint.classList.toggle('hidden', !onField);
     const active = D.heroActiveSpec(hero.heroKey);
+    el.combatHeroBar.classList.remove('is-empty');
+    el.combatHeroName.textContent = `${hero.name} · ${C.name}`;
     if (active && onField) {
       const left = Math.max(0, hero.activeCd || 0);
       const wave = state.phase === 'wave';
@@ -1222,8 +1252,22 @@ export class UI {
         : !hasTarget ? `${active.emoji} ${active.name} · 적을 기다리는 중`
         : `${active.emoji} ${active.name} 발동!`;
       el.heroActiveBtn.title = `${active.desc} · 재사용 ${active.cooldown}초`;
+      el.combatHeroRole.textContent = `${active.emoji} ${active.name} · ${active.desc}`;
+      el.combatHeroActiveBtn.dataset.heroId = String(hero.id);
+      el.combatHeroActiveBtn.disabled = el.heroActiveBtn.disabled;
+      el.combatHeroActiveBtn.classList.toggle('ready', wave && left <= 0 && hasTarget);
+      el.combatHeroActiveBtn.textContent = left > 0
+        ? `${left.toFixed(1)}초`
+        : !wave ? '전투 중 사용'
+        : !hasTarget ? '적 대기'
+        : `${active.emoji} 발동`;
+      el.combatHeroActiveBtn.title = el.heroActiveBtn.title;
     } else {
       el.heroActiveBtn.classList.add('hidden');
+      el.combatHeroRole.textContent = '전장에 배치된 고정 영웅만 액티브를 사용합니다.';
+      el.combatHeroActiveBtn.disabled = true;
+      el.combatHeroActiveBtn.classList.remove('ready');
+      el.combatHeroActiveBtn.textContent = '사용 불가';
     }
     /* Fixed squad members cannot be recalled or sold. Position is the only roster action. */
     el.recallBtn.classList.add('hidden');

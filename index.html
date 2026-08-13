@@ -101,7 +101,15 @@
           <div class="tactic-lanes"><b>←</b><b>↑</b><b>→</b></div>
         </div>
       </div>
-      <div class="tactic-routes"><span data-route="0">왼쪽 길</span><span data-route="1">가운데 길</span><span data-route="2">오른쪽 길</span></div>
+      <div id="combatHeroBar" class="combat-hero-bar is-empty" aria-live="polite">
+        <span class="combat-hero-copy"><b id="combatHeroName">영웅 액티브</b><small id="combatHeroRole">오른쪽 영웅 카드를 선택하세요</small></span>
+        <button id="combatHeroActiveBtn" type="button" disabled>카드 선택</button>
+      </div>
+      <div id="lanePressure" class="tactic-routes lane-pressure" aria-label="세 방어로 압력">
+        <span data-route="0" class="clear"><b>왼쪽</b><i><i></i></i><em>안전</em></span>
+        <span data-route="1" class="clear"><b>가운데</b><i><i></i></i><em>안전</em></span>
+        <span data-route="2" class="clear"><b>오른쪽</b><i><i></i></i><em>안전</em></span>
+      </div>
       <div id="tacticBoard" class="tactic-board" aria-label="별자리 3매치 전술판"></div>
       <div class="tactic-key"><span>☄️ 유성: 공격</span><span>❄️ 서리: 감속</span><span>🛡️ 수호: 회복·밀치기</span></div>
       <div id="tacticStatus" class="tactic-status">웨이브가 시작되면 별들이 깨어나요.</div>
