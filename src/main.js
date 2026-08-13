@@ -850,7 +850,7 @@ function handleEvents(events) {
         break;
       case 'chapterComplete':
         SFX.shard();
-        ui.toast('✦ 여명의 성도를 지켜냈습니다! 첫 원정이 완수되었습니다.', 'good');
+        ui.toast(`✦ ${E.journeyChapter(state).title}을(를) 지켜냈습니다!`, 'good');
         refreshAll();
         break;
       case 'gameOver': onGameOver(); break;
@@ -1063,6 +1063,24 @@ const handlers = {
     checkAchievements();
     refreshAll();
     autoSave();
+  },
+  onJourneyNextChapter() {
+    const result = E.advanceJourneyChapter(state);
+    if (!result.ok) return false;
+    SFX.shard();
+    ui.toast(`▤ CHAPTER ${String(result.chapter.number).padStart(2, '0')} · ${result.chapter.title}`, 'good');
+    refreshAll();
+    autoSave();
+    return true;
+  },
+  onJourneyEnding(key) {
+    const result = E.chooseJourneyEnding(state, key);
+    if (!result.ok) return false;
+    SFX.shard();
+    ui.toast(`${result.ending.icon} ${result.ending.name} 엔딩을 선택했습니다.`, 'good');
+    refreshAll();
+    autoSave();
+    return true;
   },
   onHeroActive(heroId) { doHeroActive(heroId); },
   onSceneClick(cx, cy) {
@@ -1732,6 +1750,8 @@ demo.attach({
   feast: doFeast,
   journeyTravel(id) { handlers.onJourneyTravel(id); },
   journeyRecruit(key) { handlers.onJourneyRecruit(key); },
+  journeyNext() { return handlers.onJourneyNextChapter(); },
+  journeyEnding(key) { return handlers.onJourneyEnding(key); },
   startWave: tryStartWave,
   newGame: () => newGame(store.diff),
   comboLabel: (c) => (c.kind === 'rankup'

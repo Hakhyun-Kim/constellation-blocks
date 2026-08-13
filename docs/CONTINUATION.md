@@ -9,7 +9,7 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  P2-1 chapter-registry generalization after the completed P1 combat
+  P2-2 Act 1→2 transition/save/ending contract after the completed P1 combat
   information hierarchy and Quaternius `verdant-dawn` performance gate.
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
@@ -200,9 +200,10 @@ material untouched.
 
 ## Suggested next task
 
-Continue P2-2 of the production roadmap. The chapter list now exists; make the
-Act 1 → Act 2 transition, save/restore, and ending choice deterministic before
-adding the eight authored nodes. P0 and P1
+Continue P2-3 of the production roadmap. The chapter list, Act 1 → Act 2
+transition, history save/restore, and one-time ending choice now exist. Expand
+the registered Act 2 shell to its eight authored nodes, three regions, margin
+notes, and refugee station state. P0 and P1
 are complete: the art/audio evidence remains under `docs/evidence/art-v2/`, and
 `combat:ui:check` now locks the three-lane pressure projection used by the live
 combat hierarchy.

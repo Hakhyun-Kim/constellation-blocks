@@ -34,7 +34,7 @@ const put = (st, cls, tier, pad) => {
 /* ---------- journey party: recruit rules and deterministic node progress ---------- */
 {
   const st = E.createGame({ difficulty: 'normal' });
-  ok('journey: chapter registry starts with a unique authored chapter', D.JOURNEY_CHAPTERS.length === 1
+  ok('journey: chapter registry has unique ordered chapters', D.JOURNEY_CHAPTERS.length === 2
     && new Set(D.JOURNEY_CHAPTERS.map((chapter) => chapter.id)).size === D.JOURNEY_CHAPTERS.length
     && E.journeyChapter(st).id === 'dawn-road');
   ok('journey: node lookup is scoped to the saved chapter', E.journeyNode('meadow', st)?.name === '푸른 초원'
@@ -82,6 +82,42 @@ const put = (st, cls, tier, pad) => {
   const next = E.nextLoop(st);
   const carried = next.field.find((hero) => hero.heroKey === 'arin');
   ok('journey: party growth survives a trial', next.field.length === 3 && carried.level === 2 && carried.skills.knight_edge === 1);
+}
+
+/* ---------- chapter transition, save/restore, and one-time ending ---------- */
+{
+  const st = E.createGame({ difficulty: 'normal' });
+  const arin = st.field.find((hero) => hero.heroKey === 'arin');
+  arin.level = 4; arin.xp = 17; arin.sp = 2; arin.skills.knight_edge = 1;
+  st.gold = 432; st.castleHp = 71;
+  st.journey.current = 'boss';
+  st.journey.visited = D.JOURNEY_CHAPTERS[0].nodes.map((node) => node.id);
+  st.journey.cleared = ['meadow', 'boss'];
+  st.journey.complete = true;
+  const before = { gold: st.gold, hp: st.castleHp, level: arin.level, skill: arin.skills.knight_edge };
+  const moved = E.advanceJourneyChapter(st);
+  const movedArin = st.field.find((hero) => hero.heroKey === 'arin');
+  ok('chapter: completed Act 1 opens Act 2 at its authored start', moved.ok
+    && st.journey.chapter === 'beyond-page' && st.journey.current === 'turned-gate' && !st.journey.complete);
+  ok('chapter: Act 1 result is archived without resetting run state', st.journey.history.length === 1
+    && st.journey.history[0].chapter === 'dawn-road' && st.journey.history[0].complete
+    && st.gold === before.gold && st.castleHp === before.hp && movedArin.level === before.level
+    && movedArin.skills.knight_edge === before.skill);
+
+  const restored = E.deserialize(JSON.parse(JSON.stringify(E.serialize(st))));
+  ok('chapter: Act 2 and Act 1 history survive save/restore', restored.journey.chapter === 'beyond-page'
+    && restored.journey.current === 'turned-gate' && restored.journey.history[0]?.cleared.includes('boss')
+    && restored.field.find((hero) => hero.heroKey === 'arin')?.level === 4);
+  ok('chapter: ending is locked until Act 2 completion', !E.chooseJourneyEnding(restored, 'seal').ok);
+  restored.journey.complete = true;
+  ok('chapter: bot uses the same public ending state', Bot.nextJourneyEnding(restored) === 'coauthor');
+  const ending = E.chooseJourneyEnding(restored, 'coauthor');
+  const repeat = E.chooseJourneyEnding(restored, 'seal');
+  ok('chapter: one authored ending is chosen exactly once', ending.ok && ending.ending.key === 'coauthor'
+    && !repeat.ok && repeat.reason === 'chosen' && restored.journey.ending === 'coauthor');
+  const endingBack = E.deserialize(JSON.parse(JSON.stringify(E.serialize(restored))));
+  ok('chapter: ending choice survives save/restore', endingBack.journey.ending === 'coauthor'
+    && endingBack.journey.history[0]?.chapter === 'dawn-road');
 }
 
 /* ---------- 지역 조우: 지휘관+졸개 → 지역 보스+지휘관 호위 ---------- */

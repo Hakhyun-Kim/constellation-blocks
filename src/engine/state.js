@@ -132,7 +132,7 @@ export function nextLoop(state) {
  * 객체 그래프라 직렬화가 잘 깨지고, 전투 도중 복원을 허용하면 반쯤 이긴
  * 웨이브를 저장해 두고 골드만 불리는 꼼수가 생긴다. 그래서 웨이브 진행은
  * 담지 않고, 불러오면 그 웨이브의 준비 단계에서 다시 시작한다. */
-export const SAVE_VERSION = 6;
+export const SAVE_VERSION = 7;
 const SAVE_STATS = [
   'kills', 'bossKills', 'midBossKills', 'summons', 'combos', 'goldEarned',
   'specialsMade', 'mythicsMade', 'tacticCasts', 'resonanceCasts',

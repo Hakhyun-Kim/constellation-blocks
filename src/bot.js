@@ -174,6 +174,12 @@ export function nextJourneyRecruit(state) {
     .sort((a, b) => (a === 'doyun' ? -1 : b === 'doyun' ? 1 : 0))[0] || null;
 }
 
+/* The bot has no hidden preference signal. The coauthor ending is the stable
+ * default because it keeps the public weekly/async continuation available. */
+export function nextJourneyEnding(state) {
+  return state?.journey?.complete && !state.journey.ending ? 'coauthor' : null;
+}
+
 /* ---------- 별자리 전술 ----------
  * 후보는 순수 보드 규칙이 보장한 '유효한 인접 스왑'뿐이다. 적이 어느 길에서
  * 성에 가까운지와 성 체력만 사용해 사람과 같은 공개 정보로 고른다. */

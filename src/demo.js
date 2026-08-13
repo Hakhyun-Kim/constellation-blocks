@@ -119,7 +119,13 @@ export const demo = {
     /* ④ 준비 단계 — 봇의 판단을 하나씩 소비한다 */
     if (state.phase === 'journey') {
       if (this.t > 0) return;
-      if (state.journey?.pendingRecruit) {
+      if (state.journey?.complete) {
+        if (A.journeyNext?.()) this.say('▤ 원정의 성장과 기록을 지닌 채 다음 장을 펼칩니다');
+        else {
+          const ending = Bot.nextJourneyEnding(state);
+          if (ending && A.journeyEnding?.(ending)) this.say('✎ 영웅과 몬스터가 함께 쓰는 결말을 선택합니다');
+        }
+      } else if (state.journey?.pendingRecruit) {
         const key = Bot.nextJourneyRecruit(state);
         if (key) {
           this.say(`✦ ${key} 영웅을 원정대에 맞이합니다`);

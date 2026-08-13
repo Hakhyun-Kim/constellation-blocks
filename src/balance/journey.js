@@ -5,6 +5,7 @@ const DAWN_ROAD_CHAPTER = {
   number: 1,
   title: '여명의 성도',
   subtitle: '성문 밖, 흩어진 별의 동료를 찾아라',
+  nextChapter: 'beyond-page',
   start: 'gate',
   nodes: [
     { id: 'gate', kind: 'start', icon: '✦', name: '별문', text: '아린과 루나는 무너진 성문을 지나 별빛 길로 나선다.', x: 8, y: 56, next: ['meadow'] },
@@ -17,10 +18,36 @@ const DAWN_ROAD_CHAPTER = {
   ],
 };
 
+/* P2-2 transition target. P2-3 expands this authored shell to the full eight
+ * nodes; keeping it registered now lets transition/save/ending rules land and
+ * be tested independently from content volume. */
+const BEYOND_PAGE_CHAPTER = {
+  id: 'beyond-page',
+  number: 2,
+  title: '게이트 너머의 다음 페이지',
+  subtitle: '현실과 책 세계를 잇는 두 번째 책갈피를 찾아라',
+  start: 'turned-gate',
+  endings: ['seal', 'coauthor'],
+  nodes: [
+    { id: 'turned-gate', kind: 'start', icon: '▤', name: '넘겨진 성문', text: '붉은 성문 뒤에서 출구가 아니라 넘겨지지 않은 다음 장이 열린다.', x: 10, y: 55, next: [] },
+  ],
+};
+
 /* Chapters are ordered campaign data. Keep the legacy single-chapter export
  * during the migration, but new engine/UI code resolves by the saved id. */
-export const JOURNEY_CHAPTERS = Object.freeze([DAWN_ROAD_CHAPTER]);
+export const JOURNEY_CHAPTERS = Object.freeze([DAWN_ROAD_CHAPTER, BEYOND_PAGE_CHAPTER]);
 export const JOURNEY_CHAPTER = JOURNEY_CHAPTERS[0];
+
+export const JOURNEY_ENDINGS = Object.freeze({
+  seal: {
+    key: 'seal', icon: '🔖', name: '봉합',
+    desc: '두 책갈피로 책을 닫아 현실을 지키되, 책 세계와 몬스터의 기록도 끝낸다.',
+  },
+  coauthor: {
+    key: 'coauthor', icon: '✎', name: '공동 집필',
+    desc: '편집 권한을 규칙으로 제한하고 영웅과 몬스터가 함께 다음 장을 쓴다.',
+  },
+});
 
 export const JOURNEY_KIND = {
   start: { label: '출발', color: '#aab9ff' },

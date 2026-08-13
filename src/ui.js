@@ -486,8 +486,17 @@ export class UI {
     let action = '';
     if (villageNode) {
       action = this._renderVillage(state, villageNode);
-    } else if (journey.complete) {
-      action = `<div class="journey-choice-card win"><span>✦</span><div><b>첫 원정을 완수했습니다</b><p>새 장과 별의 시련은 다음 목적지에서 이어집니다.</p></div></div>`;
+    } else if (journey.complete && chapter.nextChapter) {
+      action = `<button class="journey-choice-card win" data-journey-next><span>▤</span><div><b>${chapter.title} 완수</b><p>붉은 성문 뒤에서 출구가 아닌 다음 장이 열렸습니다. 파티와 성장을 그대로 이어갑니다.</p></div><em>다음 장 펼치기</em></button>`;
+    } else if (journey.complete && journey.ending) {
+      const ending = D.JOURNEY_ENDINGS[journey.ending];
+      action = `<div class="journey-choice-card win"><span>${ending.icon}</span><div><b>${ending.name} 엔딩</b><p>${ending.desc}</p></div><em>선택 완료</em></div>`;
+    } else if (journey.complete && chapter.endings?.length) {
+      const endings = chapter.endings.map((key) => {
+        const ending = D.JOURNEY_ENDINGS[key];
+        return `<button class="journey-choice-card" data-journey-ending="${key}"><span>${ending.icon}</span><div><b>${ending.name}</b><p>${ending.desc}</p></div><em>이 결말 선택</em></button>`;
+      }).join('');
+      action = `<div class="journey-action-title"><b>두 책갈피의 마지막 선택</b><span>이 선택은 현재 원정에 한 번만 기록됩니다.</span></div><div class="journey-offers">${endings}</div>`;
     } else if (pending) {
       const offers = pending.offers.map((key) => {
         const spec = D.squadSpec(key);
@@ -527,6 +536,10 @@ export class UI {
       button.addEventListener('click', () => this.h.onJourneyTravel(button.dataset.travel)));
     this.el.journeyBody.querySelectorAll('[data-recruit]').forEach((button) =>
       button.addEventListener('click', () => this.h.onJourneyRecruit(button.dataset.recruit)));
+    this.el.journeyBody.querySelectorAll('[data-journey-next]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onJourneyNextChapter()));
+    this.el.journeyBody.querySelectorAll('[data-journey-ending]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onJourneyEnding(button.dataset.journeyEnding)));
     this.el.journeyBody.querySelectorAll('[data-village-talk]').forEach((button) =>
       button.addEventListener('click', () => {
         const target = this._villageTargets(state, villageNode).find((entry) => entry.id === button.dataset.villageTalk);

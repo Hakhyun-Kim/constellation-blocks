@@ -25,7 +25,49 @@ export function createJourney(chapterId = null) {
     activeBattle: null,
     wavesInBattle: 0,
     complete: false,
+    history: [],
+    ending: null,
   };
+}
+
+function chapterRecord(journey) {
+  return {
+    chapter: journey.chapter,
+    current: journey.current,
+    visited: [...journey.visited],
+    cleared: [...journey.cleared],
+    complete: !!journey.complete,
+  };
+}
+
+/* The campaign changes chapter data, not the player's accumulated run state.
+ * Party growth, castle, gold, statistics, and RNG remain on the same state. */
+export function advanceJourneyChapter(state) {
+  const journey = state?.journey;
+  if (!journey || state.phase !== 'journey') return { ok: false, reason: 'phase' };
+  if (!journey.complete || journey.pendingRecruit || journey.activeBattle) return { ok: false, reason: 'incomplete' };
+  const chapter = journeyChapter(journey);
+  const next = D.JOURNEY_CHAPTERS.find((entry) => entry.id === chapter.nextChapter);
+  if (!next) return { ok: false, reason: 'final' };
+  const replacement = createJourney(next.id);
+  replacement.history = [...(journey.history || []).map((record) => ({ ...record,
+    visited: [...record.visited], cleared: [...record.cleared] })), chapterRecord(journey)];
+  state.journey = replacement;
+  state.phase = 'journey';
+  state.pendingWave = null;
+  return { ok: true, from: chapter, chapter: next, journey: replacement };
+}
+
+export function chooseJourneyEnding(state, key) {
+  const journey = state?.journey;
+  if (!journey || state.phase !== 'journey') return { ok: false, reason: 'phase' };
+  const chapter = journeyChapter(journey);
+  const ending = D.JOURNEY_ENDINGS[key];
+  if (!journey.complete) return { ok: false, reason: 'incomplete' };
+  if (!ending || !chapter.endings?.includes(key)) return { ok: false, reason: 'ending' };
+  if (journey.ending) return { ok: false, reason: 'chosen', ending: D.JOURNEY_ENDINGS[journey.ending] };
+  journey.ending = key;
+  return { ok: true, ending, chapter };
 }
 
 export function journeyChoices(state) {
@@ -148,7 +190,37 @@ export function serializeJourney(journey) {
     activeBattle: journey.activeBattle,
     wavesInBattle: journey.wavesInBattle,
     complete: !!journey.complete,
+    history: (journey.history || []).map((record) => ({
+      chapter: record.chapter, current: record.current,
+      visited: [...record.visited], cleared: [...record.cleared], complete: !!record.complete,
+    })),
+    ending: journey.ending || null,
   };
+}
+
+function restoreHistory(raw, currentChapter) {
+  if (!Array.isArray(raw)) return [];
+  const currentIndex = D.JOURNEY_CHAPTERS.findIndex((entry) => entry.id === currentChapter);
+  const seen = new Set();
+  const history = [];
+  for (const record of raw.slice(0, 12)) {
+    const index = D.JOURNEY_CHAPTERS.findIndex((entry) => entry.id === record?.chapter);
+    if (index < 0 || index >= currentIndex || seen.has(record.chapter)) continue;
+    const chapter = D.JOURNEY_CHAPTERS[index];
+    const valid = (id) => typeof id === 'string' && chapter.nodes.some((node) => node.id === id);
+    const current = valid(record.current) ? record.current : chapter.start;
+    const visited = Array.isArray(record.visited) ? [...new Set(record.visited.filter(valid))] : [current];
+    if (!visited.includes(current)) visited.push(current);
+    history.push({
+      chapter: chapter.id,
+      current,
+      visited,
+      cleared: Array.isArray(record.cleared) ? [...new Set(record.cleared.filter(valid))] : [],
+      complete: !!record.complete,
+    });
+    seen.add(chapter.id);
+  }
+  return history;
 }
 
 export function restoreJourney(raw) {
@@ -166,5 +238,7 @@ export function restoreJourney(raw) {
   fresh.activeBattle = valid(raw.activeBattle) ? raw.activeBattle : null;
   fresh.wavesInBattle = Math.max(0, Math.min(9, Math.round(raw.wavesInBattle || 0)));
   fresh.complete = !!raw.complete;
+  fresh.history = restoreHistory(raw.history, fresh.chapter);
+  fresh.ending = fresh.complete && journeyChapter(fresh).endings?.includes(raw.ending) ? raw.ending : null;
   return fresh;
 }
