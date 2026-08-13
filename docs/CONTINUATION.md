@@ -196,10 +196,11 @@ material untouched.
 
 ## Suggested next task
 
-Continue P0-3 of the production roadmap: select 8–12 clearly licensed combat
-sound samples, define their gameplay roles and loudness target, then pilot only
-the smallest useful set behind the same opt-in boundary. Keep synthesized UI
-signals as fallbacks, register every runtime file in `assets/manifest.json` and
-`CREDITS.md`, and preserve the first-load budget. The completed P0-2 gate and
-desktop-high/mobile-lite measurements are recorded in
+Continue P0-4 of the production roadmap: capture the same frozen seeded scene
+before/after at desktop-high and mobile-lite, then produce the remaining 10-second
+visual comparison evidence and make the final art-pilot go/no-go decision. P0-3
+now registers and decodes ten Kenney CC0 combat samples behind `?art=v2`, with
+role-based -16 to -7 dB mix gains and synthesized fallbacks. Browser smoke showed
+10 registered, 10 decoded, zero failures; `audio:pilot:check` is part of the main
+gate. Existing render metrics are in
 [`art-v2-verdant-gate-2026-08-13.md`](performance/art-v2-verdant-gate-2026-08-13.md).

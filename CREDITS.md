@@ -13,8 +13,15 @@
 
 Quaternius explains the packs' commercial use, modification, and redistribution terms in its [FAQ](https://quaternius.com/faq.html). The character and monster glTF files were acquired on 2026-08-13 and repacked as GLB without changing geometry, materials, textures, or animation data. The distant gate landmark keeps the original geometry and base colors while resizing base-color textures to 512px JPEG, replacing normal and roughness maps with material constants, and packing each selected module as GLB. Runtime hashes, source filenames, transformations, and quality profiles are recorded in `assets/manifest.json`.
 
+## Optional `art=v2` pilot audio
+
+- [RPG Audio](https://kenney.nl/assets/rpg-audio) by Kenney — weapon, coin, placement, and gate-latch samples, CC0 1.0 Universal.
+- [Impact Sounds](https://kenney.nl/assets/impact-sounds) by Kenney — character, shield, enemy, and castle impact samples, CC0 1.0 Universal.
+
+Ten original OGG files were acquired on 2026-08-13 and renamed without transcoding. Runtime playback gain is normalized by role between -16 dB for frequent hits and -7 dB for the rare castle impact. The existing compressor remains the final peak guard. Source filenames, roles, gain values, and hashes are recorded in `assets/manifest.json`.
+
 ## Development
 
 Constellation Defense was designed and developed by Hakhyun Kim with Codex as an AI development collaborator.
 
-The default release renders its visual game elements procedurally and synthesizes audio in the browser. The optional `?art=v2` pilot uses the models above; a failed or unsupported load keeps the procedural representation. Future image, audio, model, and animation assets are allowed when their source and commercial license are recorded here and in `assets/manifest.json`, and their download/rendering cost passes `npm run asset:check` plus the browser performance gate.
+The default release renders its visual game elements procedurally and synthesizes audio in the browser. The optional `?art=v2` pilot uses the models and samples above; a failed or unsupported load keeps the procedural representation and synthesized sound recipe. Future image, audio, model, and animation assets are allowed when their source and commercial license are recorded here and in `assets/manifest.json`, and their download/rendering cost passes `npm run asset:check` plus the browser performance gate.

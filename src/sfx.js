@@ -1,16 +1,21 @@
 /* =====================================================
- * 효과음 (Web Audio 합성, 음원 파일 0개)
- * tone() + noise() 두 가지 원시 도구로 모든 소리를 만든다.
+ * 효과음 (Web Audio 합성 + 선택적 CC0 전투 샘플)
+ * UI·마법 신호는 tone()/noise()로 유지하고, art-v2에서는 짧은 실제 샘플로
+ * 무기·타격·성벽의 물성을 보강한다. 샘플 실패 시 기존 합성음이 폴백이다.
  *
  * 외부 음원을 쓰지 않는 대신, 합성음이 "삑삑"거리지 않도록 세 가지를 건다:
  *   ① 마스터 리미터  — 전투 중 소리 20개가 겹쳐도 찢어지지 않는다
  *   ② 스테레오 패닝  — 적의 필드 x좌표를 좌우 위치로 옮긴다
  *   ③ 피치 랜덤화    — 같은 소리를 연타해도 기계적으로 들리지 않는다
  * ===================================================== */
+import { sampleCue } from './audio/sample-plan.js';
+
 let ctx = null;
 let master = null;      // 음악 + 효과음이 함께 들어오는 지점
 let sfxBus = null;      // 효과음 전용 (여기에만 살짝 공간감을 준다)
 let masterFilter = null; // 몰입/위기 상태 Dynamic Lowpass Flow
+const sampleBank = new Map();
+let sampleDecodeRequested = false;
 
 /* 효과음과 배경음을 따로 끌 수 있다 — 배경음만 끄고 싶은 요구가 가장 흔하다 */
 const AUDIO_KEY = 'constellation-defense.audio.';
@@ -86,6 +91,69 @@ export function getAc() {
   return ctx;
 }
 export const getMaster = () => { getAc(); return master; };
+
+function decodeSample(record) {
+  if (!record || record.buffer || record.decoding) return record?.decoding || Promise.resolve(record?.buffer || null);
+  const c = getAc();
+  if (!c) return Promise.resolve(null);
+  record.decoding = c.decodeAudioData(record.bytes.slice(0)).then((buffer) => {
+    record.buffer = buffer;
+    record.failed = false;
+    return buffer;
+  }).catch(() => { record.failed = true; return null; }).finally(() => { record.decoding = null; });
+  return record.decoding;
+}
+
+export function registerSfxAssets(assets = []) {
+  let registered = 0;
+  for (const asset of assets) {
+    if (asset?.entry?.type !== 'audio' || !(asset.bytes instanceof ArrayBuffer)) continue;
+    sampleBank.set(asset.entry.id, { entry: asset.entry, bytes: asset.bytes, buffer: null, decoding: null, failed: false });
+    registered++;
+  }
+  if (sampleDecodeRequested) void prepareSfxSamples();
+  return registered;
+}
+
+/* 최초 사용자 입력에서만 AudioContext를 깨우고 decode한다. 다운로드는 preload가
+ * 맡고, 디코딩 전 이벤트에는 합성 폴백을 사용하므로 전투가 기다리지 않는다. */
+export async function prepareSfxSamples() {
+  sampleDecodeRequested = true;
+  return Promise.all([...sampleBank.values()].map(decodeSample));
+}
+
+export function sfxSampleSnapshot() {
+  const records = [...sampleBank.values()];
+  return Object.freeze({
+    registered: records.length,
+    decoded: records.filter((record) => !!record.buffer).length,
+    failed: records.filter((record) => record.failed).map((record) => record.entry.id),
+  });
+}
+
+function playSample(cueName, { pan = null, gain = 1, rate = 1 } = {}) {
+  if (sfxMuted) return false;
+  const cue = sampleCue(cueName);
+  const record = cue && sampleBank.get(cue.id);
+  if (!record?.buffer) {
+    if (record) void decodeSample(record);
+    return false;
+  }
+  const c = getAc();
+  if (!c || !sfxBus) return false;
+  const source = c.createBufferSource();
+  const amp = c.createGain();
+  source.buffer = record.buffer;
+  source.playbackRate.value = Math.max(0.5, Math.min(2, (cue.rate || 1) * rate));
+  amp.gain.value = Math.pow(10, (record.entry.gainDb || 0) / 20) * gain;
+  source.connect(amp);
+  let node = amp;
+  const p = panNode(pan);
+  if (p) { node.connect(p); node = p; }
+  node.connect(sfxBus);
+  source.start();
+  return true;
+}
 
 /* 게임 상태(체력 비상 등)에 따른 마스터 오디오 플로우 튜닝 */
 export function updateAudioFlow(hpRatio = 1) {
@@ -304,26 +372,27 @@ export const SFX = {
     flowTone([440, 554, 659, 880, 1108], 0, 0.22, 'triangle', 0.09, { filterSweep: [1000, 5000] });
     noise(0.18, 0.3, 0.04, 4000, 0.5);
   },
-  place()      { flowTone([220, 140, 110], 0, 0.09, 'sine', 0.1); noise(0, 0.06, 0.07, 700, 0.6); },
+  place()      { if (!playSample('place')) { flowTone([220, 140, 110], 0, 0.09, 'sine', 0.1); noise(0, 0.06, 0.07, 700, 0.6); } },
   upgrade()    { flowTone([392, 523, 659, 784], 0, 0.2, 'square', 0.07, { filterSweep: [2000, 6000] }); },
   /* --- 전투음: x(필드 좌표)를 받아 좌우로 벌리고, 매번 피치를 살짝 흔든다 --- */
-  shoot(x)     { if (limit('shoot', 55)) return; const p = panOf(x); flowTone([880, 520, 440], 0, 0.05, 'triangle', 0.035, { pan: p, vary: 55, cutoff: 4200 }); },
+  shoot(x)     { if (limit('shoot', 55)) return; const p = panOf(x); if (!playSample('shoot', { pan: p, rate: wobble(45) })) flowTone([880, 520, 440], 0, 0.05, 'triangle', 0.035, { pan: p, vary: 55, cutoff: 4200 }); },
   orb(x)       { if (limit('orb', 80)) return; const p = panOf(x); flowTone([520, 390, 260], 0, 0.1, 'sine', 0.045, { pan: p, vary: 45 }); },
   bolt(x)      { if (limit('bolt', 80)) return; const p = panOf(x); flowTone([1200, 800, 500], 0, 0.08, 'sawtooth', 0.032, { pan: p, vary: 60, cutoff: 3600 }); },
-  hit(x)       { if (limit('hit', 45)) return; noise(0, 0.045, 0.06, 1600, 0.7, { pan: panOf(x), vary: 90 }); },
+  hit(x)       { if (limit('hit', 45)) return; const p = panOf(x); if (!playSample('hit', { pan: p, rate: wobble(70) })) noise(0, 0.045, 0.06, 1600, 0.7, { pan: p, vary: 90 }); },
   /* 치명타: 쨍! 하고 시원하게 미끄러지는 피치 플로우 */
   crit(x)      { if (limit('crit', 80)) return; const p = panOf(x); triggerDuck(0.2, 0.2);
-                 flowTone([1760, 1320, 880], 0, 0.12, 'square', 0.06, { pan: p, vary: 40, filterSweep: [6000, 2000] });
-                 noise(0, 0.09, 0.07, 2600, 0.6, { pan: p, vary: 60 }); },
+                 const sampled = playSample('crit', { pan: p, rate: wobble(35) });
+                 flowTone([1760, 1320, 880], 0, 0.12, 'square', sampled ? 0.035 : 0.06, { pan: p, vary: 40, filterSweep: [6000, 2000] });
+                 if (!sampled) noise(0, 0.09, 0.07, 2600, 0.6, { pan: p, vary: 60 }); },
   /* 방패 장벽: 금속 쿵 + 지면 울림 */
-  block(x)     { if (limit('block', 180)) return; const p = panOf(x);
-                 flowTone([220, 140, 80], 0, 0.18, 'square', 0.09, { pan: p, vary: 30, cutoff: 1800 });
-                 noise(0, 0.2, 0.08, 700, 0.5, { pan: p });
+  block(x)     { if (limit('block', 180)) return; const p = panOf(x); const sampled = playSample('block', { pan: p, rate: wobble(25) });
+                 flowTone([220, 140, 80], 0, 0.18, 'square', sampled ? 0.045 : 0.09, { pan: p, vary: 30, cutoff: 1800 });
+                 if (!sampled) noise(0, 0.2, 0.08, 700, 0.5, { pan: p });
                  tone(90, 0.05, 0.25, 'sine', 0.08, 55, { pan: p }); },
-  kill(x)      { if (limit('kill', 55)) return; const p = panOf(x);
+  kill(x)      { if (limit('kill', 55)) return; const p = panOf(x); const sampled = playSample('kill', { pan: p, rate: wobble(55) });
                  flowTone([400, 220, 90], 0, 0.09, 'square', 0.065, { pan: p, vary: 70, cutoff: 2400 });
-                 noise(0, 0.07, 0.06, 900, 0.6, { pan: p, vary: 70 }); },
-  coin()       { if (limit('coin', 100)) return; flowTone([988, 1319, 1760], 0, 0.1, 'square', 0.048, { vary: 35, cutoff: 5200 }); },
+                 if (!sampled) noise(0, 0.07, 0.06, 900, 0.6, { pan: p, vary: 70 }); },
+  coin()       { if (limit('coin', 100)) return; if (!playSample('coin', { rate: wobble(25) })) flowTone([988, 1319, 1760], 0, 0.1, 'square', 0.048, { vary: 35, cutoff: 5200 }); },
   combo(mul)   {
     const root = 784 * (mul >= 3 ? 1.5 : 1);
     flowTone([root, root * 1.25, root * 1.5], 0, 0.16, 'square', 0.075, { filterSweep: [2000, 6000] });
@@ -334,12 +403,12 @@ export const SFX = {
   thorns(x)    { if (limit('thorns', 140)) return; flowTone([1400, 950, 700], 0, 0.06, 'sawtooth', 0.038, { pan: panOf(x), vary: 80, cutoff: 3800 }); },
 
   heroHurt(x)  { if (limit('hurt', 130)) return; const p = panOf(x);
-                 flowTone([220, 140, 80], 0, 0.1, 'sine', 0.075, { pan: p, vary: 60 }); noise(0, 0.06, 0.05, 500, 0.7, { pan: p }); },
+                 if (!playSample('heroHurt', { pan: p, rate: wobble(45) })) { flowTone([220, 140, 80], 0, 0.1, 'sine', 0.075, { pan: p, vary: 60 }); noise(0, 0.06, 0.05, 500, 0.7, { pan: p }); } },
   heroDead()   { flowTone([262, 196, 130, 80], 0, 0.35, 'sine', 0.08); },
-  castleHit()  { triggerDuck(0.35, 0.4); flowTone([120, 75, 40], 0, 0.38, 'sawtooth', 0.14, { filterSweep: [1200, 200] }); noise(0, 0.3, 0.11, 250, 0.4); },
+  castleHit()  { triggerDuck(0.35, 0.4); const sampled = playSample('castleHit'); flowTone([120, 75, 40], 0, 0.38, 'sawtooth', sampled ? 0.075 : 0.14, { filterSweep: [1200, 200] }); if (!sampled) noise(0, 0.3, 0.11, 250, 0.4); },
   heartbeat()  { flowTone([80, 55], 0, 0.12, 'sine', 0.13); flowTone([70, 45], 0.16, 0.14, 'sine', 0.11); },
 
-  waveStart()  { triggerDuck(0.25, 0.3); flowTone([392, 523, 659, 784], 0, 0.25, 'sawtooth', 0.085, { filterSweep: [1000, 4500] }); },
+  waveStart()  { triggerDuck(0.25, 0.3); const sampled = playSample('waveStart'); flowTone([392, 523, 659, 784], 0, 0.25, 'sawtooth', sampled ? 0.052 : 0.085, { filterSweep: [1000, 4500] }); },
   waveClear() {
     triggerDuck(0.25, 0.3);
     flowTone([523, 659, 784, 880, 1047, 1319], 0, 0.35, 'triangle', 0.095, { filterSweep: [2000, 7000] });

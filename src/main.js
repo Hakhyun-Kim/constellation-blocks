@@ -9,7 +9,7 @@ import { RuntimeAssetLoader } from './gfx/asset-loader.js';
 import { decodeGltfAsset } from './gfx/gltf-assets.js';
 import { heroPortrait, champPortrait } from './gfx/units3d.js';
 import { UI } from './ui.js';
-import { SFX, toggleSfx, toggleMusic, toggleAll, isSfxMuted, isMusicMuted, forceMute, getAc, getMaster, registerDucker, updateAudioFlow } from './sfx.js';
+import { SFX, toggleSfx, toggleMusic, toggleAll, isSfxMuted, isMusicMuted, forceMute, getAc, getMaster, registerDucker, updateAudioFlow, registerSfxAssets, prepareSfxSamples, sfxSampleSnapshot } from './sfx.js';
 import { music } from './music.js';
 import * as Story from './story.js';
 import { demo } from './demo.js';
@@ -83,6 +83,15 @@ const assetLoader = new RuntimeAssetLoader({
   decoders: { model: decodeGltfAsset },
 });
 const assetPreload = assetLoader.preload();
+void assetPreload.then(registerSfxAssets);
+const audioProbe = urlParams.has('audioProbe') ? (() => {
+  const output = document.createElement('output');
+  output.id = 'audio-probe';
+  output.hidden = true;
+  document.body.appendChild(output);
+  void assetPreload.then(() => { output.textContent = JSON.stringify(sfxSampleSnapshot()); });
+  return output;
+})() : null;
 
 const renderer = new Renderer3D(ui.el.scene3d, {
   /* 폰은 처음부터 lite 로 시작한다. high 로 켰다가 7초 뒤에 떨어뜨리면
@@ -1640,7 +1649,11 @@ ui.coachChip();
 requestAnimationFrame(frame);
 
 /* 첫 사용자 입력에서 오디오 잠금 해제 */
-window.addEventListener('pointerdown', () => { music.sync(); }, { once: true });
+window.addEventListener('pointerdown', async () => {
+  music.sync();
+  await prepareSfxSamples();
+  if (audioProbe) audioProbe.textContent = JSON.stringify(sfxSampleSnapshot());
+}, { once: true });
 
 /* 폰트를 미리 받아 둔다.
  * 브라우저는 "화면에 실제로 그려질 때"만 폰트를 내려받는다. 그냥 두면 ① 첫 문제창이 열리는
@@ -1706,7 +1719,7 @@ window.__game = {
   E, D, renderer, ui, SFX, demo, assets: assetLoader,
   env: { isMobile, decor: useDecor, quality: renderer.quality, artMode, judgeMode, weeklyChallenge },
   exportWeeklyReplay() { return weeklyReplay?.export() || null; },
-  sfxCore: { getAc, getMaster, isSfxMuted, isMusicMuted },
+  sfxCore: { getAc, getMaster, isSfxMuted, isMusicMuted, sampleSnapshot: sfxSampleSnapshot },
   records: { codex, earned },
   refresh: refreshAll,
   selectHero(id) { selHero = id; renderer.setSelectedHero(id); ui.renderHeroPanel(state, id); },
