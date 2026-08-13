@@ -63,6 +63,16 @@ commits:
 See [regional-boss-encounters.md](design/regional-boss-encounters.md) for the
 implemented tension curve and its balance budget.
 
+## Post-competition production direction
+
+The next commercial-quality direction has been researched but not implemented.
+See [production-quality-and-act2-roadmap.md](design/production-quality-and-act2-roadmap.md)
+for the proposed single-source low-poly asset pilot, web download/licensing
+budget, recent browser/Steam comparison, and the second hunter-fiction chapter.
+The existing no-external-asset rule remains active until that isolated pilot has
+measurable visual, performance, accessibility, and provenance evidence; this
+document does not authorize silently mixing asset packs into the stable build.
+
 ## Fresh-machine setup
 
 In PowerShell:
