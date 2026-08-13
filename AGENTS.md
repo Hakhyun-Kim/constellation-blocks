@@ -32,6 +32,8 @@ Agentic GameDev Playbook의 방법론은 채택한다. 새 기능은 아래 네 
 - `src/tactics/`: DOM·엔진 없이 3매치 보드 생성·스왑·매치·보충·방어로 매핑만 맡는다.
 - `src/engine/tactics.js`: 보드 구현을 모르며, `{ route, kind, size }` 전술 명령만 방어 상태와 이벤트로 해석한다.
 - `src/app/`: 입력과 화면 흐름을 소유한다. 전술 보드의 화면 표현과 애니메이션 취소는 여기서 다룬다.
+- `src/assets/`: DOM·Three.js·fetch를 모르는 manifest 스키마와 선택 규칙이다. Node 검사와 브라우저 로더가 이 단일 계약을 공유한다.
+- `src/gfx/asset-loader.js`: 외부 파일의 지연 요청·디코딩·취소·폴백 경계다. 기본 procedural 모드에서는 manifest도 요청하지 않으며, 로딩 실패가 엔진 진행을 막아서는 안 된다.
 - `src/gfx/`, `src/ui.js`, `src/sfx.js`, `src/music.js`: 엔진 상태와 이벤트를 표현할 뿐, 게임 규칙을 결정하지 않는다.
 - `src/main.js`: 배선과 고정 타임스텝을 담당한다. 전술 보드와 방어 엔진의 유일한 연결점이며, 규칙을 새로 넣지 않는다.
 

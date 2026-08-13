@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { normalizeAssetManifest } from '../src/assets/catalog.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const ASSET_ROOT = join(ROOT, 'assets');
@@ -54,10 +55,8 @@ if (runtimeAssetFiles.length || existsSync(MANIFEST_PATH)) {
     failures.push('assets/에 파일이 있지만 assets/manifest.json이 없습니다.');
   } else {
     try {
-      const manifest = JSON.parse(readFileSync(MANIFEST_PATH, 'utf8'));
-      if (manifest.version !== 1) failures.push('assets/manifest.json version은 1이어야 합니다.');
-      if (!Array.isArray(manifest.assets)) failures.push('assets/manifest.json에 assets 배열이 필요합니다.');
-      else entries = manifest.assets;
+      const manifest = normalizeAssetManifest(JSON.parse(readFileSync(MANIFEST_PATH, 'utf8')));
+      entries = manifest.assets;
     } catch (error) {
       failures.push(`assets/manifest.json을 읽을 수 없습니다: ${error.message}`);
     }

@@ -5,6 +5,7 @@ import * as D from './data.js';
 import * as E from './engine.js';
 import { Renderer3D } from './gfx/renderer.js';
 import { VillageRenderer } from './gfx/village.js';
+import { RuntimeAssetLoader } from './gfx/asset-loader.js';
 import { heroPortrait, champPortrait } from './gfx/units3d.js';
 import { UI } from './ui.js';
 import { SFX, toggleSfx, toggleMusic, toggleAll, isSfxMuted, isMusicMuted, forceMute, getAc, getMaster, registerDucker, updateAudioFlow } from './sfx.js';
@@ -69,17 +70,28 @@ const urlDecor = urlParams.get('decor');
 const isMobile = detectMobile();
 const useDecor = urlDecor != null ? !/^(0|off|no|false)$/i.test(urlDecor)
                                   : (!isMobile && !store.decorOff);
+const graphicsQuality = urlGfx || (store.gfx === 'lite' || (isMobile && store.gfx == null) ? 'lite' : 'high');
+/* 외부 아트는 검증 중인 한 장면에만 opt-in 한다. 기본/심사 URL은 manifest조차
+ * 요청하지 않으므로 현재 첫 플레이 시간과 절차형 폴백이 그대로 유지된다. */
+const artMode = urlParams.get('art') === 'v2' ? 'v2' : 'procedural';
+const assetLoader = new RuntimeAssetLoader({
+  enabled: artMode === 'v2',
+  quality: graphicsQuality,
+});
+void assetLoader.init();
 
 const renderer = new Renderer3D(ui.el.scene3d, {
   /* 폰은 처음부터 lite 로 시작한다. high 로 켰다가 7초 뒤에 떨어뜨리면
    * 그 7초가 하필 제일 버벅이는 구간(첫인상)이 된다. */
-  quality: urlGfx || (store.gfx === 'lite' || (isMobile && store.gfx == null) ? 'lite' : 'high'),
+  quality: graphicsQuality,
   preserve: urlParams.has('rafshim') || urlGfx === 'min',
   decor: useDecor,
   touch: isMobile,
   reducedEffects,
+  assets: assetLoader,
 });
 const villageRenderer = new VillageRenderer({ quality: renderer.quality, touch: isMobile, reducedEffects });
+window.addEventListener('pagehide', () => assetLoader.dispose(), { once: true });
 
 let state = null;
 let speed = 1;
@@ -1610,8 +1622,8 @@ if (urlParams.has('demo')) {
 /* 디버그 훅 (자동 검증/테스트용) */
 window.__game = {
   get state() { return state; },
-  E, D, renderer, ui, SFX, demo,
-  env: { isMobile, decor: useDecor, quality: renderer.quality, judgeMode, weeklyChallenge },
+  E, D, renderer, ui, SFX, demo, assets: assetLoader,
+  env: { isMobile, decor: useDecor, quality: renderer.quality, artMode, judgeMode, weeklyChallenge },
   exportWeeklyReplay() { return weeklyReplay?.export() || null; },
   sfxCore: { getAc, getMaster, isSfxMuted, isMusicMuted },
   records: { codex, earned },

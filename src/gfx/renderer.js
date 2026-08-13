@@ -20,6 +20,9 @@ export class Renderer3D {
     this.container = container;
     this.quality = opts.quality || 'high';
     this.reducedEffects = opts.reducedEffects !== false;
+    /* 외부 아트는 엔진 상태와 분리된 선택적 뷰 의존성이다. null 또는 실패면
+     * 아래 절차형 생성 경로가 언제나 정상 동작한다. */
+    this.assets = opts.assets || null;
     /* 배경 장식(바람 잔디 · 바닷가 · 하늘 밴드 · 반딧불이)을 통째로 끄는 스위치.
      * 모바일은 이걸 끈다 — 화소당 셰이더 비용이 제일 비싼 것들이기도 하고,
      * 작은 화면에서는 하늘에 내줬던 19%를 전장에 돌려주는 게 훨씬 이득이다.

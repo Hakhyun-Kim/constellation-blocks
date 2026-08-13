@@ -196,7 +196,8 @@ material untouched.
 
 ## Suggested next task
 
-Prioritize the real 60--90 second gameplay video and three to five
-no-instruction first-play observations over new game systems. Only change the
-game when those observations reveal a repeated blocker; otherwise keep the
-verified submission build stable.
+Continue P0-2 of the production roadmap: add the Quaternius decoder and build
+the isolated `verdant-dawn` art pilot behind `?art=v2`. Keep the procedural
+default untouched, register every runtime file in `assets/manifest.json`, and
+capture the same seeded scene at desktop-high and mobile-lite before deciding
+whether to expand the art direction.
