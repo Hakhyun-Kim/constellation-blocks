@@ -23,6 +23,8 @@ analysis block. It reports campaign and weekly values separately:
 - first-defense, Act 1 completion, and Act 2 start conversion;
 - actions per active minute and outcome counts;
 - linked and unlinked retry records, invalid records excluded from analysis;
+- novice, regular, and expert session counts plus mode results for each cohort;
+- normal-difficulty novice first-defense and Act 1 conversion;
 - a conservative Early Access scope recommendation.
 
 The in-game export deliberately sets participant count to `null` and marks the
@@ -49,6 +51,17 @@ device fingerprints, or free-form interview answers into the runtime session
 records. Keep qualitative notes separately and publish only an anonymized
 summary.
 
+Use the explicit non-identifying experience route for both of that person's
+runs. The header badge is the facilitator's visual check:
+
+```text
+Campaign: ?playtest=novice
+Weekly:   ?weekly=2026-W33&playtest=novice
+```
+
+Replace `novice` with `regular` or `expert`. An unknown value displays a red
+“Profile required” badge and records `unspecified`; it cannot satisfy the gate.
+
 ## Minimum evidence
 
 No content recommendation is allowed until all of these are true:
@@ -56,6 +69,8 @@ No content recommendation is allowed until all of these are true:
 - at least 5 verified human participants;
 - at least 5 campaign attempts and 5 weekly attempts;
 - at least 3 completed sessions in each mode;
+- at least one novice, one regular, and one expert represented by explicitly
+  tagged sessions;
 - campaign and weekly results kept separate;
 - the same build/commit and protocol conditions recorded for the cohort.
 

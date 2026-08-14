@@ -2,18 +2,26 @@ import assert from 'node:assert/strict';
 import {
   evaluateEarlyAccessScope,
   formatPlaytestReport,
+  normalizePlaytestExperience,
   summarizePlaytestSessions,
 } from '../src/app/playtest-analysis.js';
+
+assert.equal(normalizePlaytestExperience('beginner'), 'novice');
+assert.equal(normalizePlaytestExperience('Intermediate'), 'regular');
+assert.equal(normalizePlaytestExperience('advanced'), 'expert');
+assert.equal(normalizePlaytestExperience('qa-bot'), 'unspecified');
 
 const session = (mode, outcome, activeMinutes, sequence, extras = {}) => ({
   schemaVersion: 1,
   mode,
   outcome,
+  difficulty: 'normal',
   activeMs: activeMinutes * 60000,
   elapsedMs: activeMinutes * 62000,
   sequence,
   startKind: 'new',
   retryOf: null,
+  experience: ['novice', 'regular', 'expert'][(sequence - 1) % 3],
   checkpoints: mode === 'campaign' ? {
     'first-defense-start': { activeMs: 1000 },
     'dawn-road-complete': { activeMs: 1000 },
@@ -41,17 +49,25 @@ const summary = summarizePlaytestSessions(healthy, { participantCount: 5 });
 assert.equal(summary.evidence.validSessions, 10);
 assert.equal(summary.evidence.excludedSessions, 1);
 assert.equal(summary.evidence.linkedRetries, 4);
+assert.deepEqual(summary.evidence.missingExperienceProfiles, []);
+assert.ok(summary.evidence.experienceSessionCounts.novice > 0);
 assert.equal(summary.campaign.attempts, 5);
 assert.equal(summary.campaign.completed, 4);
 assert.equal(summary.campaign.completionRate, 0.8);
 assert.deepEqual(summary.campaign.completedActiveMinutes, { p25: 28.75, median: 32.5, p75: 36.25 });
 assert.equal(summary.campaign.checkpointRate.act2Start, 1);
+assert.equal(summary.normalNoviceCampaign.attempts, 2);
+assert.equal(summary.normalNoviceCampaign.act1CompleteRate, 1);
 assert.equal(summary.weekly.completedWithinTargetRate, 1);
 assert.equal(evaluateEarlyAccessScope(summary).recommendation, 'retain-two-chapter-early-access-base');
 
 const unverified = summarizePlaytestSessions(healthy);
 assert.equal(evaluateEarlyAccessScope(unverified).status, 'insufficient-evidence');
 assert.ok(evaluateEarlyAccessScope(unverified).missing.includes('verified-participant-count'));
+
+const unspecified = summarizePlaytestSessions(healthy.map((entry) => ({ ...entry, experience: 'unspecified' })), { participantCount: 5 });
+assert.equal(evaluateEarlyAccessScope(unspecified).status, 'insufficient-evidence');
+assert.ok(evaluateEarlyAccessScope(unspecified).missing.includes('experience-profile-novice'));
 
 const strugglingSessions = [
   ...[1, 2, 3].map((n) => session('campaign', 'campaign-complete', 45 + n, n)),

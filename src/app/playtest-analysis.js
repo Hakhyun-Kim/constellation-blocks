@@ -1,4 +1,5 @@
 export const PLAYTEST_REPORT_VERSION = 1;
+export const PLAYTEST_EXPERIENCE_PROFILES = Object.freeze(['novice', 'regular', 'expert']);
 
 const MODES = Object.freeze(['campaign', 'weekly']);
 const COMPLETE_OUTCOMES = Object.freeze({
@@ -10,6 +11,14 @@ const TARGET_MINUTES = Object.freeze({
   weekly: Object.freeze([10, 15]),
 });
 const EXIT_OUTCOMES = new Set(['abandon', 'load', 'new-game', 'restart', 'spectate']);
+
+export function normalizePlaytestExperience(value) {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['novice', 'beginner'].includes(normalized)) return 'novice';
+  if (['regular', 'intermediate'].includes(normalized)) return 'regular';
+  if (['expert', 'advanced'].includes(normalized)) return 'expert';
+  return 'unspecified';
+}
 
 const finiteMs = (value) => Number.isFinite(Number(value)) && Number(value) >= 0
   ? Math.round(Number(value)) : 0;
@@ -99,6 +108,23 @@ export function summarizePlaytestSessions(sessions = [], { participantCount = nu
   const participants = Number.isInteger(participantCount) && participantCount >= 0 ? participantCount : null;
   const linkedRetries = valid.filter((session) => Number.isInteger(session.retryOf)
     && valid.some((candidate) => candidate.sequence === session.retryOf));
+  const experienceSessionCounts = Object.fromEntries(
+    [...PLAYTEST_EXPERIENCE_PROFILES, 'unspecified'].map((profile) => [
+      profile,
+      valid.filter((session) => normalizePlaytestExperience(session.experience) === profile).length,
+    ]),
+  );
+  const byExperience = Object.fromEntries(PLAYTEST_EXPERIENCE_PROFILES.map((profile) => {
+    const records = valid.filter((session) => normalizePlaytestExperience(session.experience) === profile);
+    return [profile, {
+      sessions: records.length,
+      campaign: summarizeMode(records, 'campaign'),
+      weekly: summarizeMode(records, 'weekly'),
+    }];
+  }));
+  const normalNoviceCampaign = valid.filter((session) => session.mode === 'campaign'
+    && session.difficulty === 'normal'
+    && normalizePlaytestExperience(session.experience) === 'novice');
   return {
     reportVersion: PLAYTEST_REPORT_VERSION,
     evidence: {
@@ -108,9 +134,17 @@ export function summarizePlaytestSessions(sessions = [], { participantCount = nu
       excludedSessions: input.length - valid.length,
       linkedRetries: linkedRetries.length,
       unlinkedRetries: valid.filter((session) => Number.isInteger(session.retryOf)).length - linkedRetries.length,
+      experienceSessionCounts,
+      missingExperienceProfiles: PLAYTEST_EXPERIENCE_PROFILES.filter((profile) => experienceSessionCounts[profile] === 0),
     },
     campaign: summarizeMode(valid, 'campaign'),
     weekly: summarizeMode(valid, 'weekly'),
+    byExperience,
+    normalNoviceCampaign: {
+      attempts: normalNoviceCampaign.length,
+      firstDefenseRate: rate(normalNoviceCampaign.filter((session) => hasCheckpoint(session, ['first-defense', 'first-defense-start'])).length, normalNoviceCampaign.length),
+      act1CompleteRate: rate(normalNoviceCampaign.filter((session) => hasCheckpoint(session, ['dawn-road-complete'])).length, normalNoviceCampaign.length),
+    },
     overallRetryRate: rate(valid.filter((session) => session.startKind === 'retry' || Number.isInteger(session.retryOf)).length, valid.length),
   };
 }
@@ -130,6 +164,9 @@ export function evaluateEarlyAccessScope(summary, {
   if ((weekly.attempts || 0) < minimumAttemptsPerMode) missing.push(`weekly-attempts-${weekly.attempts || 0}/${minimumAttemptsPerMode}`);
   if ((campaign.completed || 0) < minimumCompletedPerMode) missing.push(`campaign-completions-${campaign.completed || 0}/${minimumCompletedPerMode}`);
   if ((weekly.completed || 0) < minimumCompletedPerMode) missing.push(`weekly-completions-${weekly.completed || 0}/${minimumCompletedPerMode}`);
+  for (const profile of summary?.evidence?.missingExperienceProfiles || PLAYTEST_EXPERIENCE_PROFILES) {
+    missing.push(`experience-profile-${profile}`);
+  }
 
   if (missing.length) {
     return {
@@ -194,6 +231,7 @@ export function formatPlaytestReport(summary, decision = evaluateEarlyAccessScop
     '',
     `- Participants: ${summary.evidence.participantCount ?? 'unverified'}`,
     `- Valid sessions: ${summary.evidence.validSessions} (excluded ${summary.evidence.excludedSessions})`,
+    `- Experience sessions: novice ${summary.evidence.experienceSessionCounts.novice}, regular ${summary.evidence.experienceSessionCounts.regular}, expert ${summary.evidence.experienceSessionCounts.expert}, unspecified ${summary.evidence.experienceSessionCounts.unspecified}`,
     `- Decision: ${decision.recommendation}`,
     `- Status: ${decision.status}`,
     '',
@@ -206,6 +244,12 @@ export function formatPlaytestReport(summary, decision = evaluateEarlyAccessScop
     lines.push(`- Completed active p25 / median / p75: ${minuteValue(data.completedActiveMinutes.p25)} / ${minuteValue(data.completedActiveMinutes.median)} / ${minuteValue(data.completedActiveMinutes.p75)}`);
     lines.push(`- First defense / Act 1 / Act 2 conversion: ${percent(data.checkpointRate.firstDefense)} / ${percent(data.checkpointRate.act1Complete)} / ${percent(data.checkpointRate.act2Start)}`, '');
   }
+  lines.push('## Experience cohorts', '');
+  for (const profile of PLAYTEST_EXPERIENCE_PROFILES) {
+    const data = summary.byExperience[profile];
+    lines.push(`- ${profile}: ${data.sessions} sessions · campaign completion ${percent(data.campaign.completionRate)} · weekly completion ${percent(data.weekly.completionRate)}`);
+  }
+  lines.push(`- Normal/novice Act 1 completion: ${percent(summary.normalNoviceCampaign.act1CompleteRate)} (${summary.normalNoviceCampaign.attempts} attempts)`, '');
   lines.push('## Scope', '', decision.scope);
   if (decision.missing.length) lines.push('', `Missing evidence: ${decision.missing.join(', ')}`);
   return `${lines.join('\n')}\n`;

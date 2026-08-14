@@ -74,6 +74,8 @@ body {
   font-size: 11px;
   white-space: nowrap;
 }
+.playtest-badge { background: #196c75; border-color: #62d4de; }
+.playtest-badge.invalid { background: #8a352f; border-color: #ff9d8e; }
 .record {
   background: #fff7d6;
   border: 2px solid #f2cf5b;

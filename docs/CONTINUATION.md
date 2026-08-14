@@ -209,3 +209,9 @@ P3-2 and P3-4 remain open only because verified human samples are still 0; never
 label bot or Codex browser runs as human data. The protocol and conservative
 scope branches are in `docs/testing/campaign-duration-protocol.md` and
 `docs/design/early-access-evidence-gate.md`.
+
+For every participant, use one stable non-identifying experience profile across
+both modes: `?playtest=novice|regular|expert` for campaign and
+`?weekly=YYYY-Www&playtest=novice|regular|expert` for weekly. The visible header
+badge and exported `experience` field prevent cohort notes from drifting away
+from the measured sessions. The evidence gate requires all three profiles.

@@ -9,7 +9,7 @@ import {
 let time = 0;
 let epoch = Date.UTC(2026, 7, 14, 0, 0, 0);
 const meter = createSessionMeter({
-  mode: 'campaign', difficulty: 'normal', clock: () => time, epoch: () => epoch,
+  mode: 'campaign', difficulty: 'normal', experience: 'novice', clock: () => time, epoch: () => epoch,
 });
 meter.observe({ active: true, phase: 'story', chapter: 'dawn-road', node: 'gate', wave: 1 });
 time += 1200;
@@ -27,6 +27,7 @@ const result = meter.finish('defeat', { chapter: 'dawn-road', node: 'meadow', wa
 assert.equal(result.elapsedMs, 9600);
 assert.equal(result.activeMs, 4600);
 assert.equal(result.startKind, 'new');
+assert.equal(result.experience, 'novice');
 assert.deepEqual(result.phaseMs, { story: 1200, wave: 3400 });
 assert.equal(result.actions.waveStarts, 1);
 assert.equal(result.actions.tacticSwaps, 3);

@@ -25,6 +25,7 @@ import { advanceAutoPhase, createAutoPhaseClock } from './app/phase-flow.js';
 import { summarizeFrameDurations } from './app/perf-probe.js';
 import { captureCanvasVideo, captureFilename } from './app/visual-capture.js';
 import { createLocalPlaytestLog, createSessionMeter, formatPlayMinutes } from './app/session-metrics.js';
+import { normalizePlaytestExperience } from './app/playtest-analysis.js';
 import {
   KEY_ACTIONS, actionForCode, defaultBindings, keyCodeLabel, normalizeBindings, rebindAction,
 } from './app/preferences.js';
@@ -46,6 +47,9 @@ const judgeMode = urlParams.has('judge');
 const previewBlueprint = urlParams.has('blueprint');
 const previewChapter = urlParams.get('chapter') === '2' || previewBlueprint ? 'beyond-page' : null;
 const weeklyChallenge = urlParams.has('weekly') ? createWeeklyChallenge(urlParams.get('weekly')) : null;
+const playtestRoute = urlParams.has('playtest');
+const playtestExperience = playtestRoute
+  ? normalizePlaytestExperience(urlParams.get('playtest')) : 'unspecified';
 const systemReducedEffects = typeof matchMedia === 'function'
   && matchMedia('(prefers-reduced-motion: reduce)').matches;
 /* 눈이 편한 쪽이 기본값이다. 사용자가 생동감을 명시적으로 켠 경우에만
@@ -64,6 +68,16 @@ if (weeklyChallenge) {
   const badge = document.createElement('div');
   badge.className = 'weekly-badge';
   badge.textContent = `✦ ${weeklyChallenge.label}`;
+  ui.el.scene3d.closest('.left')?.querySelector('.topbar')?.appendChild(badge);
+}
+if (playtestRoute) {
+  document.body.classList.add('human-playtest-mode');
+  const profileLabel = locale === 'en'
+    ? { novice: 'Novice', regular: 'Regular', expert: 'Expert', unspecified: 'Profile required' }[playtestExperience]
+    : { novice: '초보', regular: '보통', expert: '숙련', unspecified: '경험 구간 미지정' }[playtestExperience];
+  const badge = document.createElement('div');
+  badge.className = `weekly-badge playtest-badge ${playtestExperience === 'unspecified' ? 'invalid' : ''}`;
+  badge.textContent = `🧪 ${locale === 'en' ? 'Human playtest' : '사람 플레이테스트'} · ${profileLabel}`;
   ui.el.scene3d.closest('.left')?.querySelector('.topbar')?.appendChild(badge);
 }
 /* 자동화로 열었거나 ?mute를 붙였으면 소리 없이 시작한다.
@@ -269,6 +283,7 @@ function startPlaySession(difficulty, startKind = 'new', retryOf = null) {
     mode: weeklyChallenge ? 'weekly' : 'campaign',
     challengeId: weeklyChallenge?.id || null,
     difficulty,
+    experience: playtestExperience,
     startKind,
     retryOf,
   });
@@ -2071,7 +2086,7 @@ if (urlParams.has('demo')) {
 window.__game = {
   get state() { return state; },
   E, D, renderer, ui, SFX, demo, assets: assetLoader,
-  env: { isMobile, decor: useDecor, quality: renderer.quality, artMode, judgeMode, weeklyChallenge, locale },
+  env: { isMobile, decor: useDecor, quality: renderer.quality, artMode, judgeMode, weeklyChallenge, locale, playtestRoute, playtestExperience },
   exportWeeklyReplay() { return weeklyReplay?.export() || null; },
   playtest: {
     snapshot: () => sessionMeter?.snapshot() || null,

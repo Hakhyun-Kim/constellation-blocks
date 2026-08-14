@@ -1,4 +1,8 @@
-import { evaluateEarlyAccessScope, summarizePlaytestSessions } from './playtest-analysis.js';
+import {
+  evaluateEarlyAccessScope,
+  normalizePlaytestExperience,
+  summarizePlaytestSessions,
+} from './playtest-analysis.js';
 
 export const PLAYTEST_SCHEMA_VERSION = 1;
 export const PLAYTEST_STORAGE_KEY = 'constellation-defense.playtest-sessions';
@@ -22,6 +26,7 @@ export function createSessionMeter({
   mode = 'campaign',
   challengeId = null,
   difficulty = 'normal',
+  experience = 'unspecified',
   startKind = 'new',
   retryOf = null,
   clock = () => performance.now(),
@@ -33,6 +38,7 @@ export function createSessionMeter({
     mode: mode === 'weekly' ? 'weekly' : 'campaign',
     challengeId: challengeId || null,
     difficulty,
+    experience: normalizePlaytestExperience(experience),
     startKind: ['new', 'continue', 'retry'].includes(startKind) ? startKind : 'new',
     retryOf: Number.isInteger(retryOf) ? retryOf : null,
     startedAt: safeIso(startedEpoch),
