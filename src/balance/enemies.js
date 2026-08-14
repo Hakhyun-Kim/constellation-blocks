@@ -38,6 +38,9 @@ export const GREAT_BOSS_CYCLE = ['boss', 'boss2'];
 export const REGION_BOSS_TYPES = {
   'verdant-dawn': 'boss',
   'ember-gate': 'boss2',
+  'neon-ruins': 'boss',
+  'ashen-margin': 'boss2',
+  'manuscript-core': 'boss2',
 };
 export const greatBossType = (region, fallback = 1) =>
   REGION_BOSS_TYPES[region] || GREAT_BOSS_CYCLE[(Math.max(1, fallback) - 1) % GREAT_BOSS_CYCLE.length];

@@ -555,6 +555,14 @@ export class Renderer3D {
     if (this.forcedHour == null) this.dayTarget = theme.phase;
     if (this.roadMaterial) this.roadMaterial.color.copy(this._regionRoadColor);
     if (this.roadEdgeMaterial) this.roadEdgeMaterial.color.copy(this._regionRoadEdgeColor);
+    if (this.ground?.material) {
+      const groundMap = theme.grass === false ? null : this.groundTexture;
+      if (this.ground.material.map !== groundMap) {
+        this.ground.material.map = groundMap;
+        this.ground.material.needsUpdate = true;
+      }
+    }
+    this.grass?.setVisible(theme.grass !== false);
     this.regions?.setTheme(theme.id);
     this._syncGatePilotVisibility();
     for (const view of this.heroViews?.values?.() || []) this._syncPilotVisibility(view);

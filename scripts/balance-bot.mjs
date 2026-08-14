@@ -108,7 +108,10 @@ export function playRun(profileName, difficulty, seed, options = {}) {
     /* 지도 선택과 영입도 실제 플레이와 같은 순수 엔진 명령으로 처리한다. */
     if (state.phase === 'journey') {
       spendTownSpecializations(state);
-      if (state.journey?.pendingRecruit) {
+      const path = Bot.nextJourneyPath(state);
+      if (path) {
+        if (!E.chooseJourneyPath(state, path.key).ok) { stalemate = true; break; }
+      } else if (state.journey?.pendingRecruit) {
         const key = Bot.nextJourneyRecruit(state);
         if (!key || !E.recruitJourneyHero(state, key).ok) { stalemate = true; break; }
       } else {

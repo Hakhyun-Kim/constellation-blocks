@@ -1,6 +1,6 @@
 # Difficulty and bot baseline
 
-Last calibrated: 2026-08-13
+Last calibrated: 2026-08-14
 
 The balance bot uses the real journey links, recruit rules, town-only
 specializations, castle upgrades, combat engine, match-3 board, legal adjacent
@@ -20,14 +20,20 @@ produced:
 | Normal | 19% | 86% | 100% |
 | Hard | 1% | 45% | 100% |
 
-After named hero actives were added, the required 60-seed gate produced the
-following latest completion rates without changing the enemy curve:
+After the Act 2 route policy was added, the required 60-seed first-expedition
+gate produced the following latest completion rates without changing the Act 1
+enemy curve:
 
 | Difficulty | Novice | Normal | Expert |
 | --- | ---: | ---: | ---: |
-| Easy | 52% | 95% | 100% |
-| Normal | 17% | 93% | 100% |
-| Hard | 0% | 48% | 100% |
+| Easy | 28% | 90% | 100% |
+| Normal | 22% | 88% | 100% |
+| Hard | 0% | 52% | 100% |
+
+This baseline deliberately measures the first expedition so it remains
+comparable with the stored medians. The full two-chapter bot run will become a
+separate gate when the P2-4 monster-blueprint command completes the Act 2 combat
+toolset.
 
 The intent is that Easy teaches and forgives, Normal lets an engaged first-time
 player finish the authored expedition, and Hard remains the opt-in pressure

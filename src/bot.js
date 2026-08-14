@@ -174,6 +174,15 @@ export function nextJourneyRecruit(state) {
     .sort((a, b) => (a === 'doyun' ? -1 : b === 'doyun' ? 1 : 0))[0] || null;
 }
 
+export function nextJourneyPath(state) {
+  const journey = state?.journey;
+  const node = E.journeyNode(journey?.current, state);
+  if (!node?.choices || journey.flags?.[node.id]) return null;
+  /* Stable route for reproducible runs; both options use the same public
+   * command and the market branch is exercised separately by engine tests. */
+  return node.choices.find((choice) => choice.key === 'guild') || node.choices[0] || null;
+}
+
 /* The bot has no hidden preference signal. The coauthor ending is the stable
  * default because it keeps the public weekly/async continuation available. */
 export function nextJourneyEnding(state) {

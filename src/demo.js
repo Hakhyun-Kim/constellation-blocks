@@ -132,6 +132,13 @@ export const demo = {
           A.journeyRecruit(key);
         }
       } else {
+        const path = Bot.nextJourneyPath(state);
+        if (path) {
+          this.say(`${path.icon} ${path.name}의 설명을 따릅니다`);
+          A.journeyPath?.(path.key);
+          this.t = 1.05;
+          return;
+        }
         const heroSkill = Bot.nextJourneyHeroSkill(state);
         if (heroSkill) {
           this.doAction({ type: 'heroSkill', ...heroSkill }, state);

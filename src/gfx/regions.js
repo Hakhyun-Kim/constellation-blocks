@@ -5,13 +5,33 @@ import * as THREE from 'three';
 export const REGION_THEMES = {
   'verdant-dawn': {
     id: 'verdant-dawn', label: '푸른 초원 · 새벽', phase: 0.10,
+    grass: true,
     ground: 0x8da86c, road: 0xdcc38f, roadEdge: 0x7c6744,
     wall: 0x9db5b1, stoneMix: 0.12, fog: 0xb7d8d1,
   },
   'ember-gate': {
     id: 'ember-gate', label: '붉은 성문 · 황혼', phase: 0.79,
+    grass: false,
     ground: 0x79604a, road: 0xbe8a65, roadEdge: 0x59433e,
     wall: 0x816d78, stoneMix: 0.38, fog: 0x80677a,
+  },
+  'neon-ruins': {
+    id: 'neon-ruins', label: '서울 제7게이트 · 비 내린 새벽', phase: 0.18,
+    grass: false,
+    ground: 0x56676b, road: 0x6f7479, roadEdge: 0x343b43,
+    wall: 0x73828a, stoneMix: 0.48, fog: 0x7799a2,
+  },
+  'ashen-margin': {
+    id: 'ashen-margin', label: '잿빛 여백 · 흐린 낮', phase: 0.44,
+    grass: false,
+    ground: 0x807b70, road: 0xc5b99d, roadEdge: 0x625d57,
+    wall: 0xaaa394, stoneMix: 0.32, fog: 0xb1aaa0,
+  },
+  'manuscript-core': {
+    id: 'manuscript-core', label: '원고핵 성채 · 붉은 교정광', phase: 0.74,
+    grass: false,
+    ground: 0x665362, road: 0xb68c87, roadEdge: 0x513c4c,
+    wall: 0x806a80, stoneMix: 0.52, fog: 0x80677d,
   },
 };
 
@@ -79,6 +99,34 @@ function emberGate() {
   return group;
 }
 
+function ruinBlock(width, height, color, light = null) {
+  const group = new THREE.Group();
+  const block = new THREE.Mesh(new THREE.BoxGeometry(width, height, .9), lam(color));
+  block.position.y = height / 2;
+  group.add(block);
+  if (light != null) {
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(width * .62, .12, .04), new THREE.MeshBasicMaterial({ color: light }));
+    sign.position.set(0, Math.min(height - .35, height * .72), .48);
+    group.add(sign);
+  }
+  return group;
+}
+
+function paperPillar(scale = 1, ink = 0x514b52) {
+  const group = new THREE.Group();
+  const page = new THREE.Mesh(new THREE.BoxGeometry(1.1 * scale, 2.7 * scale, .12), lam(0xd8cfb8));
+  page.position.y = 1.35 * scale;
+  const lineMat = new THREE.MeshBasicMaterial({ color: ink });
+  for (let row = 0; row < 4; row++) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(.72 * scale, .035, .025), lineMat);
+    line.position.set(0, (.8 + row * .37) * scale, .075);
+    group.add(line);
+  }
+  group.add(page);
+  group.rotation.y = .2;
+  return group;
+}
+
 export class RegionScenery {
   constructor(scene) {
     this.scene = scene;
@@ -87,6 +135,9 @@ export class RegionScenery {
     this.banners = [];
     this._buildVerdant();
     this._buildEmber();
+    this._buildNeon();
+    this._buildAshen();
+    this._buildManuscript();
     this.setTheme('verdant-dawn');
   }
 
@@ -126,6 +177,41 @@ export class RegionScenery {
     }
     for (const [x, z] of [[-7.1, -4.8], [7.1, -4.8]]) {
       const item = banner(0xbd5652); item.position.set(x, 0, z); group.add(item); this.banners.push(item);
+    }
+  }
+
+  _buildNeon() {
+    const group = this._group('neon-ruins');
+    const blocks = [[-13.2, -3.4, 2.3, 4.8], [-11.7, 2.3, 1.7, 3.4], [13.3, -2.2, 2.4, 5.1], [11.8, 3.5, 1.5, 3.0]];
+    for (let index = 0; index < blocks.length; index++) {
+      const [x, z, width, height] = blocks[index];
+      const item = ruinBlock(width, height, index % 2 ? 0x58636e : 0x414b58, index % 2 ? 0xff77b7 : 0x4fe4ef);
+      item.position.set(x, 0, z); item.rotation.y = x < 0 ? .12 : -.12; group.add(item);
+    }
+    for (const [x, z] of [[-7.2, -4.8], [7.2, -4.8]]) {
+      const item = banner(0x4cced6); item.position.set(x, 0, z); group.add(item); this.banners.push(item);
+    }
+  }
+
+  _buildAshen() {
+    const group = this._group('ashen-margin');
+    for (const [x, z, scale] of [[-13, -2.5, 1.15], [-11.2, 3.2, .8], [13.1, -1.8, 1.05], [11.3, 4.1, .75]]) {
+      const item = paperPillar(scale); item.position.set(x, 0, z); item.rotation.y += x < 0 ? .34 : -.34; group.add(item);
+    }
+    for (const [x, z, scale] of [[-9.6, 6, .5], [9.7, 5.8, .48]]) {
+      const item = boulder(scale, 0x6d6761); item.position.set(x, 0, z); group.add(item);
+    }
+  }
+
+  _buildManuscript() {
+    const group = this._group('manuscript-core');
+    for (const x of [-3.1, 3.1]) {
+      const page = paperPillar(1.7, 0x7f3348); page.position.set(x, 0, -8); page.rotation.y = x < 0 ? .25 : -.25; group.add(page);
+    }
+    const core = new THREE.Mesh(new THREE.OctahedronGeometry(.72), new THREE.MeshBasicMaterial({ color: 0xf05e82 }));
+    core.position.set(0, 2.3, -8.1); group.add(core); this.glows.push({ userData: { flame: core } });
+    for (const [x, z] of [[-10.8, 1.6], [10.8, 1.6]]) {
+      const item = banner(0xb64c6c); item.position.set(x, 0, z); group.add(item); this.banners.push(item);
     }
   }
 

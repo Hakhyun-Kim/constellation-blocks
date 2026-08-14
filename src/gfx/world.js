@@ -57,6 +57,7 @@ diffuseColor.rgb *= 1.0 - 0.26 * (1.0 - smoothstep(0.0, 0.8, vShoreW.y - shoreEd
     const farZ = this.decor ? SHORE_Z - 2.6 : -20;
     const landDepth = 20 - farZ;
     const groundMat = new THREE.MeshLambertMaterial({ map: grassTexture(), color: 0xd2e3c2 });
+    this.groundTexture = groundMat.map;
     if (this.decor) this._grassShoreEdge(groundMat);
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(74, landDepth), groundMat);
     ground.rotation.x = -Math.PI / 2;

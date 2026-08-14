@@ -384,9 +384,14 @@ export class UI {
       ? `${nearby.emoji} ${nearby.label} 근처입니다. Enter 또는 대화 버튼을 누르세요.`
       : 'WASD·방향키 또는 광장을 클릭해 걸어가세요. 빛나는 표식 가까이에서 대화할 수 있습니다.';
     const locked = state.journey.pendingRecruit === node.id;
+    const refuge = node.refugeeStation && state.journey.refuge?.arrived ? state.journey.refuge : null;
+    const ally = refuge?.ally === 'guild' ? '헌터 구조대' : refuge?.ally === 'market' ? '몬스터 연락망' : '독립 피난민';
+    const refugeStatus = refuge
+      ? `<div class="village-refuge-status"><span>👥 구조 ${refuge.survivors}명</span><span>♥ 사기 ${'◆'.repeat(refuge.morale)}${'◇'.repeat(5 - refuge.morale)}</span><span>🤝 ${ally}</span><span>🛡 방어 ${refuge.defenses}회</span></div>`
+      : '';
     return `<section class="village-screen">
-      <div id="village3d" class="village-3d" aria-label="갈림길 마을 3D 광장"></div>
-      <header class="village-top"><span>CONSTELLATION VILLAGE</span><h1>${node.icon} ${node.name}</h1><p>${locked ? '동료 한 명과 대화해야 다음 길이 열립니다.' : '시설을 방문하거나 지도에서 다음 별길로 출발하세요.'}</p></header>
+      <div id="village3d" class="village-3d" aria-label="${node.name} 3D 광장"></div>
+      <header class="village-top"><span>CONSTELLATION VILLAGE</span><h1>${node.icon} ${node.name}</h1><p>${refuge ? '이름을 잃지 않도록 구조 기록을 지키고 다음 방어를 준비합니다.' : locked ? '동료 한 명과 대화해야 다음 길이 열립니다.' : '시설을 방문하거나 지도에서 다음 별길로 출발하세요.'}</p>${refugeStatus}</header>
       <div class="village-bottom"><p data-village-hint>${hint}</p><div class="village-controls"><button data-village-action ${nearby ? '' : 'disabled'}>${nearby ? `${nearby.emoji} ${nearby.label} ${nearby.type === 'recruit' ? '와 대화' : '방문'}` : '가까운 사람 또는 시설 찾기'}</button><div class="village-dpad" aria-label="마을 이동"><button data-village-step="up">▲</button><span><button data-village-step="left">◀</button><button data-village-step="down">▼</button><button data-village-step="right">▶</button></span></div>${locked ? '' : '<button class="village-map-exit" data-village-leave>지도 보기</button>'}</div></div>
       ${this._villageDialogMarkup(state, node)}
     </section>`;
@@ -445,6 +450,7 @@ export class UI {
     const choiceIds = new Set(choices.map((node) => node.id));
     const pending = E.journeyNode(journey.pendingRecruit, journey);
     if (pending?.kind === 'town') this._village.open = true;
+    if (current?.kind === 'town' && current.enterOnArrival && this._village.nodeId !== current.id) this._village.open = true;
     if (!pending && current?.kind !== 'town') {
       this._village.open = false;
       this._village.dialog = null;
@@ -466,6 +472,10 @@ export class UI {
       const C = D.CLASSES[hero.cls];
       return `<span class="journey-party"><i>${C.emoji}</i><b>${hero.name}</b><small>Lv ${hero.level}</small></span>`;
     }).join('');
+    const latestNote = E.latestJourneyAnnotation(state);
+    const annotation = latestNote
+      ? `<aside class="journey-annotation"><span>✎ ${latestNote.title}</span><p>“${latestNote.text}”</p><b>— ${latestNote.speaker}</b><small>${journey.annotations.length}개 수집</small></aside>`
+      : '';
     const paths = nodes.flatMap((node) => node.next.map((id) => {
       const to = byId.get(id);
       if (!to) return '';
@@ -507,6 +517,10 @@ export class UI {
         </button>`;
       }).join('');
       action = `<div class="journey-action-title"><b>${pending.icon} ${pending.name}</b><span>${pending.text}</span></div><div class="journey-offers">${offers}</div>`;
+    } else if (current?.choices && !journey.flags[current.id]) {
+      const routes = current.choices.map((choice) =>
+        `<button class="journey-choice-card" data-journey-path="${choice.key}"><span>${choice.icon}</span><div><b>${choice.name}</b><p>${choice.text}</p></div><em>${choice.tag}</em></button>`).join('');
+      action = `<div class="journey-action-title"><b>${current.icon} 누구의 설명을 기록할까</b><span>선택은 역촌의 지원 세력과 청사진 권한에 이어집니다.</span></div><div class="journey-offers">${routes}</div>`;
     } else {
       const items = choices.map((node) => {
         const info = D.JOURNEY_KIND[node.kind];
@@ -524,6 +538,7 @@ export class UI {
         <div class="journey-resources"><span>🏰 ${Math.ceil(state.castleHp)}/${state.castleMax}</span><span>💰 ${state.gold}</span><span>✦ ${state.field.length}/${D.SQUAD_MAX}</span></div>
       </header>
       <div class="journey-party-row">${party}</div>
+      ${annotation}
       <div class="journey-map-wrap">
         <div class="journey-moon"></div><div class="journey-ridge ridge-far"></div><div class="journey-ridge ridge-near"></div>
         <div class="journey-haze haze-a"></div><div class="journey-haze haze-b"></div>
@@ -536,6 +551,8 @@ export class UI {
       button.addEventListener('click', () => this.h.onJourneyTravel(button.dataset.travel)));
     this.el.journeyBody.querySelectorAll('[data-recruit]').forEach((button) =>
       button.addEventListener('click', () => this.h.onJourneyRecruit(button.dataset.recruit)));
+    this.el.journeyBody.querySelectorAll('[data-journey-path]').forEach((button) =>
+      button.addEventListener('click', () => this.h.onJourneyPath(button.dataset.journeyPath)));
     this.el.journeyBody.querySelectorAll('[data-journey-next]').forEach((button) =>
       button.addEventListener('click', () => this.h.onJourneyNextChapter()));
     this.el.journeyBody.querySelectorAll('[data-journey-ending]').forEach((button) =>

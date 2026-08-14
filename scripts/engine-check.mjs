@@ -120,6 +120,55 @@ const put = (st, cls, tier, pad) => {
     && endingBack.journey.history[0]?.chapter === 'dawn-road');
 }
 
+/* ---------- Act 2 authored map, route consequence, notes, refugee state ---------- */
+{
+  const chapter = D.JOURNEY_CHAPTERS.find((entry) => entry.id === 'beyond-page');
+  const ids = chapter.nodes.map((node) => node.id);
+  const regions = new Set(chapter.nodes.map((node) => node.region).filter(Boolean));
+  ok('act2: exactly eight authored nodes have unique ids', chapter.nodes.length === 8 && new Set(ids).size === 8);
+  ok('act2: three new battle regions are assigned', [...regions].sort().join(',') === 'ashen-margin,manuscript-core,neon-ruins');
+  ok('act2: required hunter-fiction beats are present', ['turned-gate', 'seoul-gate', 'alignment-hub', 'refugee-station', 'corrector-hunt', 'nameless-archive', 'correction-gates', 'manuscript-core'].every((id) => ids.includes(id)));
+  const direct = E.createGame({ difficulty: 'normal', journeyChapter: 'beyond-page' });
+  ok('act2: local QA can create a clean chapter scene without mutating progression', direct.journey.chapter === 'beyond-page'
+    && direct.journey.current === 'turned-gate' && direct.journey.annotations.includes('next-page'));
+
+  const st = E.createGame({ difficulty: 'normal' });
+  st.journey.current = 'boss'; st.journey.complete = true;
+  E.advanceJourneyChapter(st);
+  ok('act2: opening margin note is collected on transition', E.latestJourneyAnnotation(st)?.id === 'next-page');
+  E.travelJourney(st, 'seoul-gate');
+  E.prepareJourneyBattle(st);
+  E.completeJourneyWave(st); E.completeJourneyWave(st); E.completeJourneyWave(st);
+  E.travelJourney(st, 'alignment-hub');
+  ok('act2: route hub blocks travel until an explicit public choice', E.journeyChoices(st).length === 0
+    && E.travelJourney(st, 'refugee-station').reason === 'choice');
+  const market = E.chooseJourneyPath(st, 'market');
+  const repeat = E.chooseJourneyPath(st, 'guild');
+  ok('act2: market/guild choice is single and deterministic', market.ok && market.choice.key === 'market'
+    && !repeat.ok && repeat.reason === 'chosen' && st.journey.flags['alignment-hub'] === 'market');
+
+  st.castleHp = Math.round(st.castleMax * .7);
+  const station = E.travelJourney(st, 'refugee-station');
+  ok('act2: refugee station derives visible state from route and castle health', station.ok && station.type === 'town'
+    && station.refuge.ally === 'market' && station.refuge.survivors === 30 && station.refuge.morale === 4);
+  const stationBack = E.deserialize(JSON.parse(JSON.stringify(E.serialize(st))));
+  ok('act2: branch, notes, and refugee state survive save/restore', stationBack.journey.flags['alignment-hub'] === 'market'
+    && stationBack.journey.refuge.survivors === 30 && stationBack.journey.annotations.includes('station-register'));
+
+  E.travelJourney(st, 'corrector-hunt'); E.prepareJourneyBattle(st);
+  E.completeJourneyWave(st); E.completeJourneyWave(st); E.completeJourneyWave(st);
+  ok('act2: defending the next region improves the station', st.journey.refuge.defenses === 1
+    && st.journey.refuge.survivors === 33 && st.journey.refuge.morale === 5);
+  E.travelJourney(st, 'nameless-archive');
+  E.travelJourney(st, 'correction-gates'); E.prepareJourneyBattle(st);
+  for (let i = 0; i < 4; i++) E.completeJourneyWave(st);
+  E.travelJourney(st, 'manuscript-core'); E.prepareJourneyBattle(st);
+  for (let i = 0; i < 5; i++) E.completeJourneyWave(st);
+  ok('act2: final defense completes the chapter and collects the last margin', st.journey.complete
+    && st.journey.cleared.includes('manuscript-core') && E.latestJourneyAnnotation(st)?.id === 'last-margin'
+    && st.journey.refuge.defenses === 3);
+}
+
 /* ---------- 지역 조우: 지휘관+졸개 → 지역 보스+지휘관 호위 ---------- */
 {
   const st = E.createGame({ difficulty: 'normal', rng: Bot.mulberry32(812) });

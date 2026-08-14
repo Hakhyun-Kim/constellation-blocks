@@ -18,9 +18,8 @@ const DAWN_ROAD_CHAPTER = {
   ],
 };
 
-/* P2-2 transition target. P2-3 expands this authored shell to the full eight
- * nodes; keeping it registered now lets transition/save/ending rules land and
- * be tested independently from content volume. */
+/* Act 2 keeps eight map steps. The 3A/3B fork is one physical hub with an
+ * engine-owned choice, so the map does not lie about its promised length. */
 const BEYOND_PAGE_CHAPTER = {
   id: 'beyond-page',
   number: 2,
@@ -29,7 +28,53 @@ const BEYOND_PAGE_CHAPTER = {
   start: 'turned-gate',
   endings: ['seal', 'coauthor'],
   nodes: [
-    { id: 'turned-gate', kind: 'start', icon: '▤', name: '넘겨진 성문', text: '붉은 성문 뒤에서 출구가 아니라 넘겨지지 않은 다음 장이 열린다.', x: 10, y: 55, next: [] },
+    {
+      id: 'turned-gate', kind: 'start', icon: '▤', name: '넘겨진 성문',
+      text: '붉은 성문 뒤에서 출구가 아니라 넘겨지지 않은 다음 장이 열린다.', x: 7, y: 52, next: ['seoul-gate'],
+      annotation: { id: 'next-page', title: '여백 주석 01', speaker: '루나', text: '별자리는 별이 아니었어. 문장을 제자리에 고정하는 교정 기호였어.' },
+    },
+    {
+      id: 'seoul-gate', kind: 'battle', icon: '⚔', name: '서울 제7게이트',
+      text: '무너진 도심에서 현실 헌터와 별빛 영웅단이 처음 마주친다.', x: 21, y: 52,
+      waves: 3, threat: 10, region: 'neon-ruins', next: ['alignment-hub'],
+      annotation: { id: 'disaster-app', title: '여백 주석 02', speaker: '시스템', text: '제7게이트가 재난 등급으로 승격되었습니다. 축하 쿠폰은 지급되지 않습니다.' },
+    },
+    {
+      id: 'alignment-hub', kind: 'choice', icon: '⌁', name: '두 개의 설명',
+      text: '헌터 연합과 여백회가 서로 다른 방식으로 같은 재난을 설명한다.', x: 35, y: 33, next: ['refugee-station'],
+      choices: [
+        { key: 'guild', icon: '🏢', name: '임시 헌터 길드', tag: '3A · 연합', text: '현실 장비와 질서를 택한다. 역촌에는 헌터 구조대가 합류한다.' },
+        { key: 'market', icon: '👺', name: '지하 몬스터 시장', tag: '3B · 여백회', text: '몬스터의 증언을 듣는다. 청사진 권한의 흔적을 확보한다.' },
+      ],
+    },
+    {
+      id: 'refugee-station', kind: 'town', icon: '⌂', name: '피난민 역촌',
+      text: '구조 인원과 선택한 세력에 따라 사람·시설·대사가 달라지는 두 번째 마을.', x: 48, y: 72,
+      enterOnArrival: true, refugeeStation: true, facilities: ['forge', 'shrine', 'guild'], next: ['corrector-hunt'],
+      annotation: { id: 'station-register', title: '여백 주석 03', speaker: '역촌 기록관', text: '이름을 적어 두면 배경 인물로 덮어써져도 누군가 다시 불러 줄 수 있다.' },
+    },
+    {
+      id: 'corrector-hunt', kind: 'battle', icon: '⚔', name: '교정관의 사냥',
+      text: '중간보스와 졸개가 편대로 밀려오고, 플레이어의 명령이 적에게도 들린다.', x: 61, y: 51,
+      waves: 3, threat: 13, region: 'ashen-margin', protectsRefugees: true, next: ['nameless-archive'],
+    },
+    {
+      id: 'nameless-archive', kind: 'clue', icon: '▧', name: '무명 서고',
+      text: '현실 기억과 초고 0호가 처음 쓰인 기록을 발견한다.', x: 71, y: 25,
+      gold: 70, heal: 18, next: ['correction-gates'],
+      annotation: { id: 'draft-zero', title: '여백 주석 04', speaker: '초고 0호', text: '나는 처음 죽은 일을 기억한다. 네가 다시 만들 때마다 그 기억도 다시 생겼다.' },
+    },
+    {
+      id: 'correction-gates', kind: 'battle', icon: '♜', name: '세 개의 교정문',
+      text: '중간보스 둘과 졸개가 세 길을 동시에 막는 최종 전초전.', x: 82, y: 52,
+      waves: 4, threat: 16, region: 'ashen-margin', protectsRefugees: true, next: ['manuscript-core'],
+    },
+    {
+      id: 'manuscript-core', kind: 'boss', icon: '◆', name: '원고핵 성채',
+      text: '초고 0호와 살아남은 교정관 편성을 넘어 두 번째 책갈피를 되찾는다.', x: 94, y: 52,
+      waves: 5, threat: 19, region: 'manuscript-core', protectsRefugees: true, next: [],
+      annotation: { id: 'last-margin', title: '마지막 여백', speaker: '아린', text: '우리를 움직일 수 있다는 것과, 우리 대신 선택해도 된다는 건 다른 말이야.' },
+    },
   ],
 };
 
@@ -56,5 +101,7 @@ export const JOURNEY_KIND = {
   town: { label: '마을', color: '#7edff0' },
   recruit: { label: '동료', color: '#c49aff' },
   camp: { label: '야영', color: '#7fe0a2' },
+  choice: { label: '분기', color: '#e2b675' },
+  clue: { label: '단서', color: '#b7a6ff' },
   boss: { label: '보스', color: '#ff956b' },
 };

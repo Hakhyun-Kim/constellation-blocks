@@ -182,6 +182,7 @@ export class WindGrass {
     this.uTime = { value: 0 };
     this.uWind = { value: 1 };              // 돌풍 세기 배수(보스전에 올린다)
     this.meshes = {};
+    this.visible = true;
     this.quality = null;
     this._wx = wx; this._wz = wz;
     this._geo = bladeGeometry();
@@ -290,7 +291,13 @@ transformed.y -= abs( sway ) * amp * 0.30;     /* 휜 만큼 키가 준다 */
     mesh.instanceMatrix.needsUpdate = true;
     mesh.instanceColor.needsUpdate = true;
     this.mesh = mesh;
+    this.mesh.visible = this.visible;
     this.scene.add(mesh);
+  }
+
+  setVisible(visible) {
+    this.visible = !!visible;
+    if (this.mesh) this.mesh.visible = this.visible;
   }
 
   frame(dt, t, palette, bossBlend) {

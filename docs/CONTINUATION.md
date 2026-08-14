@@ -1,6 +1,6 @@
 # Cross-machine continuation guide
 
-Last updated: 2026-08-13
+Last updated: 2026-08-14
 
 This document is the starting point for a developer or Codex session picking
 up `Constellation Defense` on another computer.
@@ -9,11 +9,11 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  P2-2 Act 1→2 transition/save/ending contract after the completed P1 combat
-  information hierarchy and Quaternius `verdant-dawn` performance gate.
+  P2-3's complete eight-node Act 2 journey, three procedural regions, margin
+  notes, route fork, and persisted refugee-station state.
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
-  passed on 2026-08-13. The 60-run balance gate also passed with the real
+  passed on 2026-08-14. The 60-run balance gate also passed with the real
   match-3 policy and named hero actives on the same date.
 
 The current campaign is an authored constellation expedition. It starts with
@@ -200,10 +200,10 @@ material untouched.
 
 ## Suggested next task
 
-Continue P2-3 of the production roadmap. The chapter list, Act 1 → Act 2
-transition, history save/restore, and one-time ending choice now exist. Expand
-the registered Act 2 shell to its eight authored nodes, three regions, margin
-notes, and refugee station state. P0 and P1
-are complete: the art/audio evidence remains under `docs/evidence/art-v2/`, and
-`combat:ui:check` now locks the three-lane pressure projection used by the live
-combat hierarchy.
+Continue P2-4 of the production roadmap. Act 2 now has all eight authored nodes,
+three region themes, deterministic route choice, margin-note collection, and a
+refugee station whose survivors, morale, ally, and defenses survive save/restore.
+Add one monster blueprint through the normal command path and make the demo bot
+use the same public rule. P0 and P1 are complete: the art/audio evidence remains
+under `docs/evidence/art-v2/`, and `combat:ui:check` locks the three-lane pressure
+projection used by the live combat hierarchy.

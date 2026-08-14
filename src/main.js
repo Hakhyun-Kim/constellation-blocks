@@ -34,6 +34,7 @@ const tacticFeedback = createTacticFeedback();
 const urlParams = new URLSearchParams(location.search);
 const urlGfx = urlParams.get('gfx');
 const judgeMode = urlParams.has('judge');
+const previewChapter = urlParams.get('chapter') === '2' ? 'beyond-page' : null;
 const weeklyChallenge = urlParams.has('weekly') ? createWeeklyChallenge(urlParams.get('weekly')) : null;
 const systemReducedEffects = typeof matchMedia === 'function'
   && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -311,6 +312,7 @@ function newGame(difficulty, opts = {}) {
     difficulty,
     metaLevels: store.meta,
     rng: weeklyChallenge ? seededRandom(weeklyChallenge.seed) : undefined,
+    journeyChapter: opts.journeyChapter || previewChapter,
   });
   autoPhaseClock = createAutoPhaseClock();
   if (tactics) tactics.reset();
@@ -953,6 +955,8 @@ const handlers = {
       ui.toast(`⚔ ${result.node.name} · 방어 1/${result.node.waves}를 준비하세요.`, 'good');
     } else if (result.type === 'recruit') {
       ui.toast(`✦ ${result.node.name}에서 함께할 영웅을 고르세요.`, 'good');
+    } else if (result.type === 'town') {
+      ui.toast(`⌂ ${result.node.name} · 구조 ${result.refuge.survivors}명 · 사기 ${result.refuge.morale}/5`, 'good');
     } else {
       ui.toast(`✧ 보급 확보 · 골드 +${result.gold} · 성 내구도 +${result.heal}`, 'good');
     }
@@ -1063,6 +1067,15 @@ const handlers = {
     checkAchievements();
     refreshAll();
     autoSave();
+  },
+  onJourneyPath(key) {
+    const result = E.chooseJourneyPath(state, key);
+    if (!result.ok) return false;
+    SFX.tap();
+    ui.toast(`${result.choice.icon} ${result.choice.name}의 설명을 기록했습니다.`, 'good');
+    refreshAll();
+    autoSave();
+    return true;
   },
   onJourneyNextChapter() {
     const result = E.advanceJourneyChapter(state);
@@ -1643,11 +1656,11 @@ function frame(now) {
  * 자동 저장이 있으면 "이어하기 / 처음부터"를 먼저 묻는다.
  * 데모 링크(?demo=)는 구경이 목적이니 메뉴 없이 바로 시작한다. */
 const bootSave = (() => {
-  if (urlParams.has('demo') || judgeMode) return null;
+  if (urlParams.has('demo') || judgeMode || previewChapter) return null;
   const s = store.autosave;
   return s && Number.isFinite(s.wave) && Array.isArray(s.bench) ? s : null;
 })();
-newGame(store.diff, { holdStory: !!bootSave });
+newGame(store.diff, { holdStory: !!bootSave || !!previewChapter });
 
 /* 전술판은 웨이브 동안만 손을 받는다. 이벤트는 기존 렌더러와 사운드 경로로
  * 흘려 보내므로, 새 퍼즐도 원래 전장의 별똥별·피격·회복 연출을 똑같이 쓴다. */
@@ -1750,6 +1763,7 @@ demo.attach({
   feast: doFeast,
   journeyTravel(id) { handlers.onJourneyTravel(id); },
   journeyRecruit(key) { handlers.onJourneyRecruit(key); },
+  journeyPath(key) { return handlers.onJourneyPath(key); },
   journeyNext() { return handlers.onJourneyNextChapter(); },
   journeyEnding(key) { return handlers.onJourneyEnding(key); },
   startWave: tryStartWave,

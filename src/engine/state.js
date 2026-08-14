@@ -38,7 +38,7 @@ export function createGame(opts = {}) {
     nextId: 1,
     bench: [], field: [],
     squad: opts.fixedSquad !== false,
-    journey: opts.fixedSquad !== false && opts.journey !== false ? createJourney() : null,
+    journey: opts.fixedSquad !== false && opts.journey !== false ? createJourney(opts.journeyChapter) : null,
     enemies: [], projectiles: [],
     spawnQueue: [], waveT: 0,
     pendingWave: null,

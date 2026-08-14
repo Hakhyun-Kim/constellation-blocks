@@ -16,6 +16,7 @@ export const journeyNode = (id, value = null) =>
 export function createJourney(chapterId = null) {
   const chapter = journeyChapter(chapterId);
   const start = chapter.start;
+  const startAnnotation = chapter.nodes.find((node) => node.id === start)?.annotation?.id;
   return {
     chapter: chapter.id,
     current: start,
@@ -27,6 +28,9 @@ export function createJourney(chapterId = null) {
     complete: false,
     history: [],
     ending: null,
+    flags: {},
+    annotations: startAnnotation ? [startAnnotation] : [],
+    refuge: { arrived: false, survivors: 0, morale: 0, ally: null, defenses: 0 },
   };
 }
 
@@ -74,6 +78,7 @@ export function journeyChoices(state) {
   const journey = state.journey;
   const current = journey && journeyNode(journey.current, journey);
   if (!journey || !current || journey.pendingRecruit || journey.activeBattle || journey.complete) return [];
+  if (current.choices && !journey.flags[current.id]) return [];
   return current.next.map((id) => journeyNode(id, journey)).filter(Boolean);
 }
 
@@ -84,6 +89,47 @@ export function journeyBattleProgress(state) {
   const total = Math.max(1, Math.round(node.waves || 1));
   const step = Math.max(1, Math.min(total, Math.round(state.journey.wavesInBattle || 0) + 1));
   return { node, step, total };
+}
+
+const findChapterChoice = (node, key) => node?.choices?.find((choice) => choice.key === key) || null;
+
+/* A fork choice is a command, not a UI-only label. It remains visible to the
+ * bot and to later refugee/blueprint rules through the public journey flags. */
+export function chooseJourneyPath(state, key) {
+  const journey = state?.journey;
+  const node = journey && journeyNode(journey.current, journey);
+  if (!journey || state.phase !== 'journey' || !node?.choices) return { ok: false, reason: 'node' };
+  if (journey.flags[node.id]) return { ok: false, reason: 'chosen', key: journey.flags[node.id] };
+  const choice = findChapterChoice(node, key);
+  if (!choice) return { ok: false, reason: 'choice' };
+  journey.flags[node.id] = key;
+  return { ok: true, node, choice };
+}
+
+export function latestJourneyAnnotation(state) {
+  const ids = state?.journey?.annotations || [];
+  const id = ids[ids.length - 1];
+  if (!id) return null;
+  for (const node of journeyChapter(state).nodes) if (node.annotation?.id === id) return node.annotation;
+  return null;
+}
+
+function collectAnnotation(journey, node) {
+  const id = node.annotation?.id;
+  if (id && !journey.annotations.includes(id)) journey.annotations.push(id);
+}
+
+function arriveRefugeeStation(state, node) {
+  const refuge = state.journey.refuge;
+  if (refuge.arrived) return;
+  const route = state.journey.flags['alignment-hub'] || null;
+  const healthRatio = state.castleMax ? state.castleHp / state.castleMax : 1;
+  refuge.arrived = true;
+  refuge.ally = route;
+  refuge.survivors = 18 + Math.round(healthRatio * 12) + (route === 'guild' ? 8 : route === 'market' ? 4 : 0);
+  refuge.morale = Math.max(1, Math.min(5, 2 + (healthRatio >= .6 ? 1 : 0) + (route ? 1 : 0)));
+  refuge.defenses = 0;
+  collectAnnotation(state.journey, node);
 }
 
 /* 한 지역은 순찰 → 지휘관전 → 지역 결전의 리듬을 갖는다.
@@ -123,17 +169,21 @@ export function travelJourney(state, id) {
   const from = journeyNode(state.journey.current, state);
   const node = journeyNode(id, state);
   if (!from || !node || !from.next.includes(id)) return { ok: false, reason: 'path' };
+  if (from.choices && !state.journey.flags[from.id]) return { ok: false, reason: 'choice' };
 
   state.journey.current = id;
   markVisited(state.journey, id);
+  collectAnnotation(state.journey, node);
   if (node.kind === 'battle' || node.kind === 'boss') {
     state.journey.activeBattle = id;
     state.journey.wavesInBattle = 0;
     return { ok: true, type: 'battle', node };
   }
   if (node.kind === 'town' || node.kind === 'recruit') {
+    if (node.refugeeStation) arriveRefugeeStation(state, node);
     state.journey.pendingRecruit = id;
-    return { ok: true, type: 'recruit', node };
+    if (node.enterOnArrival && !(node.offers || []).length) state.journey.pendingRecruit = null;
+    return { ok: true, type: node.refugeeStation ? 'town' : 'recruit', node, refuge: node.refugeeStation ? { ...state.journey.refuge } : null };
   }
   return { ok: true, type: 'supply', node, ...applySupply(state, node) };
 }
@@ -172,6 +222,11 @@ export function completeJourneyWave(state) {
   journey.wavesInBattle++;
   if (journey.wavesInBattle < node.waves) return { complete: false, node };
   if (!journey.cleared.includes(node.id)) journey.cleared.push(node.id);
+  if (node.protectsRefugees && journey.refuge.arrived) {
+    journey.refuge.defenses++;
+    journey.refuge.survivors += Math.max(1, 4 - journey.refuge.defenses);
+    journey.refuge.morale = Math.min(5, journey.refuge.morale + 1);
+  }
   journey.activeBattle = null;
   journey.wavesInBattle = 0;
   state.phase = 'journey';
@@ -195,6 +250,9 @@ export function serializeJourney(journey) {
       visited: [...record.visited], cleared: [...record.cleared], complete: !!record.complete,
     })),
     ending: journey.ending || null,
+    flags: { ...(journey.flags || {}) },
+    annotations: [...(journey.annotations || [])],
+    refuge: { ...(journey.refuge || {}) },
   };
 }
 
@@ -240,5 +298,26 @@ export function restoreJourney(raw) {
   fresh.complete = !!raw.complete;
   fresh.history = restoreHistory(raw.history, fresh.chapter);
   fresh.ending = fresh.complete && journeyChapter(fresh).endings?.includes(raw.ending) ? raw.ending : null;
+  const chapter = journeyChapter(fresh);
+  fresh.flags = {};
+  if (raw.flags && typeof raw.flags === 'object') {
+    for (const node of chapter.nodes) {
+      const choice = findChapterChoice(node, raw.flags[node.id]);
+      if (choice) fresh.flags[node.id] = choice.key;
+    }
+  }
+  const annotationIds = new Set(chapter.nodes.map((node) => node.annotation?.id).filter(Boolean));
+  fresh.annotations = Array.isArray(raw.annotations)
+    ? [...new Set(raw.annotations.filter((id) => typeof id === 'string' && annotationIds.has(id)))]
+    : chapter.nodes.filter((node) => fresh.visited.includes(node.id) && node.annotation).map((node) => node.annotation.id);
+  const refuge = raw.refuge && typeof raw.refuge === 'object' ? raw.refuge : {};
+  const selectedRoute = fresh.flags['alignment-hub'] || null;
+  fresh.refuge = {
+    arrived: !!refuge.arrived,
+    survivors: Math.max(0, Math.min(9999, Math.round(refuge.survivors || 0))),
+    morale: Math.max(0, Math.min(5, Math.round(refuge.morale || 0))),
+    ally: refuge.ally === selectedRoute ? refuge.ally : null,
+    defenses: Math.max(0, Math.min(99, Math.round(refuge.defenses || 0))),
+  };
   return fresh;
 }
