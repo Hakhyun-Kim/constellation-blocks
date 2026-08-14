@@ -87,6 +87,7 @@ const EN = new Map(Object.entries({
   '기본 키로 되돌리기': 'Restore Default Keys',
   '완료': 'Done',
   '브라우저 사이트 저장소': 'Browser site storage',
+  '데스크톱 앱 데이터 폴더': 'Desktop app data folder',
   '별똥별': 'Falling Star',
   '은하수': 'Milky Way',
   '별지기 별자리': 'Stargazer Skills',

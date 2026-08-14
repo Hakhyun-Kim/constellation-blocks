@@ -417,6 +417,68 @@
       "audioRole": "hero-hurt",
       "gainDb": -12,
       "modifications": "Renamed only; runtime mix gain normalized to -12 dB."
+    },
+    {
+      "id": "google-fonts-jua-regular",
+      "type": "font",
+      "path": "assets/fonts/Jua-Regular.ttf",
+      "creator": "Woowahan Brothers / Google Fonts",
+      "sourceUrl": "https://github.com/google/fonts/tree/main/ofl/jua",
+      "license": "SIL Open Font License 1.1",
+      "licenseUrl": "https://github.com/google/fonts/blob/main/ofl/jua/OFL.txt",
+      "acquiredAt": "2026-08-14",
+      "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898",
+      "preload": true,
+      "runtimeLoad": false,
+      "profiles": ["high", "lite"],
+      "sourceAsset": "Jua-Regular.ttf",
+      "modifications": "Bundled unchanged for offline browser and desktop typography."
+    },
+    {
+      "id": "google-fonts-gaegu-bold",
+      "type": "font",
+      "path": "assets/fonts/Gaegu-Bold.ttf",
+      "creator": "JIKJI SOFT / Google Fonts",
+      "sourceUrl": "https://github.com/google/fonts/tree/main/ofl/gaegu",
+      "license": "SIL Open Font License 1.1",
+      "licenseUrl": "https://github.com/google/fonts/blob/main/ofl/gaegu/OFL.txt",
+      "acquiredAt": "2026-08-14",
+      "sha256": "cc38a4af9506a45254d1ce07c589ec473d9e5f0be319e5a77b17c214903f8c1c",
+      "preload": true,
+      "runtimeLoad": false,
+      "profiles": ["high", "lite"],
+      "sourceAsset": "Gaegu-Bold.ttf",
+      "modifications": "Bundled unchanged for offline browser and desktop typography."
+    },
+    {
+      "id": "constellation-defense-app-icon",
+      "type": "image",
+      "path": "assets/branding/icon.png",
+      "creator": "Hakhyun Kim with OpenAI ImageGen",
+      "sourceUrl": "https://openai.com/policies/terms-of-use/",
+      "license": "Project-owned generated output under OpenAI Terms of Use",
+      "licenseUrl": "https://openai.com/policies/terms-of-use/",
+      "acquiredAt": "2026-08-14",
+      "sha256": "64888cd7e3ebb3d390923f6b193ffc0c6bf3b2c45915906427c6396150caf6cc",
+      "preload": true,
+      "runtimeLoad": false,
+      "profiles": ["high", "lite"],
+      "modifications": "Generated from an original text-only project prompt with no reference images, then resized to 512px PNG."
+    },
+    {
+      "id": "constellation-defense-windows-icon",
+      "type": "image",
+      "path": "assets/branding/icon.ico",
+      "creator": "Hakhyun Kim with OpenAI ImageGen",
+      "sourceUrl": "https://openai.com/policies/terms-of-use/",
+      "license": "Project-owned generated output under OpenAI Terms of Use",
+      "licenseUrl": "https://openai.com/policies/terms-of-use/",
+      "acquiredAt": "2026-08-14",
+      "sha256": "60905d820044ff2c65d5b20157285e20caab385825e7cdef626e94cd02854b6c",
+      "preload": false,
+      "runtimeLoad": false,
+      "profiles": ["high", "lite"],
+      "modifications": "Converted from the project icon PNG into 16/24/32/48/64/128/256px Windows icon layers."
     }
   ]
 }

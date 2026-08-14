@@ -3,11 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; object-src 'none'; form-action 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'">
 <title>🌌 Constellation Defense</title>
-<!-- 폰트: Jua(제목) + Gaegu(숫자·문제) — 둘 다 SIL Open Font License 1.1 (CREDITS.md 참조) -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jua&family=Gaegu:wght@700&display=swap">
+<link rel="icon" type="image/png" href="assets/branding/icon.png">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
@@ -381,17 +379,7 @@
 <!-- 용사 상세 정보 툴팁 -->
 <div id="tooltip" class="hidden"></div>
 
-<script>
-/* ?rafshim: 숨겨진 탭/자동화 환경에서 rAF가 스로틀될 때 타이머로 구동 (테스트용) */
-(function () {
-  var q = new URLSearchParams(location.search);
-  if (!q.has('rafshim') && document.visibilityState !== 'hidden') return;
-  window.requestAnimationFrame = function (cb) {
-    return setTimeout(function () { cb(performance.now()); }, 33);
-  };
-  window.cancelAnimationFrame = clearTimeout;
-})();
-</script>
+<script src="dist/rafshim.js"></script>
 <script src="dist/game.js"></script>
 </body>
 </html>

@@ -9,8 +9,8 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  P3-3b's Korean/English presentation and current hunter-fiction interludes.
-- Working tree at handoff: clean after the P3-3b commit.
+  P3-3c's offline Electron Forge desktop demo and Steam ZIP packaging contract.
+- Working tree at handoff: clean after the P3-3c commit.
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-14. The first-expedition and full two-chapter 60-run balance
   gates also passed with the real match-3, hero-active, and blueprint policies.
@@ -34,6 +34,9 @@ The prize-focused presentation pass now also includes:
 - A combat-focus projection that keeps the three live lane pressures and the
   selected hero active beside the match-3 board, while growth, codex, and castle
   management automatically recede until preparation resumes.
+- A Korean/English browser release plus an offline Windows desktop demo using a
+  sandboxed local protocol, shared settings/key bindings, explicit save path,
+  bundled fonts, and a reproducible Steam depot ZIP.
 
 ## Current play-feel implementation
 
@@ -199,10 +202,11 @@ material untouched.
 
 ## Suggested next task
 
-Continue P3-3c of the production roadmap: retain the browser build while adding
-the free Steam demo Electron Forge wrapper and its explicit save-path contract.
-Shared settings, remappable physical keys, and Korean/English presentation are
-complete. P0-P2 and P3-1 are complete. P3-2 instrumentation is
+Complete P3-4's local playtest aggregation and evidence-based Early Access scope
+gate. P3-3 is complete: the browser build remains available, while the free
+Steam demo has an offline Electron Forge wrapper, an explicit save-path contract,
+shared settings, remappable physical keys, and Korean/English presentation.
+P0-P2 and P3-1 are complete. P3-2 instrumentation is
 complete but its roadmap item remains open until real human samples exist; never
 label bot or Codex browser runs as human data. The protocol is in
 `docs/testing/campaign-duration-protocol.md`.

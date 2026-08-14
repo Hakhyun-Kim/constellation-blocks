@@ -7,7 +7,7 @@
  * ===================================================== */
 
 export const ASSET_MANIFEST_VERSION = 1;
-export const ASSET_TYPES = Object.freeze(['model', 'audio', 'texture']);
+export const ASSET_TYPES = Object.freeze(['model', 'audio', 'texture', 'font', 'image']);
 export const ASSET_PROFILES = Object.freeze(['high', 'lite', 'min']);
 
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -87,5 +87,5 @@ export function assetSupportsProfile(entry, profile) {
 }
 
 export function preloadAssets(manifest, profile) {
-  return manifest.assets.filter((entry) => entry.preload && assetSupportsProfile(entry, profile));
+  return manifest.assets.filter((entry) => entry.preload && entry.runtimeLoad !== false && assetSupportsProfile(entry, profile));
 }

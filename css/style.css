@@ -2587,3 +2587,5 @@ body.combat-focus #benchCard .bench { margin-top: 4px; }
   .tactic-star.matched { animation-duration: .12s; }
   .tactic-beam.run { animation-duration: .13s; }
 }
+@font-face { font-family: "Jua"; src: url("../assets/fonts/Jua-Regular.ttf") format("truetype"); font-display: swap; font-weight: 400; }
+@font-face { font-family: "Gaegu"; src: url("../assets/fonts/Gaegu-Bold.ttf") format("truetype"); font-display: swap; font-weight: 700; }

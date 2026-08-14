@@ -2,8 +2,25 @@
 
 ## Current fonts
 
-- [Jua](https://fonts.google.com/specimen/Jua), distributed by Google Fonts under the SIL Open Font License 1.1.
-- [Gaegu](https://fonts.google.com/specimen/Gaegu), distributed by Google Fonts under the SIL Open Font License 1.1.
+- [Jua](https://github.com/google/fonts/tree/main/ofl/jua), distributed by Google Fonts under the SIL Open Font License 1.1.
+- [Gaegu](https://github.com/google/fonts/tree/main/ofl/gaegu), distributed by Google Fonts under the SIL Open Font License 1.1.
+
+The two font files were acquired from the official Google Fonts repository on
+2026-08-14 and are bundled unchanged so that both the browser build and the
+desktop demo work offline. Their hashes are recorded in `assets/manifest.json`;
+the license text is bundled at `licenses/OFL-1.1.txt`. System sans-serif and
+cursive families remain the CSS fallbacks.
+
+## Project branding
+
+The castle-and-constellation app icon was generated for this project by Hakhyun
+Kim with OpenAI ImageGen on 2026-08-14. It used an original text-only prompt and
+no reference images: a centered ivory low-poly castle, a gold-and-cyan
+constellation shield, a deep navy square background, strong silhouette, and no
+lettering. The selected output was resized to a 512px PNG and converted into a
+multi-resolution Windows ICO. The project-owned output is used under the
+[OpenAI Terms of Use](https://openai.com/policies/terms-of-use/); hashes and
+transformations are recorded in `assets/manifest.json`.
 
 ## Runtime character, monster, and landmark models
 

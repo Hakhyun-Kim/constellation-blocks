@@ -1736,8 +1736,18 @@ function isPaused() {
     || ui.isRevealOpen() || ui.isBookOpen() || ui.isVictoryOpen() || state.phase === 'over';
 }
 
+let desktopInfo = null;
+const desktopInfoRequest = window.constellationDesktop?.getInfo?.();
+if (desktopInfoRequest && typeof desktopInfoRequest.then === 'function') {
+  void desktopInfoRequest.then((info) => {
+    if (info && typeof info.storagePath === 'string') desktopInfo = info;
+    if (ui.isSettingsOpen()) renderSettings();
+  }).catch(() => {});
+}
+
 function settingsSaveLocation() {
-  return window.constellationDesktop?.storageLabel || '브라우저 사이트 저장소';
+  if (desktopInfo?.storagePath) return desktopInfo.storagePath;
+  return window.constellationDesktop ? '데스크톱 앱 데이터 폴더' : '브라우저 사이트 저장소';
 }
 
 function renderSettings() {
