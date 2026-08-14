@@ -1,3 +1,5 @@
+import { evaluateEarlyAccessScope, summarizePlaytestSessions } from './playtest-analysis.js';
+
 export const PLAYTEST_SCHEMA_VERSION = 1;
 export const PLAYTEST_STORAGE_KEY = 'constellation-defense.playtest-sessions';
 export const PLAYTEST_LIMIT = 40;
@@ -143,11 +145,22 @@ export function createLocalPlaytestLog(storage = globalThis.localStorage, {
     },
     records: () => clone(read()),
     export() {
+      const sessions = clone(read());
+      const summary = summarizePlaytestSessions(sessions);
       return {
         schemaVersion: PLAYTEST_SCHEMA_VERSION,
         exportedAt: safeIso(now()),
         privacy: 'Stored locally; no network telemetry and no personal identifier.',
-        sessions: clone(read()),
+        evidence: {
+          qualification: 'unverified-local',
+          participantCount: null,
+          note: 'Count participants only when these sessions were collected under the documented human playtest protocol.',
+        },
+        analysis: {
+          summary,
+          earlyAccess: evaluateEarlyAccessScope(summary),
+        },
+        sessions,
       };
     },
     clear: () => write([]),

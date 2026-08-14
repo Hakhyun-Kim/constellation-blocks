@@ -9,8 +9,8 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  P3-3c's offline Electron Forge desktop demo and Steam ZIP packaging contract.
-- Working tree at handoff: clean after the P3-3c commit.
+  P3-4's local playtest aggregation and conservative Early Access evidence gate.
+- Working tree at handoff: clean after the P3-4 tooling commit.
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-14. The first-expedition and full two-chapter 60-run balance
   gates also passed with the real match-3, hero-active, and blueprint policies.
@@ -202,11 +202,10 @@ material untouched.
 
 ## Suggested next task
 
-Complete P3-4's local playtest aggregation and evidence-based Early Access scope
-gate. P3-3 is complete: the browser build remains available, while the free
-Steam demo has an offline Electron Forge wrapper, an explicit save-path contract,
-shared settings, remappable physical keys, and Korean/English presentation.
-P0-P2 and P3-1 are complete. P3-2 instrumentation is
-complete but its roadmap item remains open until real human samples exist; never
-label bot or Codex browser runs as human data. The protocol is in
-`docs/testing/campaign-duration-protocol.md`.
+Run the documented human campaign/weekly playtest cohort, aggregate its local
+JSON exports with `npm.cmd run playtest:report -- ...`, and then revisit P3-2 and
+P3-4. All automatable P0-P3 implementation and release packaging is complete.
+P3-2 and P3-4 remain open only because verified human samples are still 0; never
+label bot or Codex browser runs as human data. The protocol and conservative
+scope branches are in `docs/testing/campaign-duration-protocol.md` and
+`docs/design/early-access-evidence-gate.md`.

@@ -50,6 +50,9 @@ assert.equal(third.sequence, 3);
 assert.deepEqual(log.records().map((entry) => entry.sequence), [2, 3]);
 assert.equal(log.export().sessions.length, 2);
 assert.match(log.export().privacy, /no network telemetry/i);
+assert.equal(log.export().evidence.qualification, 'unverified-local');
+assert.equal(log.export().analysis.summary.evidence.participantCount, null);
+assert.equal(log.export().analysis.earlyAccess.status, 'insufficient-evidence');
 assert.ok(memory.has(PLAYTEST_STORAGE_KEY));
 
 const blockedLog = createLocalPlaytestLog({

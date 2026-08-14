@@ -48,3 +48,17 @@ Last updated: 2026-08-14
 
 원본 JSON은 공개 저장소에 커밋하지 않는다. 익명 집계만 날짜·빌드 SHA·표본 수와 함께
 로드맵 문서에 기록한다.
+
+## 집계 명령과 증거 자격
+
+한 사람당 하나의 📊 JSON을 받은 경우 다음처럼 합친다.
+
+```powershell
+npm.cmd run playtest:report -- player-a.json player-b.json player-c.json player-d.json player-e.json
+```
+
+파일 수와 실제 사람 수가 다르면 `--participants=5`처럼 검증한 사람 수를 명시한다.
+게임 내부의 단일 기기 export는 사람 수를 추정하지 않으며 항상
+`unverified-local`이다. 봇, Codex 브라우저 조작, `?judge=1`, `?demo`, `?sessionqa=1`
+세션은 사람 표본에 포함하지 않는다. 세부 판정 분기는
+`docs/design/early-access-evidence-gate.md`를 따른다.
