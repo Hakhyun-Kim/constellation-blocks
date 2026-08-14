@@ -14,7 +14,7 @@ import { fxMethods } from './fx.js';
 import { WindGrass, Sea, Fireflies, makePalette, daylightPalette, clockPhase, moonPhaseNow } from './nature.js';
 import { SkyBand } from './sky.js';
 import { RegionScenery, regionTheme } from './regions.js';
-import { ART_PILOT_REGION, enemyPilotSlot, heroPilotSlot, landmarkPilotSlot } from './art-pilot.js';
+import { ART_PILOT_REGION, enemyPilotSlot, heroPilotSlot, landmarkPilotSlot, supportsArtRegion } from './art-pilot.js';
 import { instantiateGltfAsset } from './gltf-assets.js';
 
 export class Renderer3D {
@@ -259,7 +259,7 @@ export class Renderer3D {
 
   _syncPilotVisibility(view) {
     if (!view?.externalPilot) return;
-    const showExternal = this.region?.id === ART_PILOT_REGION;
+    const showExternal = supportsArtRegion(this.region?.id);
     view.externalPilot.root.visible = showExternal;
     if (view.pilotFallback) view.pilotFallback.visible = !showExternal;
   }

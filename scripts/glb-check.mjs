@@ -9,9 +9,18 @@ const failures = [];
 
 const REQUIRED_ANIMATIONS = Object.freeze({
   'quaternius-warrior': ['Idle', 'Run', 'Sword_Attack', 'Death'],
+  'quaternius-wizard': ['Idle', 'Run', 'Spell1', 'Death'],
+  'quaternius-monk': ['Idle', 'Run', 'Attack', 'Death'],
+  'quaternius-ranger': ['Idle', 'Run', 'Bow_Shoot', 'Death'],
+  'quaternius-cleric': ['Idle', 'Run', 'Spell1', 'Death'],
   'quaternius-green-blob': ['Idle', 'Walk', 'Bite_Front', 'Death'],
   'quaternius-demon': ['Flying_Idle'],
   'quaternius-yeti': ['Idle', 'Walk', 'Bite_Front', 'Death'],
+  'quaternius-orc': ['Idle', 'Walk', 'Punch', 'Death'],
+  'quaternius-orc-skull': ['Idle', 'Walk', 'Punch', 'Death'],
+  'quaternius-alien': ['Idle', 'Walk', 'Punch', 'Death'],
+  'quaternius-mushroom-king': ['Idle', 'Walk', 'Punch', 'Death'],
+  'quaternius-blue-demon': ['Idle', 'Walk', 'Punch', 'Death'],
 });
 
 function inspectGlb(entry) {

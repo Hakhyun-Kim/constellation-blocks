@@ -40,7 +40,7 @@ The design decisions were human-led: matching must map to a visible road, each t
 - `src/engine/` is DOM- and renderer-free, enabling deterministic Node checks.
 - `src/balance/` is the single source for tactical and squad-growth numbers.
 - `src/app/tacticflow.js` owns board input and cascades; `src/engine/tactics.js` resolves their commands into combat events.
-- All 3D models, VFX, terrain, and Web Audio sound are generated procedurally; no game-art or audio asset files are required.
-- Production upgrades may use licensed external models, animation, images, and audio. Each bundled asset must have recorded provenance and pass the project's initial-download and rendering-performance gates.
+- The release uses a single CC0 Quaternius character/monster family and compact CC0 Kenney combat samples, with procedural terrain, VFX, and synthesized fallbacks.
+- `?art=procedural` runs without requesting the external-asset manifest. Every bundled asset has recorded provenance and must pass the initial-download, integrity, and rendering-performance gates.
 
 See [CREDITS.md](CREDITS.md) for asset and font credits.

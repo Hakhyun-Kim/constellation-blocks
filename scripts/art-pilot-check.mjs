@@ -1,15 +1,52 @@
 import assert from 'node:assert/strict';
-import { ART_PILOT_REGION, enemyPilotSlot, heroPilotSlot, landmarkPilotSlot } from '../src/gfx/art-pilot.js';
+import { readFileSync } from 'node:fs';
+import {
+  ART_PILOT_REGION,
+  ART_REGIONS,
+  enemyPilotSlot,
+  heroPilotSlot,
+  landmarkPilotSlot,
+  supportsArtRegion,
+} from '../src/gfx/art-pilot.js';
 
-assert.equal(heroPilotSlot(ART_PILOT_REGION, { heroKey: 'arin' })?.id, 'quaternius-warrior');
-assert.equal(heroPilotSlot(ART_PILOT_REGION, { heroKey: 'luna' }), null);
-assert.equal(heroPilotSlot('ember-gate', { heroKey: 'arin' }), null);
+const HERO_ASSETS = Object.freeze({
+  arin: 'quaternius-warrior',
+  luna: 'quaternius-wizard',
+  doyun: 'quaternius-monk',
+  sera: 'quaternius-ranger',
+  yuna: 'quaternius-cleric',
+});
+const manifest = JSON.parse(readFileSync(new URL('../assets/manifest.json', import.meta.url), 'utf8'));
+const assets = new Map(manifest.assets.map((asset) => [asset.id, asset]));
+const selectedAssets = new Set();
 
-assert.equal(enemyPilotSlot(ART_PILOT_REGION, { type: 'goblin' })?.id, 'quaternius-green-blob');
-assert.equal(enemyPilotSlot(ART_PILOT_REGION, { type: 'orc' })?.id, 'quaternius-demon');
-assert.equal(enemyPilotSlot(ART_PILOT_REGION, { type: 'ogrelord', midBoss: true })?.id, 'quaternius-yeti');
-assert.equal(enemyPilotSlot(ART_PILOT_REGION, { type: 'boss', boss: true }), null);
-assert.equal(enemyPilotSlot('ember-gate', { type: 'goblin' }), null);
+assert.equal(ART_REGIONS.length, 5);
+assert.equal(new Set(ART_REGIONS).size, ART_REGIONS.length);
+for (const region of ART_REGIONS) {
+  assert.equal(supportsArtRegion(region), true);
+  for (const [heroKey, asset] of Object.entries(HERO_ASSETS)) {
+    assert.equal(heroPilotSlot(region, { heroKey })?.id, asset);
+    selectedAssets.add(asset);
+  }
+  selectedAssets.add(enemyPilotSlot(region, { type: 'goblin' })?.id);
+  selectedAssets.add(enemyPilotSlot(region, { type: 'ogrelord', midBoss: true })?.id);
+  selectedAssets.add(enemyPilotSlot(region, { type: 'boss', boss: true })?.id);
+}
+
+for (const id of selectedAssets) assert.equal(assets.get(id)?.type, 'model', `${id} must be registered as a model`);
+assert.equal(assets.get('quaternius-warrior').preload, true);
+assert.equal(assets.get('quaternius-wizard').preload, true);
+for (const id of ['quaternius-monk', 'quaternius-ranger', 'quaternius-cleric']) {
+  assert.equal(assets.get(id).preload, false, `${id} must remain post-first-play`);
+}
+
+assert.equal(heroPilotSlot('unknown', { heroKey: 'arin' }), null);
+assert.equal(heroPilotSlot(ART_PILOT_REGION, { heroKey: 'unknown' }), null);
+assert.equal(enemyPilotSlot('unknown', { type: 'goblin' }), null);
+assert.equal(enemyPilotSlot('ember-gate', { type: 'goblin' })?.id, 'quaternius-orc');
+assert.equal(enemyPilotSlot('neon-ruins', { type: 'boss', boss: true })?.id, 'quaternius-alien');
+assert.equal(enemyPilotSlot('ashen-margin', { type: 'ogrelord', midBoss: true })?.id, 'quaternius-mushroom-king');
+assert.equal(enemyPilotSlot('manuscript-core', { type: 'boss2', boss: true })?.id, 'quaternius-blue-demon');
 
 assert.deepEqual(Object.values(landmarkPilotSlot(ART_PILOT_REGION)), [
   'quaternius-gate-wall',
@@ -19,4 +56,4 @@ assert.deepEqual(Object.values(landmarkPilotSlot(ART_PILOT_REGION)), [
 ]);
 assert.equal(landmarkPilotSlot('ember-gate'), null);
 
-console.log('✅ 푸른 초원 아트 슬롯 11개 결정적 검사 통과');
+console.log('✅ 5 heroes × 5 regions and regional monster/boss art slots passed.');

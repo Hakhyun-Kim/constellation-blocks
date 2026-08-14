@@ -9,8 +9,7 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  the completed P2 campaign, including the market-route monster blueprint and
-  the two-chapter deterministic balance gate.
+  P3-1's release-default five-hero and campaign-wide regional model expansion.
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-14. The first-expedition and full two-chapter 60-run balance
@@ -200,9 +199,8 @@ material untouched.
 
 ## Suggested next task
 
-Continue P3-1 of the production roadmap: extend the proven common art rig and
-material direction from the one-scene pilot to all five heroes and the regional
-enemy/boss families without breaking lazy loading or the mobile draw-call gate.
-P0-P2 are complete. The art/audio evidence remains under
-`docs/evidence/art-v2/`; `combat:ui:check` locks the three-lane pressure
-projection, and `campaign:balance:check` locks the full two-chapter command path.
+Continue P3-2 of the production roadmap: add honest campaign/session timing
+instrumentation, define the 25–40 minute campaign and 10–15 minute weekly human
+play protocol, and record operator measurements without labeling bot results as
+human data. P0-P2 and P3-1 are complete. The expanded art performance evidence
+is in `docs/performance/art-v2-campaign-expansion-2026-08-14.md`.

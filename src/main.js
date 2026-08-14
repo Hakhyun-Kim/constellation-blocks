@@ -76,9 +76,10 @@ const isMobile = detectMobile();
 const useDecor = urlDecor != null ? !/^(0|off|no|false)$/i.test(urlDecor)
                                   : (!isMobile && !store.decorOff);
 const graphicsQuality = urlGfx || (store.gfx === 'lite' || (isMobile && store.gfx == null) ? 'lite' : 'high');
-/* 외부 아트는 검증 중인 한 장면에만 opt-in 한다. 기본/심사 URL은 manifest조차
- * 요청하지 않으므로 현재 첫 플레이 시간과 절차형 폴백이 그대로 유지된다. */
-const artMode = urlParams.get('art') === 'v2' ? 'v2' : 'procedural';
+/* P0 파일럿을 통과한 art-v2가 출시 기본값이다. 저사양 비교·복구에는
+ * ?art=procedural을 사용하며, 이 경로는 manifest조차 요청하지 않는다. */
+const requestedArt = urlParams.get('art');
+const artMode = /^(procedural|off|0)$/i.test(requestedArt || '') ? 'procedural' : 'v2';
 const perfMode = urlParams.has('perf');
 const assetLoader = new RuntimeAssetLoader({
   enabled: artMode === 'v2',
