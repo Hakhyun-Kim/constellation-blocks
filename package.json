@@ -23,6 +23,7 @@
     "weekly:check": "node scripts/weekly-check.mjs",
     "session:check": "node scripts/session-metrics-check.mjs",
     "preferences:check": "node scripts/preferences-check.mjs",
+    "i18n:check": "node scripts/i18n-check.mjs",
     "demo:check": "node scripts/demo-check.mjs",
     "storage:check": "node scripts/storage-check.mjs",
     "visual:check": "node scripts/visual-safety-check.mjs",
@@ -34,7 +35,7 @@
     "asset:pilot:check": "node scripts/art-pilot-check.mjs",
     "asset:model:check": "node scripts/glb-check.mjs",
     "asset:check": "node scripts/asset-budget-check.mjs",
-    "check": "npm run engine:check && npm run tactics:check && npm run ui:check && npm run combat:ui:check && npm run act2:check && npm run village:check && npm run phase:check && npm run weekly:check && npm run session:check && npm run preferences:check && npm run demo:check && npm run visual:check && npm run capture:check && npm run evidence:check && npm run perf:check && npm run audio:pilot:check && npm run asset:runtime:check && npm run asset:pilot:check && npm run asset:model:check && npm run build && npm run asset:check"
+    "check": "npm run engine:check && npm run tactics:check && npm run ui:check && npm run combat:ui:check && npm run act2:check && npm run village:check && npm run phase:check && npm run weekly:check && npm run session:check && npm run preferences:check && npm run i18n:check && npm run demo:check && npm run visual:check && npm run capture:check && npm run evidence:check && npm run perf:check && npm run audio:pilot:check && npm run asset:runtime:check && npm run asset:pilot:check && npm run asset:model:check && npm run build && npm run asset:check"
   },
   "dependencies": {
     "three": "^0.166.0"

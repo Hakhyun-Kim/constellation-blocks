@@ -9,8 +9,8 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  P3-2's local-only human play-session measurement infrastructure.
-- Working tree at handoff: clean after the P3-2 commit.
+  P3-3b's Korean/English presentation and current hunter-fiction interludes.
+- Working tree at handoff: clean after the P3-3b commit.
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-14. The first-expedition and full two-chapter 60-run balance
   gates also passed with the real match-3, hero-active, and blueprint policies.
@@ -199,9 +199,10 @@ material untouched.
 
 ## Suggested next task
 
-Continue P3-3 of the production roadmap: retain the browser build while adding
-the free Steam demo desktop wrapper, settings/save-path contract, key remapping,
-and Korean/English support. P0-P2 and P3-1 are complete. P3-2 instrumentation is
+Continue P3-3c of the production roadmap: retain the browser build while adding
+the free Steam demo Electron Forge wrapper and its explicit save-path contract.
+Shared settings, remappable physical keys, and Korean/English presentation are
+complete. P0-P2 and P3-1 are complete. P3-2 instrumentation is
 complete but its roadmap item remains open until real human samples exist; never
 label bot or Codex browser runs as human data. The protocol is in
 `docs/testing/campaign-duration-protocol.md`.

@@ -1,19 +1,8 @@
-/* =====================================================
- * 막간 이야기 — 「마왕은 계산을 못 한다」
- *
- * 은유 하나로 게임 전체를 꿴다:
- *   마왕군이 끝없이 오는 이유 = 마왕이 몇 명 보냈는지 세지 못해서
- *   용사 조합 = 왕국의 이상한 산수 ("두 명을 합치면 한 명이 된다")
- *   수학 문제 = 세계관상 진짜 무기 (셈을 아는 쪽이 끝을 정한다)
- *
- * 톤 곡선: 1~10웨이브는 실없는 개그 → 15웨이브에서 전환 → 20 이후는 진중.
- * 개그 장치 둘 — ① 답이 하나뿐인 가짜 선택지 ② 김빠지는 마지막 한 줄.
- * 새 문구를 넣을 때도 둘 중 하나는 지킬 것.
- *
- * 순수 데이터 + 순수 함수. 렌더러도 엔진도 모른다.
- * ===================================================== */
+/* 막간 이야기 표현 계층. 런타임은 아래의 현재 BEATS/ENGLISH_BEATS만 사용한다.
+ * LEGACY_BEATS는 예전 저장 파일의 seenStory key 문맥을 검토하기 위한 비활성 자료이며
+ * 빌드에서는 참조되지 않아 제거된다. 현재 서사는 헌터 소설·게이트·창조 책임을 따른다. */
 
-export const BEATS = {
+const LEGACY_BEATS = {
   prologue: {
     icon: '📜', title: '왕국 최후의 방어선',
     lines: [
@@ -164,6 +153,88 @@ export const BEATS = {
   },
 };
 
+/* 현재 캠페인의 막간은 헌터 소설 속으로 들어온 플레이어가 영웅과 몬스터를
+ * 함께 움직이는 책임을 알아가는 이야기다. 이전 수학 프로토타입 문구는 런타임에서
+ * 사용하지 않는다. locale은 표현만 바꾸며 진행 조건과 beat key는 동일하다. */
+export const BEATS = {
+  prologue: {
+    icon: '▤', title: '책이 먼저 너를 읽었다',
+    lines: [
+      '2026년 서울. 《게이트 최후의 수호자》의 마지막 장이 비어 있었다.',
+      '페이지를 넘긴 순간, 네 손끝에서 별길과 몬스터가 동시에 태어났다.',
+      '',
+      '아린은 하늘을 올려다봤다. 「명령하는 분, 적어도 성은 우리 편 맞죠?」',
+      '대답할 버튼은 없었다. 방어 버튼만 있었다.',
+    ],
+  },
+  w1: {
+    icon: '⚔️', title: '들리는 명령',
+    lines: ['첫 방어가 시작됐다.', '아린뿐 아니라 반대편 몬스터도 네 클릭 소리에 고개를 들었다.', '', '이 세계에서는 명령이 공용 채널인 모양이다. 보안 담당자는 아직 생성되지 않았다.'],
+  },
+  w2: {
+    icon: '🔮', title: '루나의 첫 민원',
+    lines: ['루나가 별자리 판을 올려다봤다.', '「저 별 세 개를 맞추면 길에 마법이 떨어지는 거죠?」', '그렇다.', '「그럼 왜 설명서는 전투 시작 뒤에 뜨죠?」', '', '그건 정말 미안하다.'],
+  },
+  w3: {
+    icon: '📱', title: '현실의 재난 알림',
+    lines: ['허공에 서울 재난 문자가 겹쳐 떴다.', '［ 제7게이트 위험 등급 상향 · 인근 헌터는 대피를 지원하십시오 ］', '', '소설 속 성벽과 현실의 지하철역이 같은 좌표를 가리키고 있었다.'],
+  },
+  w4: {
+    icon: '♜', title: '교정관이 온다',
+    lines: ['졸개들이 세 길로 흩어지고, 그 뒤에서 지휘관이 걸어왔다.', '혼자 강한 적보다 명령을 듣는 편대가 더 위험하다.', '', '세라는 활시위를 당겼다. 「이번엔 튜토리얼 아니죠?」', '아쉽게도 실전이다.'],
+  },
+  w5: {
+    icon: '🖋️', title: '죽은 문장의 기억',
+    lines: ['쓰러진 지휘관의 갑옷 안쪽에 같은 문장이 수십 번 적혀 있었다.', '［ 생성됨 · 명령받음 · 삭제됨 · 다시 생성됨 ］', '', '몬스터는 사라졌지만 문장은 남았다.', '네가 만든 것들은 네가 기억하지 않아도 너를 기억한다.'],
+  },
+  w10: {
+    icon: '🏢', title: '헌터 길드의 견적서',
+    lines: ['임시 헌터 길드가 성벽 보수 견적을 보냈다.', '재료비, 위험 수당, 차원 간 출장비가 적혀 있었다.', '', '마지막 항목은 「주인공 할인: 0%」였다. 현실적이었다.'],
+  },
+  w15: {
+    icon: '👺', title: '몬스터 시장의 증언',
+    lines: ['지하 시장의 몬스터들은 인간을 공격하지 않았다.', '그들은 누가 자신을 만들었는지 알고 싶어 했다.', '', '김대리가 도장을 들었다. 「책임 소재부터 교정하시죠. 전투 지원은 그다음입니다.」'],
+  },
+  w20: {
+    icon: '▧', title: '초고 0호',
+    lines: ['무명 서고에서 가장 먼저 생성된 몬스터의 기록을 찾았다.', '초고 0호. 죽을 때마다 기억을 가진 채 다시 쓰이는 존재.', '', '최종보스는 세계를 끝내려는 악당이 아니었다.', '끝없이 다시 쓰는 너를 멈추러 오고 있었다.'],
+  },
+  w25: {
+    icon: '✦', title: '명령과 선택',
+    lines: ['아린이 말했다. 「우리를 움직일 수 있다는 것과, 우리 대신 선택해도 된다는 건 달라요.」', '', '별길은 여전히 네 손을 기다렸다.', '이번에는 가장 강한 길보다 책임질 수 있는 길을 골라야 했다.'],
+  },
+  w30: {
+    icon: '🌅', title: '다음 장의 첫 문장',
+    lines: ['성은 남았고 두 세계의 문도 닫히지 않았다.', '영웅과 몬스터가 같은 원고의 다음 문장을 기다렸다.', '', '이번에는 명령문이 아니라 약속부터 쓰기로 했다.'],
+  },
+  firstLegend: { icon: '✦', title: '영웅의 자기소개', lines: ['새 힘이 별자리와 이어졌다.', '영웅은 카드의 등급이 아니라 스스로 고른 전문화로 강해진다.', '', '인사팀은 이 문장을 좋아했다. 뽑기 담당 부서는 사라졌다.'] },
+  firstMythic: { icon: '🌌', title: '별길의 주인', lines: ['누군가 정해 둔 역할의 끝에 도달했다.', '이제부터는 역할을 따르는 것이 아니라 새 규칙을 만든다.'] },
+  castleHurt: { icon: '🧱', title: '성벽 담당관', lines: ['성벽에 금이 갔다.', '담당관이 말했다. 「괜찮습니다. 아직 현실 쪽까지 새지는 않습니다.」', '', '아직이라는 말이 제일 불안했다.'] },
+  champIntro: { icon: '🌠', title: '명령을 듣는 별지기', lines: ['성문 앞의 별지기 {name}가 하늘을 올려다봤다.', '「목소리는 들리는데 얼굴은 안 보이네요. 신이면 원래 원격 근무인가요?」', '', '［ 별똥별: A · 은하수: E · 별자리: V · 초상을 누르면 옷장 ］'] },
+};
+
+const ENGLISH_BEATS = {
+  prologue: { icon: '▤', title: 'The Book Read You First', lines: ['Seoul, 2026. The final chapter of The Last Guardian of the Gate was blank.', 'When you turned the page, star roads and monsters formed beneath your fingertips.', '', 'Arin looked to the sky. “Commander, the citadel is on our side… right?”', 'There was no answer button. Only a defense button.'] },
+  w1: { icon: '⚔️', title: 'A Command Everyone Can Hear', lines: ['The first defense began.', 'Arin and the monsters both looked up at the sound of your click.', '', 'Commands use a public channel in this world. The security officer has not spawned yet.'] },
+  w2: { icon: '🔮', title: "Luna's First Complaint", lines: ['Luna looked up at the constellation board.', '“Match three stars and magic falls on that lane, right?”', 'Correct.', '“Then why did the instructions appear after combat started?”', '', 'That one is on us.'] },
+  w3: { icon: '📱', title: 'A Disaster Alert from Reality', lines: ['A Seoul emergency alert appeared in midair.', '[ Gate Seven threat raised · Nearby hunters must assist evacuation ]', '', 'The storybook citadel and a real subway station pointed to the same coordinates.'] },
+  w4: { icon: '♜', title: 'The Corrector Approaches', lines: ['Minions split across three lanes while a commander marched behind them.', 'A formation that follows orders is more dangerous than one strong enemy.', '', 'Sera drew her bow. “This is not another tutorial, is it?”', 'Unfortunately, this one is real.'] },
+  w5: { icon: '🖋️', title: 'The Memory of a Dead Sentence', lines: ['The same line was written dozens of times inside the fallen commander’s armor.', '[ Created · Commanded · Deleted · Created again ]', '', 'The monster vanished, but the sentence remained.', 'What you create remembers you, even when you do not remember it.'] },
+  w10: { icon: '🏢', title: "The Hunter Guild's Estimate", lines: ['The provisional guild sent an estimate for wall repairs.', 'Materials, hazard pay, and interdimensional travel were itemized.', '', 'The final line read “Protagonist discount: 0%.” Realistic.'] },
+  w15: { icon: '👺', title: 'Testimony from the Monster Market', lines: ['The monsters in the underground market did not attack humans.', 'They wanted to know who had created them.', '', 'Assistant Kim raised his stamp. “We assign responsibility first. Combat support comes second.”'] },
+  w20: { icon: '▧', title: 'Draft Zero', lines: ['The Nameless Archive held a record of the first created monster.', 'Draft Zero: reborn with every memory of every death.', '', 'The final boss was not trying to end the world.', 'It was coming to stop you from rewriting it forever.'] },
+  w25: { icon: '✦', title: 'Command and Choice', lines: ['Arin said, “Being able to move us does not mean you may choose for us.”', '', 'The star road still waited for your hand.', 'This time, choose the road you can answer for—not merely the strongest one.'] },
+  w30: { icon: '🌅', title: 'The First Sentence of the Next Chapter', lines: ['The citadel remained, and the passage between worlds stayed open.', 'Heroes and monsters waited for the next sentence of the same manuscript.', '', 'This time, you would write a promise before a command.'] },
+  firstLegend: { icon: '✦', title: "A Hero's Introduction", lines: ['A new power joined the constellation.', 'Heroes grow through chosen specializations, not card rarity.', '', 'Recruiting approved the wording. The gacha department no longer exists.'] },
+  firstMythic: { icon: '🌌', title: 'Owner of the Star Road', lines: ['Someone reached the end of a role written for them.', 'From here on, they would write new rules instead of following old ones.'] },
+  castleHurt: { icon: '🧱', title: 'The Wall Inspector', lines: ['A crack opened in the wall.', 'The inspector said, “It has not leaked into reality yet.”', '', 'Yet was the least reassuring word.'] },
+  champIntro: { icon: '🌠', title: 'The Stargazer Who Hears You', lines: ['The stargazer {name} looked up from the gate.', '“I hear your voice but cannot see your face. Do gods always work remotely?”', '', '[ Falling Star: A · Milky Way: E · Skills: V · Select the portrait for wardrobe ]'] },
+};
+
+export function beat(key, locale = 'ko') {
+  return locale === 'en' ? ENGLISH_BEATS[key] || BEATS[key] : BEATS[key];
+}
+
 /* 웨이브를 깼을 때 띄울 이야기가 있으면 그 키를, 없으면 null.
  * 매 웨이브 띄우면 "스킵을 누르는 게임"이 되므로 초반에 몰고 뒤로 갈수록 성글게. */
 const WAVE_BEATS = { 1: 'w1', 2: 'w2', 3: 'w3', 4: 'w4', 5: 'w5', 10: 'w10', 15: 'w15', 20: 'w20', 25: 'w25', 30: 'w30' };
@@ -175,18 +246,28 @@ export function beatForWave(wave) {
 /* 웨이브 시작 한 줄 — 이번에 뭐가 오는지 알려 주면서 톤도 살린다.
  * 이야기 모달과 달리 매 웨이브 나오므로 짧게. */
 const WAVE_QUIPS = [
-  '마왕군이 또 온다. 세어 보진 않았다.',
-  '이번엔 좀 많아 보인다. 착각이면 좋겠다.',
-  '정찰병: 「많습니다.」 그게 보고의 전부였다.',
-  '성문을 잠갔다. 잠글 성문이 있다는 게 어디냐.',
-  '병사들이 숫자를 세기 시작했다. 좋은 징조다.',
-  '마왕군은 오늘도 자기들이 몇 명인지 모른다.',
-  '오늘의 목표: 어제보다 하나 더.',
-  '북이 울렸다. 북 담당관은 신났다.',
+  '게이트가 다시 흔들린다. 이번에는 세 길 모두다.',
+  '헌터 길드 예보: 오늘도 몬스터, 가끔 중간보스.',
+  '성문을 잠갔다. 차원문에는 잠금 버튼이 없었다.',
+  '아린이 검을 들었다. 루나는 설명서를 찾는 중이다.',
+  '별자리가 빛났다. 몬스터도 그쪽을 보고 있다.',
+  '오늘의 목표: 지키고, 기록하고, 책임지기.',
+  '북이 울렸다. 북 담당관은 여전히 신났다.',
 ];
 
-export function waveQuip(wave, rng = Math.random) {
-  return WAVE_QUIPS[Math.floor(rng() * WAVE_QUIPS.length) % WAVE_QUIPS.length];
+const WAVE_QUIPS_EN = [
+  'The gate shakes again—across all three lanes this time.',
+  'Hunter Guild forecast: monsters, with a chance of commander.',
+  'The citadel gate is locked. The dimensional gate has no lock button.',
+  'Arin raises his sword. Luna is still looking for the manual.',
+  'The constellation lights up. The monsters are watching it too.',
+  'Today’s plan: defend, record, and take responsibility.',
+  'The drums sound. The drummer remains delighted.',
+];
+
+export function waveQuip(wave, rng = Math.random, locale = 'ko') {
+  const lines = locale === 'en' ? WAVE_QUIPS_EN : WAVE_QUIPS;
+  return lines[Math.floor(rng() * lines.length) % lines.length];
 }
 
 /* ---------- 별지기의 수다 ----------
@@ -195,13 +276,13 @@ export function waveQuip(wave, rng = Math.random) {
  * 톤 규칙은 이야기와 같다: 세는 것에 서툰 세계 + 김빠지는 마지막 한 마디. */
 export const CHAMP_CHAT = {
   any: [
-    ['오늘 몬스터 몇 마리 왔는지 세어 봤어요?', '세다가 잊어버렸습니다.'],
-    ['마왕은 왜 자꾸 쳐들어올까요?', '멈추는 법을 못 세서 그렇답니다.'],
-    ['성벽에 금 간 거 봤어요?', '원래 있던 금입니다.'],
-    ['오늘 목표는 어제보다 하나 더예요!', '어제가 몇이었는지는 비밀입니다.'],
+    ['하늘의 명령, 다 들려요?', '몬스터도 듣는 것 같습니다.'],
+    ['현실의 헌터는 월급을 받나요?', '차원 수당도 받는답니다.'],
+    ['성벽에 금 간 거 봤어요?', '현실까지 새지는 않았습니다. 아직은.'],
+    ['오늘 목표는 모두 살아남기예요.', '아주 좋은 목표입니다.'],
     ['발판이 참 튼튼하네요.', '발판 담당관이 기뻐하겠군요.'],
-    ['무섭지 않아요?', '월급이 더 무섭습니다.'],
-    ['별을 세다 보면 마음이 편해져요.', '몬스터도 세 주시면 좋겠습니다.'],
+    ['무섭지 않아요?', '책임 보고서가 더 무섭습니다.'],
+    ['별길 끝에는 뭐가 있을까요?', '다음 장 마감일이 있겠죠.'],
     ['제 검 좀 봐요, 별빛이에요!', '밤에는 끄고 주무십시오.'],
   ],
   byCls: {
@@ -216,7 +297,7 @@ export const CHAMP_CHAT = {
   solo: [
     '병사가 아무도 없네… 발판이 이렇게 많은데.',
     '길을 세 바퀴 돌았다. 길은 여전히 세 갈래다.',
-    '별 하나, 별 둘… 몬스터는 안 세야지.',
-    '순찰 이상 무! …보고할 사람이 없지만.',
+    '현실의 신호가 약하네. 와이파이는 세계관 밖인가?',
+    '순찰 이상 무! …보고서는 누가 결재하지?',
   ],
 };

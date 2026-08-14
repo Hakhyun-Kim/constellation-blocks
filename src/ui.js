@@ -111,7 +111,7 @@ export class UI {
       'revealModal', 'revealCard', 'summonReveal', 'revealTier', 'revealArt', 'revealName', 'revealDesc',
       'wavePreview', 'bossBar', 'bossBarFill', 'bossBarName', 'bossWarnBanner',
       'saveBtn', 'loadBtn', 'playtestBtn', 'settingsBtn', 'loadFile',
-      'settingsModal', 'settingsGfx', 'settingsEffects', 'settingsApplyNote',
+      'settingsModal', 'settingsLanguage', 'settingsGfx', 'settingsEffects', 'settingsApplyNote',
       'settingsSfxBtn', 'settingsBgmBtn', 'settingsKeyRows', 'settingsKeyReset',
       'settingsSavePath', 'settingsClose',
       'sellModeBtn', 'sellInfo', 'sellAllBtn', 'sellGoBtn',
@@ -612,7 +612,7 @@ export class UI {
     this.el.placeBar.classList.toggle('on', on);
     this.el.placeBarText.textContent = on
       ? label
-      : '🎲 용사를 소환하고, 카드를 눌러 배치하세요';
+      : '✦ 영웅 카드를 눌러 방어로 옆 발판에 배치하세요';
   }
 
   /* 용사를 고르면 잠깐 용사 탭으로 넘어갔다가, 선택을 풀면 원래 보던 탭으로 돌아온다 */
@@ -639,6 +639,7 @@ export class UI {
     el.effectsBtn.addEventListener('click', h.onToggleEffects);
     el.settingsBtn.addEventListener('click', h.onSettingsOpen);
     el.settingsClose.addEventListener('click', h.onSettingsClose);
+    el.settingsLanguage.addEventListener('change', () => h.onSettingsLanguage(el.settingsLanguage.value));
     el.settingsGfx.addEventListener('change', () => h.onSettingsGraphics(el.settingsGfx.value));
     el.settingsEffects.addEventListener('change', () => h.onSettingsEffects(el.settingsEffects.value));
     el.settingsSfxBtn.addEventListener('click', h.onToggleSfx);
@@ -1900,7 +1901,8 @@ export class UI {
       : `기기에만 저장된 플레이 시간 기록 ${total}개 내보내기`;
   }
   renderSettings({ actions, bindings, captureAction = null, graphics = 'high', reducedEffects = true,
-    systemReduced = false, sfxMuted = false, bgmMuted = false, saveLocation = '브라우저 사이트 저장소' }) {
+    systemReduced = false, sfxMuted = false, bgmMuted = false, locale = 'ko', saveLocation = '브라우저 사이트 저장소' }) {
+    this.el.settingsLanguage.value = locale === 'en' ? 'en' : 'ko';
     this.el.settingsGfx.value = graphics === 'lite' ? 'lite' : 'high';
     this.el.settingsEffects.value = reducedEffects ? 'reduced' : 'lively';
     this.el.settingsEffects.disabled = systemReduced;

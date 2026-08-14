@@ -28,14 +28,19 @@ import { createLocalPlaytestLog, createSessionMeter, formatPlayMinutes } from '.
 import {
   KEY_ACTIONS, actionForCode, defaultBindings, keyCodeLabel, normalizeBindings, rebindAction,
 } from './app/preferences.js';
+import { getLocale, installDocumentLocalization, normalizeLocale } from './app/i18n.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
 
 /* ---------- 초기화 ---------- */
+const urlParams = new URLSearchParams(location.search);
+const requestedLocale = urlParams.get('lang');
+const locale = normalizeLocale(requestedLocale || store.language);
+if (requestedLocale) store.language = locale;
 const ui = new UI();
 const tacticFeedback = createTacticFeedback();
+installDocumentLocalization(locale);
 /* URL로 강제 지정 가능: ?gfx=high|lite|min (min은 테스트/초저사양용) */
-const urlParams = new URLSearchParams(location.search);
 const urlGfx = urlParams.get('gfx');
 const judgeMode = urlParams.has('judge');
 const previewBlueprint = urlParams.has('blueprint');
@@ -472,13 +477,13 @@ function refreshAll() {
  * 한 판에 최대 열댓 번. 이미 본 것은 state.seenStory로 걸러진다. */
 let storyResume = null;
 function playStory(key, onDone = null) {
-  if (store.storyOff || !Story.BEATS[key]) { if (onDone) onDone(); return false; }
+  if (store.storyOff || !Story.beat(key, getLocale())) { if (onDone) onDone(); return false; }
   if (!state.seenStory) state.seenStory = new Set();
   if (state.seenStory.has(key)) { if (onDone) onDone(); return false; }
   state.seenStory.add(key);
   storyResume = onDone;
   /* {name} = 옷장에서 지은 별지기 이름 — 이야기가 그 이름을 부른다 */
-  const beat = Story.BEATS[key];
+  const beat = Story.beat(key, getLocale());
   ui.showStory({ ...beat, lines: beat.lines.map(l => l.replace(/\{name\}/g, heroName())) });
   SFX.tap();
   return true;
@@ -1142,6 +1147,10 @@ const handlers = {
     ui.hideSettings();
     SFX.tap();
   },
+  onSettingsLanguage(value) {
+    store.language = normalizeLocale(value);
+    location.reload();
+  },
   onSettingsGraphics(value) {
     store.gfx = value === 'lite' ? 'lite' : 'high';
     renderSettings();
@@ -1523,7 +1532,7 @@ function cycleField(dir) {
 function tryStartWave() {
   if (ui.isStoryOpen() || ui.isRevealOpen()) return;   // 연출 중에 웨이브가 몰래 시작되지 않게
   const incoming = E.journeyEncounter(state);
-  const quip = store.storyOff || incoming.boss ? null : Story.waveQuip(state.wave);
+  const quip = store.storyOff || incoming.boss ? null : Story.waveQuip(state.wave, Math.random, getLocale());
   if (quip) setTimeout(() => ui.toast(`📣 ${quip}`), 260);
   const r = E.startWave(state);
   if (!r.ok) return;
@@ -1741,6 +1750,7 @@ function renderSettings() {
     systemReduced: systemReducedEffects,
     sfxMuted: isSfxMuted(),
     bgmMuted: isMusicMuted(),
+    locale: getLocale(),
     saveLocation: settingsSaveLocation(),
   });
 }
@@ -2051,7 +2061,7 @@ if (urlParams.has('demo')) {
 window.__game = {
   get state() { return state; },
   E, D, renderer, ui, SFX, demo, assets: assetLoader,
-  env: { isMobile, decor: useDecor, quality: renderer.quality, artMode, judgeMode, weeklyChallenge },
+  env: { isMobile, decor: useDecor, quality: renderer.quality, artMode, judgeMode, weeklyChallenge, locale },
   exportWeeklyReplay() { return weeklyReplay?.export() || null; },
   playtest: {
     snapshot: () => sessionMeter?.snapshot() || null,
