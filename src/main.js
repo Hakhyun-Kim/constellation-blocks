@@ -24,6 +24,7 @@ import { createSwapReplay, createWeeklyChallenge, seededRandom } from './challen
 import { advanceAutoPhase, createAutoPhaseClock } from './app/phase-flow.js';
 import { summarizeFrameDurations } from './app/perf-probe.js';
 import { captureCanvasVideo, captureFilename } from './app/visual-capture.js';
+import { createLocalPlaytestLog, createSessionMeter, formatPlayMinutes } from './app/session-metrics.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
 
@@ -44,6 +45,10 @@ const systemReducedEffects = typeof matchMedia === 'function'
 let reducedEffects = systemReducedEffects || store.effectsReduced !== false;
 document.body.classList.toggle('reduced-effects', reducedEffects);
 const weeklyReplay = weeklyChallenge ? createSwapReplay(weeklyChallenge.id) : null;
+const sessionEligible = !judgeMode && !previewChapter && !urlParams.has('demo')
+  && !urlParams.has('perf') && !urlParams.has('sessionqa');
+const playtestLog = createLocalPlaytestLog();
+ui.setPlaytestLogStatus(playtestLog.records().length);
 if (weeklyChallenge) {
   document.body.classList.add('weekly-mode');
   const badge = document.createElement('div');
@@ -237,6 +242,59 @@ let sellMode = false;         // 여러 명 판매 모드 (벤치 카드가 체�
 const sellSel = new Set();    // 판매하려고 고른 용사 id
 let tactics = null;
 let autoPhaseClock = createAutoPhaseClock();
+let sessionMeter = null;
+let lastSessionSequence = null;
+
+function playtestContext() {
+  return {
+    chapter: state?.journey?.chapter || null,
+    node: state?.journey?.current || null,
+    wave: state?.wave || 1,
+  };
+}
+
+function startPlaySession(difficulty, startKind = 'new', retryOf = null) {
+  if (!sessionEligible || demo.active) return null;
+  sessionMeter = createSessionMeter({
+    mode: weeklyChallenge ? 'weekly' : 'campaign',
+    challengeId: weeklyChallenge?.id || null,
+    difficulty,
+    startKind,
+    retryOf,
+  });
+  return sessionMeter;
+}
+
+function discardPlaySession() {
+  sessionMeter = null;
+}
+
+function finishPlaySession(outcome) {
+  if (!sessionMeter || sessionMeter.finished) return null;
+  const record = sessionMeter.finish(outcome, playtestContext());
+  const stored = playtestLog.append(record);
+  if (stored) {
+    lastSessionSequence = stored.sequence;
+    ui.setPlaytestLogStatus(playtestLog.records().length);
+  }
+  return stored;
+}
+
+function exportPlaytestLog() {
+  const data = playtestLog.export();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `constellation-defense-playtest-${new Date().toISOString().slice(0, 10)}.json`;
+  link.hidden = true;
+  document.body.appendChild(link);
+  ui.setPlaytestLogStatus(data.sessions.length, true);
+  ui.toast(`📊 로컬 플레이 기록 ${data.sessions.length}개를 내보냈어요. 외부 전송은 하지 않습니다.`, 'good');
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
 
 /* ---------- 도감 · 업적 ----------
  * 조건은 전부 값 비교라 아무 때나 다시 평가해도 싸다. 언제 부르는지가 전부다:
@@ -308,6 +366,14 @@ function giveStarters() {
 }
 
 function newGame(difficulty, opts = {}) {
+  let retryOf = opts.retry ? lastSessionSequence : null;
+  if (sessionMeter && !sessionMeter.finished) {
+    if (opts.replaceSession) discardPlaySession();
+    else {
+      const previous = finishPlaySession(opts.retry ? 'restart' : 'new-game');
+      if (opts.retry) retryOf = previous?.sequence || lastSessionSequence;
+    }
+  }
   gameOverToken++;                 // 게임오버 연출 예약이 새 판을 덮지 않게
   weeklyReplay?.clear();
   state = E.createGame({
@@ -329,6 +395,8 @@ function newGame(difficulty, opts = {}) {
   tacticFeedback.reset();
   giveStarters();
   resetSession();
+  startPlaySession(difficulty, opts.retry ? 'retry' : 'new', retryOf);
+  if (opts.retry) sessionMeter?.action('restarts');
   refreshAll();
   ui.hideOver();
   music.setWave(1);
@@ -494,6 +562,7 @@ function doHeroActive(heroId) {
   }
   renderer.onEvents(state, r.events);
   handleEvents(r.events);
+  sessionMeter?.action('heroActives');
   ui.renderHeroPanel(state, heroId);
 }
 function doMonsterBlueprint() {
@@ -508,6 +577,7 @@ function doMonsterBlueprint() {
   SFX.summon(1);
   renderer.onEvents(state, result.events);
   handleEvents(result.events);
+  sessionMeter?.action('blueprintCasts');
   ui.updateHud(state, store.shards, store.best(state.difficulty));
   return true;
 }
@@ -751,18 +821,21 @@ function saveGame() {
   ui.toast(`💾 ${state.wave}웨이브 준비 상태를 파일로 저장했어요!`, 'good');
 }
 
-function loadGame(data) {
+function loadGame(data, { replaceSession = false } = {}) {
   const next = data ? E.deserialize(data, { fixedSquad: true, journey: true }) : null;
   if (!next) {
     ui.toast('😢 저장 파일을 읽을 수 없어요 — 이 게임에서 저장한 파일이 맞는지 확인해 주세요', 'bad');
     return false;
   }
   gameOverToken++;                     // 예약된 게임오버 연출이 불러온 판을 덮지 않게
+  if (replaceSession) discardPlaySession();
+  else finishPlaySession('load');
   state = next;
   autoPhaseClock = createAutoPhaseClock();
   tacticFeedback.reset();
   store.diff = state.difficulty;
   resetSession();
+  startPlaySession(state.difficulty, 'continue');
   ui.hideOver();
   refreshAll();
   music.setWave(state.wave);
@@ -795,9 +868,17 @@ function autoSave() {
   pendingAutosave = data;
   idle(() => { flushAutosave(); flushRecords(); });
 }
-window.addEventListener('pagehide', () => { flushAutosave(); flushRecords(); });
+window.addEventListener('pagehide', () => {
+  finishPlaySession('abandon');
+  flushAutosave();
+  flushRecords();
+});
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') { flushAutosave(); flushRecords(); }
+  if (document.visibilityState === 'hidden') {
+    observePlaySession(performance.now(), true);
+    flushAutosave();
+    flushRecords();
+  }
 });
 
 function handleEvents(events) {
@@ -882,6 +963,11 @@ function handleEvents(events) {
       case 'chapterComplete':
         SFX.shard();
         ui.toast(`✦ ${E.journeyChapter(state).title}을(를) 지켜냈습니다!`, 'good');
+        sessionMeter?.checkpoint(`${state.journey.chapter}-complete`, playtestContext());
+        if (weeklyChallenge?.endsAfterChapter === state.journey.chapter) {
+          const record = finishPlaySession('weekly-complete');
+          if (record) ui.toast(`📊 주간 도전 활성 플레이 ${formatPlayMinutes(record.activeMs)} · 목표 10–15분`, 'good');
+        }
         refreshAll();
         break;
       case 'gameOver': onGameOver(); break;
@@ -949,6 +1035,7 @@ let gameOverToken = 0;
 function onGameOver() {
   if (overHandled) return;
   overHandled = true;
+  finishPlaySession('defeat');
   SFX.gameOver();
   music.stop();
   pendingAutosave = null;              // 쓰기 대기 중이던 스냅샷도 되살아나면 안 된다
@@ -977,6 +1064,7 @@ const handlers = {
   onJourneyTravel(id) {
     const result = E.travelJourney(state, id);
     if (!result.ok) return;
+    sessionMeter?.action('journeyMoves');
     SFX.tap();
     if (result.type === 'battle') {
       const prepared = E.prepareJourneyBattle(state);
@@ -995,6 +1083,7 @@ const handlers = {
   onJourneyRecruit(key) {
     const result = E.recruitJourneyHero(state, key);
     if (!result.ok) return;
+    sessionMeter?.action('recruits');
     SFX.upgrade();
     renderer.burst((result.hero.x - D.FIELD_W / 2) / 36, .5, (result.hero.y - D.FIELD_H / 2) / 36, 0xd8b4ff, 12, 2);
     ui.toast(`✦ ${result.hero.name}이(가) 영웅단에 합류했습니다!`, 'good');
@@ -1046,7 +1135,7 @@ const handlers = {
   onDiff(d) {
     if (!(state.phase === 'prep' && state.wave === 1)) return;
     store.diff = d;
-    newGame(d);
+    newGame(d, { replaceSession: true });
     ui.toast(`${D.DIFFICULTIES[d].emoji} ${D.DIFFICULTIES[d].name} 난이도로 시작!`);
   },
   onCancelPlace() { SFX.tap(); deselectAll(); },
@@ -1107,8 +1196,13 @@ const handlers = {
     return true;
   },
   onJourneyNextChapter() {
+    if (weeklyChallenge && state.journey?.chapter === weeklyChallenge.endsAfterChapter) {
+      ui.toast(`✦ 이번 주 도전은 1막 7회 방어로 완료됐어요. 기록을 확인하거나 다시 도전해 보세요.`, 'good');
+      return false;
+    }
     const result = E.advanceJourneyChapter(state);
     if (!result.ok) return false;
+    sessionMeter?.checkpoint('act2-start', playtestContext());
     SFX.shard();
     ui.toast(`▤ CHAPTER ${String(result.chapter.number).padStart(2, '0')} · ${result.chapter.title}`, 'good');
     refreshAll();
@@ -1120,6 +1214,8 @@ const handlers = {
     if (!result.ok) return false;
     SFX.shard();
     ui.toast(`${result.ending.icon} ${result.ending.name} 엔딩을 선택했습니다.`, 'good');
+    const record = finishPlaySession('campaign-complete');
+    if (record) ui.toast(`📊 캠페인 활성 플레이 ${formatPlayMinutes(record.activeMs)} · 실경과 ${formatPlayMinutes(record.elapsedMs)}`, 'good');
     refreshAll();
     autoSave();
     return true;
@@ -1231,7 +1327,7 @@ const handlers = {
     ui.hideStart();
     SFX.tap();
     /* 자동 저장이 깨져 있으면 이미 준비된 새 게임을 그대로 진행한다 */
-    if (!loadGame(store.autosave)) playStory('prologue');
+    if (!loadGame(store.autosave, { replaceSession: true })) playStory('prologue');
   },
   onStartNew() {
     ui.hideStart();
@@ -1292,11 +1388,16 @@ const handlers = {
   },
   onRestart() {
     SFX.tap();
-    newGame(store.diff);
+    newGame(store.diff, { retry: true });
   },
+  onPlaytestExport: exportPlaytestLog,
   onShare() { ui.makeShareCard(state, store.best(state.difficulty)); },
   onDragStart, onDragMove, onDragEnd,
-  onDemoToggle() { demo.toggle(); SFX.tap(); },
+  onDemoToggle() {
+    if (!demo.active) finishPlaySession('spectate');
+    demo.toggle();
+    SFX.tap();
+  },
   onStoryClose: closeStory,
   onStoryOff() { store.storyOff = true; ui.toast('이야기를 끄었어요. 다시 보려면 새로고침 후 설정에서…', 'bad'); closeStory(); },
   onRevealClose: closeReveal,
@@ -1393,6 +1494,8 @@ function tryStartWave() {
   if (quip) setTimeout(() => ui.toast(`📣 ${quip}`), 260);
   const r = E.startWave(state);
   if (!r.ok) return;
+  sessionMeter?.action('waveStarts');
+  sessionMeter?.checkpoint('first-defense-start', playtestContext());
   SFX.waveStart();
   music.setWave(state.wave);
   ui.toast(`🌊 ${state.wave}웨이브 시작! 몬스터를 막아요!`);
@@ -1560,6 +1663,20 @@ function isPaused() {
     || ui.isRevealOpen() || ui.isBookOpen() || ui.isVictoryOpen() || state.phase === 'over';
 }
 
+function observePlaySession(now, forceInactive = false) {
+  if (!sessionMeter || sessionMeter.finished) return;
+  const management = ui.isMetaOpen() || ui.isSkillOpen() || ui.isClosetOpen()
+    || ui.isBookOpen() || ui.isVictoryOpen();
+  const phase = ui.isStoryOpen() ? 'story'
+    : ui.isVillageActive() ? 'village'
+      : management ? 'management' : state.phase;
+  sessionMeter.observe({
+    ...playtestContext(),
+    phase,
+    active: !forceInactive && !document.hidden && !ui.isStartOpen() && !demo.active && state.phase !== 'over',
+  }, now);
+}
+
 function updateAutoPhaseFlow(dt) {
   /* 관전 봇은 자체 준비 정책을 쓰며, 사람이 읽거나 선택하는 모달 뒤에서는
    * 카운트다운을 멈춘다. 자동 시작도 수동 버튼과 같은 경로만 호출한다. */
@@ -1593,6 +1710,7 @@ function frame(now) {
   lastT = now;
   frameCount++;
   syncPlaceBar();
+  observePlaySession(now);
 
   /* 그래픽 자동 품질: 시작 4초 후부터 3초간 실측 fps */
   if (!gfxDecided) {
@@ -1701,6 +1819,7 @@ tactics = createTacticFlow({
   resolveTactic: (lane, type, size) => E.castTactic(state, lane, type, size),
   toast: (msg, tone) => ui.toast(msg, tone),
   onCast(result, type, lane, size) {
+    sessionMeter?.action('tacticCasts');
     SFX.tactic(type, size);
     renderer.tacticCast(state, result, type, lane, size);
     renderer.onEvents(state, result.events);
@@ -1714,6 +1833,7 @@ tactics = createTacticFlow({
     tacticFeedback.announceMatch(type, lane, size);
   },
   onSwap(from, to, groups) {
+    sessionMeter?.action('tacticSwaps');
     if (judgeMode) document.body.classList.remove('judge-opening');
     weeklyReplay?.record({ wave: state.wave, time: state.time, from, to, groups });
   },
@@ -1831,6 +1951,10 @@ window.__game = {
   E, D, renderer, ui, SFX, demo, assets: assetLoader,
   env: { isMobile, decor: useDecor, quality: renderer.quality, artMode, judgeMode, weeklyChallenge },
   exportWeeklyReplay() { return weeklyReplay?.export() || null; },
+  playtest: {
+    snapshot: () => sessionMeter?.snapshot() || null,
+    export: () => playtestLog.export(),
+  },
   sfxCore: { getAc, getMaster, isSfxMuted, isMusicMuted, sampleSnapshot: sfxSampleSnapshot },
   records: { codex, earned },
   refresh: refreshAll,

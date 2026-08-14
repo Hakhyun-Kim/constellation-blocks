@@ -1,5 +1,11 @@
 const WEEK_RE = /^\d{4}-W\d{2}$/;
 
+export const WEEKLY_RULES = Object.freeze({
+  endsAfterChapter: 'dawn-road',
+  defenses: 7,
+  targetMinutes: Object.freeze([10, 15]),
+});
+
 export function weeklyId(date = new Date()) {
   const utc = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
   const day = utc.getUTCDay() || 7;
@@ -38,7 +44,13 @@ export function createWeeklyChallenge(id) {
   const normalized = normalizeWeeklyId(id);
   if (!normalized) return null;
   const seed = seedForChallenge(normalized);
-  return Object.freeze({ id: normalized, seed, label: `Weekly Constellation · ${normalized}` });
+  return Object.freeze({
+    id: normalized,
+    seed,
+    label: `Weekly Constellation · ${normalized}`,
+    endsAfterChapter: WEEKLY_RULES.endsAfterChapter,
+    targetMinutes: WEEKLY_RULES.targetMinutes,
+  });
 }
 
 export function createSwapReplay(challengeId) {

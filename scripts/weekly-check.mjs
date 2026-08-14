@@ -1,4 +1,4 @@
-import { createWeeklyChallenge, createSwapReplay, normalizeWeeklyId, seededRandom, weeklyId } from '../src/challenges/weekly.js';
+import { WEEKLY_RULES, createWeeklyChallenge, createSwapReplay, normalizeWeeklyId, seededRandom, weeklyId } from '../src/challenges/weekly.js';
 import { createStableBoard, findLegalSwaps } from '../src/tactics/board.js';
 
 let failures = 0;
@@ -7,6 +7,8 @@ const check = (condition, message) => condition ? console.log(`✅ weekly: ${mes
 check(weeklyId(new Date('2026-08-12T00:00:00Z')) === '2026-W33', 'UTC date maps to a stable ISO week');
 check(normalizeWeeklyId('bad') === null, 'invalid challenge ids are rejected');
 const challenge = createWeeklyChallenge('2026-W33');
+check(challenge.endsAfterChapter === 'dawn-road' && WEEKLY_RULES.defenses === 7
+  && challenge.targetMinutes.join('-') === '10-15', 'weekly scope is the seven-defense first chapter and 10-15 minute target');
 const boardA = createStableBoard(seededRandom(challenge.seed));
 const boardB = createStableBoard(seededRandom(challenge.seed));
 check(JSON.stringify(boardA) === JSON.stringify(boardB), 'same challenge id creates the same opening board');

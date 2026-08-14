@@ -110,7 +110,7 @@ export class UI {
       'demoBtn', 'spectateBtn', 'demoBar', 'demoCaption', 'demoDetail', 'demoExit',
       'revealModal', 'revealCard', 'summonReveal', 'revealTier', 'revealArt', 'revealName', 'revealDesc',
       'wavePreview', 'bossBar', 'bossBarFill', 'bossBarName', 'bossWarnBanner',
-      'saveBtn', 'loadBtn', 'loadFile',
+      'saveBtn', 'loadBtn', 'playtestBtn', 'loadFile',
       'sellModeBtn', 'sellInfo', 'sellAllBtn', 'sellGoBtn',
       'startModal', 'continueInfo', 'continueBtn', 'newGameBtn',
       'overModal', 'overStats', 'overShards', 'restartBtn', 'shareBtn', 'overMetaBtn',
@@ -661,6 +661,7 @@ export class UI {
     /* 저장/불러오기 — "간단한 파일" 하나로 오간다 */
     el.saveBtn.addEventListener('click', () => h.onSave());
     el.loadBtn.addEventListener('click', () => el.loadFile.click());
+    el.playtestBtn.addEventListener('click', () => h.onPlaytestExport());
     el.loadFile.addEventListener('change', () => {
       const f = el.loadFile.files && el.loadFile.files[0];
       el.loadFile.value = '';               // 같은 파일을 다시 골라도 change가 오게
@@ -1876,6 +1877,14 @@ export class UI {
     setTimeout(() => el.classList.add('hidden'), 9000);
   }
   setSpeedLabel(s) { this.el.speedBtn.textContent = `⏩ x${s} (Q)`; }
+  setPlaytestLogStatus(count = 0, exported = false) {
+    const total = Math.max(0, Math.round(Number(count) || 0));
+    this.el.playtestBtn.textContent = total > 0 ? `📊 ${total}` : '📊';
+    this.el.playtestBtn.setAttribute('aria-label', `플레이 기록 내보내기 · 로컬 기록 ${total}개`);
+    this.el.playtestBtn.title = exported
+      ? `방금 내보냄 · 기기에만 저장된 플레이 기록 ${total}개`
+      : `기기에만 저장된 플레이 시간 기록 ${total}개 내보내기`;
+  }
   /* 음소거 버튼 상태 — 꺼진 건 한눈에 보이게 (아이콘 + 회색 처리) */
   setSoundLabels(sfxOff, bgmOff) {
     this.el.sfxBtn.textContent = sfxOff ? '🔇 효과음' : '🔊 효과음';

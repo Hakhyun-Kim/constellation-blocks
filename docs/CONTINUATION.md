@@ -9,8 +9,8 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  P3-1's release-default five-hero and campaign-wide regional model expansion.
-- Working tree at handoff: clean
+  P3-2's local-only human play-session measurement infrastructure.
+- Working tree at handoff: clean after the P3-2 commit.
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
   passed on 2026-08-14. The first-expedition and full two-chapter 60-run balance
   gates also passed with the real match-3, hero-active, and blueprint policies.
@@ -199,8 +199,9 @@ material untouched.
 
 ## Suggested next task
 
-Continue P3-2 of the production roadmap: add honest campaign/session timing
-instrumentation, define the 25–40 minute campaign and 10–15 minute weekly human
-play protocol, and record operator measurements without labeling bot results as
-human data. P0-P2 and P3-1 are complete. The expanded art performance evidence
-is in `docs/performance/art-v2-campaign-expansion-2026-08-14.md`.
+Continue P3-3 of the production roadmap: retain the browser build while adding
+the free Steam demo desktop wrapper, settings/save-path contract, key remapping,
+and Korean/English support. P0-P2 and P3-1 are complete. P3-2 instrumentation is
+complete but its roadmap item remains open until real human samples exist; never
+label bot or Codex browser runs as human data. The protocol is in
+`docs/testing/campaign-duration-protocol.md`.
