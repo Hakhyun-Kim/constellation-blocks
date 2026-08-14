@@ -17,6 +17,7 @@
     "ui:check": "node scripts/hero-card-check.mjs",
     "combat:ui:check": "node scripts/combat-focus-check.mjs",
     "act2:check": "node scripts/act2-content-check.mjs",
+    "campaign:balance:check": "node scripts/campaign-balance-check.mjs 20",
     "village:check": "node scripts/village-check.mjs",
     "phase:check": "node scripts/phase-flow-check.mjs",
     "weekly:check": "node scripts/weekly-check.mjs",

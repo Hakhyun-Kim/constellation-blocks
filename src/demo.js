@@ -190,6 +190,12 @@ export const demo = {
         A.spell();
         return;
       }
+      const blueprint = Bot.nextMonsterBlueprint(state, P, state.rng || Math.random);
+      if (blueprint) {
+        this.say(`${blueprint.spec.emoji} ${blueprint.spec.summonName}, ${['왼쪽', '가운데', '오른쪽'][blueprint.route]} 길 지원!`);
+        A.monsterBlueprint();
+        return;
+      }
       const heroActive = Bot.nextHeroActive(state, P, state.rng || Math.random);
       if (heroActive) {
         this.say(`${heroActive.spec.emoji} ${heroActive.hero.name} · ${heroActive.spec.name}!`);

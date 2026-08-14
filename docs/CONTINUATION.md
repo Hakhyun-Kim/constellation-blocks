@@ -9,12 +9,12 @@ up `Constellation Defense` on another computer.
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  P2-3's complete eight-node Act 2 journey, three procedural regions, margin
-  notes, route fork, and persisted refugee-station state.
+  the completed P2 campaign, including the market-route monster blueprint and
+  the two-chapter deterministic balance gate.
 - Working tree at handoff: clean
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
-  passed on 2026-08-14. The 60-run balance gate also passed with the real
-  match-3 policy and named hero actives on the same date.
+  passed on 2026-08-14. The first-expedition and full two-chapter 60-run balance
+  gates also passed with the real match-3, hero-active, and blueprint policies.
 
 The current campaign is an authored constellation expedition. It starts with
 Arin and Luna, uses a fixed five-hero party, and connects short defense stages
@@ -200,10 +200,9 @@ material untouched.
 
 ## Suggested next task
 
-Continue P2-4 of the production roadmap. Act 2 now has all eight authored nodes,
-three region themes, deterministic route choice, margin-note collection, and a
-refugee station whose survivors, morale, ally, and defenses survive save/restore.
-Add one monster blueprint through the normal command path and make the demo bot
-use the same public rule. P0 and P1 are complete: the art/audio evidence remains
-under `docs/evidence/art-v2/`, and `combat:ui:check` locks the three-lane pressure
-projection used by the live combat hierarchy.
+Continue P3-1 of the production roadmap: extend the proven common art rig and
+material direction from the one-scene pilot to all five heroes and the regional
+enemy/boss families without breaking lazy loading or the mobile draw-call gate.
+P0-P2 are complete. The art/audio evidence remains under
+`docs/evidence/art-v2/`; `combat:ui:check` locks the three-lane pressure
+projection, and `campaign:balance:check` locks the full two-chapter command path.

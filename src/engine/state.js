@@ -48,7 +48,8 @@ export function createGame(opts = {}) {
     champKills: 0, starCasts: 0, ultCasts: 0, perfectWaves: 0,
     feasts: 0, feastWave: 0,
     shardsEarned: 0,
-    tacticCasts: 0, heroActiveCasts: 0,
+    tacticCasts: 0, heroActiveCasts: 0, blueprintCasts: 0,
+    blueprintUsedWave: 0, blueprintSummons: [],
     runMemory: createRunMemory(),
     resonanceCasts: 0,
     resonance: createResonance(1),
@@ -136,7 +137,7 @@ export const SAVE_VERSION = 7;
 const SAVE_STATS = [
   'kills', 'bossKills', 'midBossKills', 'summons', 'combos', 'goldEarned',
   'specialsMade', 'mythicsMade', 'tacticCasts', 'resonanceCasts',
-  'champKills', 'starCasts', 'ultCasts', 'heroActiveCasts', 'perfectWaves', 'feasts',
+  'champKills', 'starCasts', 'ultCasts', 'heroActiveCasts', 'blueprintCasts', 'perfectWaves', 'feasts',
 ];
 
 export function serialize(state) {

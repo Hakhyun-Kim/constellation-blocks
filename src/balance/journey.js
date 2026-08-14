@@ -56,7 +56,7 @@ const BEYOND_PAGE_CHAPTER = {
     {
       id: 'corrector-hunt', kind: 'battle', icon: '⚔', name: '교정관의 사냥',
       text: '중간보스와 졸개가 편대로 밀려오고, 플레이어의 명령이 적에게도 들린다.', x: 61, y: 51,
-      waves: 3, threat: 13, region: 'ashen-margin', protectsRefugees: true, next: ['nameless-archive'],
+      waves: 3, threat: 12, region: 'ashen-margin', protectsRefugees: true, next: ['nameless-archive'],
     },
     {
       id: 'nameless-archive', kind: 'clue', icon: '▧', name: '무명 서고',
@@ -67,12 +67,12 @@ const BEYOND_PAGE_CHAPTER = {
     {
       id: 'correction-gates', kind: 'battle', icon: '♜', name: '세 개의 교정문',
       text: '중간보스 둘과 졸개가 세 길을 동시에 막는 최종 전초전.', x: 82, y: 52,
-      waves: 4, threat: 16, region: 'ashen-margin', protectsRefugees: true, next: ['manuscript-core'],
+      waves: 4, threat: 14, region: 'ashen-margin', protectsRefugees: true, next: ['manuscript-core'],
     },
     {
       id: 'manuscript-core', kind: 'boss', icon: '◆', name: '원고핵 성채',
       text: '초고 0호와 살아남은 교정관 편성을 넘어 두 번째 책갈피를 되찾는다.', x: 94, y: 52,
-      waves: 5, threat: 19, region: 'manuscript-core', protectsRefugees: true, next: [],
+      waves: 5, threat: 16, region: 'manuscript-core', protectsRefugees: true, next: [],
       annotation: { id: 'last-margin', title: '마지막 여백', speaker: '아린', text: '우리를 움직일 수 있다는 것과, 우리 대신 선택해도 된다는 건 다른 말이야.' },
     },
   ],

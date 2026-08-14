@@ -34,7 +34,8 @@ const tacticFeedback = createTacticFeedback();
 const urlParams = new URLSearchParams(location.search);
 const urlGfx = urlParams.get('gfx');
 const judgeMode = urlParams.has('judge');
-const previewChapter = urlParams.get('chapter') === '2' ? 'beyond-page' : null;
+const previewBlueprint = urlParams.has('blueprint');
+const previewChapter = urlParams.get('chapter') === '2' || previewBlueprint ? 'beyond-page' : null;
 const weeklyChallenge = urlParams.has('weekly') ? createWeeklyChallenge(urlParams.get('weekly')) : null;
 const systemReducedEffects = typeof matchMedia === 'function'
   && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -314,6 +315,14 @@ function newGame(difficulty, opts = {}) {
     rng: weeklyChallenge ? seededRandom(weeklyChallenge.seed) : undefined,
     journeyChapter: opts.journeyChapter || previewChapter,
   });
+  if (previewBlueprint && state.journey?.chapter === 'beyond-page') {
+    state.journey.current = 'alignment-hub';
+    if (!state.journey.visited.includes('alignment-hub')) state.journey.visited.push('alignment-hub');
+    E.chooseJourneyPath(state, 'market');
+    E.travelJourney(state, 'refugee-station');
+    E.travelJourney(state, 'corrector-hunt');
+    E.prepareJourneyBattle(state);
+  }
   autoPhaseClock = createAutoPhaseClock();
   if (tactics) tactics.reset();
   tacticFeedback.reset();
@@ -485,6 +494,21 @@ function doHeroActive(heroId) {
   renderer.onEvents(state, r.events);
   handleEvents(r.events);
   ui.renderHeroPanel(state, heroId);
+}
+function doMonsterBlueprint() {
+  const result = E.castMonsterBlueprint(state);
+  if (!result.ok) {
+    if (result.reason === 'locked') ui.toast('👺 지하 몬스터 시장에서 청사진을 기록해야 합니다.', 'bad');
+    else if (result.reason === 'phase') ui.toast('👺 몬스터 청사진은 전투 중에만 사용할 수 있습니다.', 'bad');
+    else if (result.reason === 'charge') ui.toast('👺 이번 방어에서는 이미 청사진을 사용했습니다.', 'bad');
+    else if (result.reason === 'none') ui.toast('👺 소환할 방어로에 적이 아직 없습니다.');
+    return false;
+  }
+  SFX.summon(1);
+  renderer.onEvents(state, result.events);
+  handleEvents(result.events);
+  ui.updateHud(state, store.shards, store.best(state.difficulty));
+  return true;
 }
 function openSkills() {
   if (!state.champ) return;
@@ -792,6 +816,10 @@ function handleEvents(events) {
         else SFX.explode(ev.x);
         ui.toast(`${ev.emoji} ${ev.heroName} · ${ev.ability}!`, 'good');
         break;
+      case 'blueprintSummon':
+        SFX.orb(ev.x);
+        ui.toast(`${ev.emoji} ${ev.name} · ${['왼쪽', '가운데', '오른쪽'][ev.route]} 길 지원!`, 'good');
+        break;
       case 'kill':
         if (!demo.active) codexAddKill(ev.etype);   // 몬스터 도감 — 봇의 사냥은 세지 않는다
         if (ev.boss) {
@@ -1096,6 +1124,7 @@ const handlers = {
     return true;
   },
   onHeroActive(heroId) { doHeroActive(heroId); },
+  onMonsterBlueprint() { return doMonsterBlueprint(); },
   onSceneClick(cx, cy) {
     const pad = renderer.screenToPad(cx, cy);
     if (pad == null) { deselectAll(); return; }
@@ -1513,6 +1542,7 @@ document.addEventListener('keydown', (ev) => {
       SFX.tap();
       return;
     case 'f': cycleField(1); return;
+    case 'g': doMonsterBlueprint(); return;
     case 'r': if (selHero != null && !ui.el.recallBtn.classList.contains('hidden')) ui.el.recallBtn.click(); return;
     case 'x': if (selHero != null) ui.el.sellBtn.click(); return;
     case '7': ui.el.castleRows.querySelector('button[data-key="repair"]')?.click(); return;
@@ -1760,6 +1790,7 @@ demo.attach({
   skill(key) { handlers.onSkillPick(key); },
   heroSkill(heroId, key) { handlers.onHeroSkill(heroId, key); },
   heroActive: doHeroActive,
+  monsterBlueprint: doMonsterBlueprint,
   feast: doFeast,
   journeyTravel(id) { handlers.onJourneyTravel(id); },
   journeyRecruit(key) { handlers.onJourneyRecruit(key); },

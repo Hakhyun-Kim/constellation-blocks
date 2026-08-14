@@ -31,9 +31,27 @@ enemy curve:
 | Hard | 0% | 52% | 100% |
 
 This baseline deliberately measures the first expedition so it remains
-comparable with the stored medians. The full two-chapter bot run will become a
-separate gate when the P2-4 monster-blueprint command completes the Act 2 combat
-toolset.
+comparable with the stored medians. The separate 60-seed, full two-chapter run
+now exercises the market-route monster blueprint through the same public
+command used by the player:
+
+| Difficulty | Profile | Reached Act 2 | Completed Act 2 | Mean blueprint casts |
+| --- | --- | ---: | ---: | ---: |
+| Easy | Novice | 28% | 3% | 0.5 |
+| Easy | Normal | 90% | 83% | 8.7 |
+| Easy | Expert | 100% | 100% | 10.1 |
+| Normal | Novice | 22% | 2% | 0.2 |
+| Normal | Normal | 88% | 62% | 8.2 |
+| Normal | Expert | 100% | 100% | 10.4 |
+| Hard | Novice | 0% | 0% | 0.0 |
+| Hard | Normal | 52% | 5% | 3.1 |
+| Hard | Expert | 100% | 98% | 10.9 |
+
+The Act 2 encounter threats were calibrated from `13/16/19` to `12/14/16` for
+Corrector Hunt, Correction Gates, and Manuscript Core. This preserves the
+opt-in Hard wall while bringing the engaged Normal profile above the 35% full
+campaign floor. `npm.cmd run campaign:balance:check` enforces the release
+profiles; use `node scripts/campaign-balance-check.mjs 60` for the full audit.
 
 The intent is that Easy teaches and forgives, Normal lets an engaged first-time
 player finish the authored expedition, and Hard remains the opt-in pressure

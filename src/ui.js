@@ -103,7 +103,8 @@ export class UI {
       'summonBtn', 'benchHint', 'bench', 'combineRows', 'sfxBtn', 'bgmBtn', 'effectsBtn',
       'placeBar', 'placeBarText', 'placeBarCancel',
       'castleRows', 'heroPanel', 'hpTitle', 'hpInfo', 'heroActiveBtn', 'recallBtn', 'sellBtn', 'moveHint',
-      'combatHeroBar', 'combatHeroName', 'combatHeroRole', 'combatHeroActiveBtn', 'lanePressure',
+      'combatHeroBar', 'combatHeroName', 'combatHeroRole', 'combatHeroActiveBtn',
+      'combatBlueprintBar', 'combatBlueprintName', 'combatBlueprintRole', 'combatBlueprintBtn', 'lanePressure',
       'diffRow',
       'storyModal', 'storyIcon', 'storyTitle', 'storyLines', 'storyNext', 'storyOff',
       'demoBtn', 'spectateBtn', 'demoBar', 'demoCaption', 'demoDetail', 'demoExit',
@@ -142,7 +143,8 @@ export class UI {
       <p>🛡️ <b>영웅단</b> 아린과 루나로 시작해 원정 중 동료를 영입합니다. 영웅 카드를 눌러 선택한 뒤 빈 발판이나 다른 영웅을 눌러 위치를 옮기거나 교환하세요.</p>
       <p>✦ <b>성장</b> 처치와 웨이브 완료로 영웅 경험치를 얻습니다. 레벨업 포인트가 생기면 <b>영웅 성장</b> 탭에서 그 영웅의 전문화를 고르세요. <b>S</b> 키로 바로 열 수 있어요.</p>
       <p>☄️ <b>별자리 전술</b> 전투 중 6×6 보드에서 이웃 별을 바꾸세요. Flare는 공격, Tide는 감속, Bloom은 회복·후퇴를 맡고, 맞춘 열이 대상 길을 정합니다.</p>
-      <p>🌠 <b>영웅 액티브</b> 전투 중 영웅 카드를 누른 뒤 용사 패널의 큰 기술 버튼을 누르세요. 다섯 영웅이 서로 다른 처형·폭발·저지·연사·감속 기술을 씁니다. <b>D</b>는 밸런스 봇 관전, <b>B</b>는 기록입니다.</p>`;
+      <p>🌠 <b>영웅 액티브</b> 전투 중 영웅 카드를 누른 뒤 용사 패널의 큰 기술 버튼을 누르세요. 다섯 영웅이 서로 다른 처형·폭발·저지·연사·감속 기술을 씁니다.</p>
+      <p>👺 <b>몬스터 청사진</b> 2막 지하 시장에서 기록하면 방어마다 한 번, 가장 위험한 길에 고블린 김대리를 소환할 수 있습니다. 버튼 또는 <b>G</b>를 누르세요. <b>D</b>는 밸런스 봇 관전, <b>B</b>는 기록입니다.</p>`;
     document.body.insertAdjacentHTML('beforeend', `
       <section id="journeyModal" class="journey-modal hidden" aria-live="polite">
         <div id="journeyBody" class="journey-shell"></div>
@@ -655,6 +657,7 @@ export class UI {
     el.sellBtn.addEventListener('click', () => h.onSell());
     el.heroActiveBtn.addEventListener('click', () => h.onHeroActive(Number(el.heroActiveBtn.dataset.heroId)));
     el.combatHeroActiveBtn.addEventListener('click', () => h.onHeroActive(Number(el.combatHeroActiveBtn.dataset.heroId)));
+    el.combatBlueprintBtn.addEventListener('click', () => h.onMonsterBlueprint());
     /* 저장/불러오기 — "간단한 파일" 하나로 오간다 */
     el.saveBtn.addEventListener('click', () => h.onSave());
     el.loadBtn.addEventListener('click', () => el.loadFile.click());
@@ -783,6 +786,7 @@ export class UI {
     el.castleFill.style.width = `${pct}%`;
     el.castleGhost.style.width = `${pct}%`;
     this.updateLanePressure(state);
+    this.updateMonsterBlueprint(state);
     /* 소환 버튼도 "왜 안 눌리는지"를 버튼 얼굴에 적는다 — 회색이 된 이유가 돈인지 자리인지 보이게 */
     const canPay = state.gold >= D.SUMMON_COST;
     const benchFull = state.bench.length >= D.BENCH_MAX;
@@ -809,6 +813,30 @@ export class UI {
       element.querySelector('em').textContent = lane.count ? `${lane.label} · ${lane.count}` : lane.label;
       element.title = `${lane.name} 길 · ${lane.count ? `적 ${lane.count}기 · 최전선 ${Math.round(lane.maxProgress * 100)}%` : '적 없음'}`;
     }
+  }
+
+  updateMonsterBlueprint(state) {
+    const el = this.el;
+    const spec = E.availableMonsterBlueprint(state);
+    el.combatBlueprintBar.classList.toggle('hidden', !spec);
+    if (!spec) return;
+    const status = E.canCastMonsterBlueprint(state);
+    const routeNames = ['왼쪽', '가운데', '오른쪽'];
+    const active = (state.blueprintSummons || []).find((summon) => summon.blueprint === spec.key);
+    el.combatBlueprintName.textContent = `${spec.emoji} ${spec.name}`;
+    el.combatBlueprintRole.textContent = active
+      ? `${routeNames[active.route]} 길 지원 중 · ${Math.max(0, active.life).toFixed(1)}초`
+      : status.ok
+        ? `${routeNames[status.target.route]} 길이 가장 위험합니다 · 방어당 1회`
+        : status.reason === 'charge' ? '이번 방어의 청사진을 이미 사용했습니다.'
+          : status.reason === 'none' ? '적이 나타나면 가장 위험한 길을 자동 선택합니다.'
+            : '전투 중에만 소환할 수 있습니다.';
+    el.combatBlueprintBtn.disabled = !status.ok;
+    el.combatBlueprintBtn.classList.toggle('ready', status.ok);
+    el.combatBlueprintBtn.textContent = status.ok
+      ? `${spec.emoji} ${routeNames[status.target.route]} 소환`
+      : active ? '지원 중' : status.reason === 'charge' ? '사용 완료' : '소환 대기';
+    el.combatBlueprintBtn.title = `${spec.desc} · G`;
   }
 
   setWaveUI(state, autoStartSeconds = null) {

@@ -169,6 +169,40 @@ const put = (st, cls, tier, pad) => {
     && st.journey.refuge.defenses === 3);
 }
 
+/* ---------- Act 2 market monster blueprint ---------- */
+{
+  const locked = E.createGame({ difficulty: 'normal', journeyChapter: 'beyond-page' });
+  locked.phase = 'wave';
+  locked.enemies = [{ id: 10, route: 0, s: 10, dead: false }];
+  ok('blueprint: non-market routes cannot use the monster command', E.castMonsterBlueprint(locked).reason === 'locked');
+
+  const st = E.createGame({ difficulty: 'normal', journeyChapter: 'beyond-page' });
+  st.journey.current = 'alignment-hub';
+  E.chooseJourneyPath(st, 'market');
+  st.phase = 'wave'; st.wave = 13;
+  st.enemies = [
+    { id: 20, route: 0, s: D.ROUTE_LENS[0] * .25, dead: false },
+    { id: 21, route: 2, s: D.ROUTE_LENS[2] * .72, dead: false, midBoss: true },
+  ];
+  const decision = Bot.nextMonsterBlueprint(st, { activeUse: 1 }, () => 0);
+  const cast = E.castMonsterBlueprint(st, decision?.route);
+  ok('blueprint: bot and player share the public availability rule', decision?.route === 2 && cast.ok && cast.summon.route === 2);
+  ok('blueprint: one summon consumes the defense charge', st.blueprintCasts === 1
+    && st.blueprintUsedWave === 13 && E.castMonsterBlueprint(st).reason === 'charge');
+  const events = [];
+  E.updateMonsterBlueprints(st, .2, events);
+  ok('blueprint: summoned clerk fires a normal tracked projectile', st.projectiles.length === 1
+    && st.projectiles[0].kind === 'blueprint' && events.some((event) => event.type === 'blueprintAttack'));
+  st.blueprintSummons[0].life = .01;
+  E.updateMonsterBlueprints(st, .02, events);
+  ok('blueprint: temporary summons leave no persistent combat actor', st.blueprintSummons.length === 0
+    && events.some((event) => event.type === 'blueprintDismiss'));
+  st.phase = 'journey'; st.projectiles = []; st.blueprintSummons = [];
+  const back = E.deserialize(JSON.parse(JSON.stringify(E.serialize(st))));
+  ok('blueprint: market unlock and cast count survive save/load', E.availableMonsterBlueprint(back)?.key === 'clerk-goblin'
+    && back.blueprintCasts === 1 && back.blueprintSummons.length === 0);
+}
+
 /* ---------- 지역 조우: 지휘관+졸개 → 지역 보스+지휘관 호위 ---------- */
 {
   const st = E.createGame({ difficulty: 'normal', rng: Bot.mulberry32(812) });

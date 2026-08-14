@@ -135,6 +135,7 @@ export class Renderer3D {
     this.heroViews = new Map();
     this.enemyViews = new Map();
     this.projViews = new Map();
+    this.blueprintViews = new Map();
     this.gatePilot = null;
     this.gatePilotRequest = null;
     this.castleFortify = 0;
@@ -693,6 +694,25 @@ export class Renderer3D {
     return view;
   }
 
+  _makeBlueprintView(summon) {
+    const spec = D.monsterBlueprintSpec(summon.blueprint);
+    const group = new THREE.Group();
+    const sprite = new THREE.Sprite(new THREE.SpriteMaterial({
+      map: emojiTexture(spec?.emoji || '👺'), transparent: true, color: 0xdfffea,
+    }));
+    sprite.scale.set(1.25, 1.25, 1);
+    sprite.position.y = .82;
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(.5, .68, 24),
+      new THREE.MeshBasicMaterial({ color: 0x66efb2, transparent: true, opacity: .78, depthWrite: false }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.y = .06;
+    group.add(sprite, ring);
+    this.scene.add(group);
+    return { group, sprite, ring, attackT: 0 };
+  }
+
   /* ---------- 상태 동기화 ---------- */
   sync(state) {
     const fieldIds = new Set();
@@ -720,6 +740,23 @@ export class Renderer3D {
         this._disposePilotView(v);
         this.scene.remove(v.holder);
         this.heroViews.delete(id);
+      }
+    }
+
+    const blueprintIds = new Set();
+    for (const summon of state.blueprintSummons || []) {
+      blueprintIds.add(summon.id);
+      let view = this.blueprintViews.get(summon.id);
+      if (!view) {
+        view = this._makeBlueprintView(summon);
+        this.blueprintViews.set(summon.id, view);
+      }
+      view.group.position.set(wx(summon.x), 0, wz(summon.y));
+    }
+    for (const [id, view] of this.blueprintViews) {
+      if (!blueprintIds.has(id)) {
+        this.scene.remove(view.group);
+        this.blueprintViews.delete(id);
       }
     }
 
@@ -876,6 +913,13 @@ export class Renderer3D {
       const orb = new THREE.Mesh(new THREE.SphereGeometry(0.17, 12, 10), new THREE.MeshBasicMaterial({ color }));
       g.add(orb);
       g.userData.pulse = true;
+    } else if (p.kind === 'blueprint') {
+      const stamp = new THREE.Mesh(
+        new THREE.OctahedronGeometry(.18),
+        new THREE.MeshBasicMaterial({ color: 0x65f0af }),
+      );
+      g.add(stamp);
+      g.userData.pulse = true;
     } else {
       const bolt = new THREE.Mesh(new THREE.SphereGeometry(0.14, 10, 8), new THREE.MeshBasicMaterial({ color: 0x8df3ff }));
       g.add(bolt);
@@ -954,6 +998,22 @@ export class Renderer3D {
             this.burst(hx, .75, hz, color, ev.kind === 'nova' ? 10 : 5, 2.2, { grav: .8, ttl: .38 });
           }
           this.addShake(.1);
+          break;
+        }
+        case 'blueprintSummon': {
+          this._shockRing(x3, z3, 1.05, 0x65f0af, .48, .16);
+          this.burst(x3, .8, z3, 0x65f0af, 12, 2.2, { grav: .8, ttl: .42 });
+          this.showNumber(x3, 2.0, z3, `${ev.emoji} ${ev.name}`, '#c8ffe4', .95);
+          break;
+        }
+        case 'blueprintAttack': {
+          const view = this.blueprintViews.get(ev.summonId);
+          if (view) view.attackT = 1;
+          this.burst(x3, .82, z3, 0x65f0af, 4, 1.3, { grav: .4, ttl: .3 });
+          break;
+        }
+        case 'blueprintDismiss': {
+          this.burst(x3, .62, z3, 0x8aa69a, 6, 1.4, { grav: .5, ttl: .35 });
           break;
         }
         case 'kill': {
@@ -1217,6 +1277,19 @@ export class Renderer3D {
       }
     }
 
+    for (const [id, view] of this.blueprintViews) {
+      const bob = Math.sin(t * 5 + id) * .08;
+      view.sprite.position.y = .82 + bob;
+      view.ring.rotation.z = t * 1.6;
+      view.ring.material.opacity = .58 + Math.sin(t * 4 + id) * .16;
+      if (view.attackT > 0) {
+        view.attackT = Math.max(0, view.attackT - dt * 4);
+        view.sprite.scale.setScalar(1.25 + Math.sin((1 - view.attackT) * Math.PI) * .24);
+      } else {
+        view.sprite.scale.set(1.25, 1.25, 1);
+      }
+    }
+
     for (const [id, v] of this.enemyViews) {
       const bossHop = v.boss ? 4.2 : (v.midBoss ? 5.5 : 7);
       const hop = Math.abs(Math.sin(t * bossHop + id)) * (v.boss || v.midBoss ? 0.2 : 0.14);
@@ -1386,6 +1459,8 @@ export class Renderer3D {
     this.gatePilot = null;
     for (const view of this.heroViews.values()) this._disposePilotView(view);
     for (const view of this.enemyViews.values()) this._disposePilotView(view);
+    for (const view of this.blueprintViews.values()) view.group.removeFromParent();
+    this.blueprintViews.clear();
     if (this.decor) {
       this.grass.dispose();
       this.sea.dispose();

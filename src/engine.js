@@ -13,6 +13,7 @@ export * from './engine/state.js';
 export * from './engine/champion.js';
 export * from './engine/squad.js';
 export * from './engine/hero-actives.js';
+export * from './engine/blueprints.js';
 export * from './engine/journey.js';
 export * from './engine/roster.js';
 export * from './engine/economy.js';

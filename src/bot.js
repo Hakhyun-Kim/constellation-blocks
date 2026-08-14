@@ -147,6 +147,12 @@ export function nextHeroActive(state, P, rng = state.rng || Math.random) {
   return hero ? { heroId: hero.id, hero, spec: D.heroActiveSpec(hero.heroKey) } : null;
 }
 
+export function nextMonsterBlueprint(state, P, rng = state.rng || Math.random) {
+  const status = E.canCastMonsterBlueprint(state);
+  if (!status.ok || rng() > (P.activeUse || 0)) return null;
+  return { spec: status.spec, route: status.target.route };
+}
+
 /* 지도에서도 사람과 봇이 같은 공개 정보만 사용한다. 영입 가능한 동료가
  * 있는 길을 먼저 택하고, 그 다음 보급과 전투를 고른다. */
 const JOURNEY_KIND_PRIORITY = {
@@ -178,9 +184,9 @@ export function nextJourneyPath(state) {
   const journey = state?.journey;
   const node = E.journeyNode(journey?.current, state);
   if (!node?.choices || journey.flags?.[node.id]) return null;
-  /* Stable route for reproducible runs; both options use the same public
-   * command and the market branch is exercised separately by engine tests. */
-  return node.choices.find((choice) => choice.key === 'guild') || node.choices[0] || null;
+  /* Stable route for reproducible runs. The market route lets campaign bots
+   * exercise the same monster-blueprint command exposed to players. */
+  return node.choices.find((choice) => choice.key === 'market') || node.choices[0] || null;
 }
 
 /* The bot has no hidden preference signal. The coauthor ending is the stable

@@ -97,6 +97,7 @@ export function resolveTacticSwap(state, move, onCast = null) {
 
 export function playRun(profileName, difficulty, seed, options = {}) {
   const waveCap = options.waveCap ?? 40;
+  const chapterCap = Math.max(1, Math.min(D.JOURNEY_CHAPTERS.length, options.chapterCap ?? 1));
   const tacticPolicy = options.tacticPolicy ?? 'threat';
   const trace = options.trace ? [] : null;
   const profile = Bot.PROFILES[profileName];
@@ -104,7 +105,15 @@ export function playRun(profileName, difficulty, seed, options = {}) {
 
   let board = createStableBoard(state.rng);
   let stalemate = false;
-  while (state.phase !== 'over' && state.wave <= waveCap && !state.journey?.complete && !stalemate) {
+  while (state.phase !== 'over' && state.wave <= waveCap && !stalemate) {
+    if (state.phase === 'journey' && state.journey?.complete) {
+      const chapterIndex = D.JOURNEY_CHAPTERS.findIndex((chapter) => chapter.id === state.journey.chapter);
+      if (chapterIndex >= 0 && chapterIndex + 1 < chapterCap) {
+        if (!E.advanceJourneyChapter(state).ok) { stalemate = true; break; }
+        continue;
+      }
+      break;
+    }
     /* 지도 선택과 영입도 실제 플레이와 같은 순수 엔진 명령으로 처리한다. */
     if (state.phase === 'journey') {
       spendTownSpecializations(state);
@@ -162,15 +171,24 @@ export function playRun(profileName, difficulty, seed, options = {}) {
       const heroActive = Bot.nextHeroActive(state, profile, state.rng);
       if (heroActive) E.castHeroActive(state, heroActive.heroId);
 
+      const blueprint = Bot.nextMonsterBlueprint(state, profile, state.rng);
+      if (blueprint) E.castMonsterBlueprint(state, blueprint.route);
+
       if (profile.midWave && Bot.wantsSummon(state, profile)) {
         if (E.summon(state).ok) Bot.placeAll(state, profile.sloppy || 0);
       }
     }
   }
+  const finalChapterIndex = D.JOURNEY_CHAPTERS.findIndex((chapter) => chapter.id === state.journey?.chapter);
   return {
     wave: Math.min(state.wave, waveCap + 1),
-    survived: state.journey?.complete || state.wave > waveCap,
+    survived: (!!state.journey?.complete && finalChapterIndex + 1 >= chapterCap) || state.wave > waveCap,
     tactics: state.tacticCasts,
+    blueprints: state.blueprintCasts || 0,
+    chapter: state.journey?.chapter || null,
+    node: state.journey?.current || null,
+    castleHp: Math.round(state.castleHp || 0),
+    reachedAct2: finalChapterIndex >= 1,
     trace,
   };
 }
@@ -185,13 +203,20 @@ export function runProfile(profile, difficulty, runs, options = {}) {
   const waves = [];
   const survived = [];
   const tactics = [];
+  const blueprints = [];
+  const reachedAct2 = [];
+  const nodeCounts = {};
   for (let index = 0; index < runs; index++) {
     const result = playRun(profile, difficulty, index * 7919 + 13, options);
     waves.push(result.wave);
     survived.push(result.survived ? 1 : 0);
     tactics.push(result.tactics);
+    blueprints.push(result.blueprints);
+    reachedAct2.push(result.reachedAct2 ? 1 : 0);
+    nodeCounts[result.node || 'none'] = (nodeCounts[result.node || 'none'] || 0) + 1;
   }
   const survivedRate = average(survived);
+  const reachedAct2Rate = average(reachedAct2);
   return {
     profile,
     difficulty,
@@ -200,7 +225,11 @@ export function runProfile(profile, difficulty, runs, options = {}) {
     min: Math.min(...waves), max: Math.max(...waves),
     survivedRate,
     survivedPct: `${(survivedRate * 100).toFixed(0)}%`,
+    reachedAct2Rate,
+    reachedAct2Pct: `${(reachedAct2Rate * 100).toFixed(0)}%`,
     tacticMean: average(tactics).toFixed(1),
+    blueprintMean: average(blueprints).toFixed(1),
+    nodeCounts,
   };
 }
 
