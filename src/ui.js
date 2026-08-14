@@ -110,7 +110,10 @@ export class UI {
       'demoBtn', 'spectateBtn', 'demoBar', 'demoCaption', 'demoDetail', 'demoExit',
       'revealModal', 'revealCard', 'summonReveal', 'revealTier', 'revealArt', 'revealName', 'revealDesc',
       'wavePreview', 'bossBar', 'bossBarFill', 'bossBarName', 'bossWarnBanner',
-      'saveBtn', 'loadBtn', 'playtestBtn', 'loadFile',
+      'saveBtn', 'loadBtn', 'playtestBtn', 'settingsBtn', 'loadFile',
+      'settingsModal', 'settingsGfx', 'settingsEffects', 'settingsApplyNote',
+      'settingsSfxBtn', 'settingsBgmBtn', 'settingsKeyRows', 'settingsKeyReset',
+      'settingsSavePath', 'settingsClose',
       'sellModeBtn', 'sellInfo', 'sellAllBtn', 'sellGoBtn',
       'startModal', 'continueInfo', 'continueBtn', 'newGameBtn',
       'overModal', 'overStats', 'overShards', 'restartBtn', 'shareBtn', 'overMetaBtn',
@@ -141,10 +144,10 @@ export class UI {
     this.el.summonBtn.classList.add('hidden');
     this.el.helpBox.innerHTML = `
       <p>🛡️ <b>영웅단</b> 아린과 루나로 시작해 원정 중 동료를 영입합니다. 영웅 카드를 눌러 선택한 뒤 빈 발판이나 다른 영웅을 눌러 위치를 옮기거나 교환하세요.</p>
-      <p>✦ <b>성장</b> 처치와 웨이브 완료로 영웅 경험치를 얻습니다. 레벨업 포인트가 생기면 <b>영웅 성장</b> 탭에서 그 영웅의 전문화를 고르세요. <b>S</b> 키로 바로 열 수 있어요.</p>
+      <p>✦ <b>성장</b> 처치와 웨이브 완료로 영웅 경험치를 얻습니다. 레벨업 포인트가 생기면 <b>영웅 성장</b> 탭에서 그 영웅의 전문화를 고르세요. <b data-shortcut="squad">S</b> 키로 바로 열 수 있어요.</p>
       <p>☄️ <b>별자리 전술</b> 전투 중 6×6 보드에서 이웃 별을 바꾸세요. Flare는 공격, Tide는 감속, Bloom은 회복·후퇴를 맡고, 맞춘 열이 대상 길을 정합니다.</p>
       <p>🌠 <b>영웅 액티브</b> 전투 중 영웅 카드를 누른 뒤 용사 패널의 큰 기술 버튼을 누르세요. 다섯 영웅이 서로 다른 처형·폭발·저지·연사·감속 기술을 씁니다.</p>
-      <p>👺 <b>몬스터 청사진</b> 2막 지하 시장에서 기록하면 방어마다 한 번, 가장 위험한 길에 고블린 김대리를 소환할 수 있습니다. 버튼 또는 <b>G</b>를 누르세요. <b>D</b>는 밸런스 봇 관전, <b>B</b>는 기록입니다.</p>`;
+      <p>👺 <b>몬스터 청사진</b> 2막 지하 시장에서 기록하면 방어마다 한 번, 가장 위험한 길에 고블린 김대리를 소환할 수 있습니다. 버튼 또는 <b data-shortcut="blueprint">G</b>를 누르세요. <b data-shortcut="spectate">D</b>는 밸런스 봇 관전, <b data-shortcut="codex">B</b>는 기록입니다.</p>`;
     document.body.insertAdjacentHTML('beforeend', `
       <section id="journeyModal" class="journey-modal hidden" aria-live="polite">
         <div id="journeyBody" class="journey-shell"></div>
@@ -634,6 +637,17 @@ export class UI {
     el.sfxBtn.addEventListener('click', h.onToggleSfx);
     el.bgmBtn.addEventListener('click', h.onToggleBgm);
     el.effectsBtn.addEventListener('click', h.onToggleEffects);
+    el.settingsBtn.addEventListener('click', h.onSettingsOpen);
+    el.settingsClose.addEventListener('click', h.onSettingsClose);
+    el.settingsGfx.addEventListener('change', () => h.onSettingsGraphics(el.settingsGfx.value));
+    el.settingsEffects.addEventListener('change', () => h.onSettingsEffects(el.settingsEffects.value));
+    el.settingsSfxBtn.addEventListener('click', h.onToggleSfx);
+    el.settingsBgmBtn.addEventListener('click', h.onToggleBgm);
+    el.settingsKeyReset.addEventListener('click', h.onSettingsKeyReset);
+    el.settingsKeyRows.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-key-action]');
+      if (button) h.onSettingsKeyCapture(button.dataset.keyAction);
+    });
     el.metaBtn.addEventListener('click', h.onMetaOpen);
     el.overMetaBtn.addEventListener('click', h.onMetaOpen);
     el.metaClose.addEventListener('click', () => this.hideMeta());
@@ -1876,7 +1890,7 @@ export class UI {
     el.classList.remove('hidden');
     setTimeout(() => el.classList.add('hidden'), 9000);
   }
-  setSpeedLabel(s) { this.el.speedBtn.textContent = `⏩ x${s} (Q)`; }
+  setSpeedLabel(s, shortcut = 'Q') { this.el.speedBtn.textContent = `⏩ x${s} (${shortcut})`; }
   setPlaytestLogStatus(count = 0, exported = false) {
     const total = Math.max(0, Math.round(Number(count) || 0));
     this.el.playtestBtn.textContent = total > 0 ? `📊 ${total}` : '📊';
@@ -1884,6 +1898,40 @@ export class UI {
     this.el.playtestBtn.title = exported
       ? `방금 내보냄 · 기기에만 저장된 플레이 기록 ${total}개`
       : `기기에만 저장된 플레이 시간 기록 ${total}개 내보내기`;
+  }
+  renderSettings({ actions, bindings, captureAction = null, graphics = 'high', reducedEffects = true,
+    systemReduced = false, sfxMuted = false, bgmMuted = false, saveLocation = '브라우저 사이트 저장소' }) {
+    this.el.settingsGfx.value = graphics === 'lite' ? 'lite' : 'high';
+    this.el.settingsEffects.value = reducedEffects ? 'reduced' : 'lively';
+    this.el.settingsEffects.disabled = systemReduced;
+    this.el.settingsApplyNote.textContent = systemReduced
+      ? '운영체제의 동작 줄이기 설정이 켜져 있어 절제 효과를 유지합니다. 전체 화면 점멸은 항상 금지됩니다.'
+      : '그래픽 품질은 다음 실행부터 적용됩니다. 전체 화면 점멸은 어떤 설정에서도 사용하지 않습니다.';
+    this.el.settingsSfxBtn.textContent = sfxMuted ? '🔇 효과음 꺼짐' : '🔊 효과음 켜짐';
+    this.el.settingsBgmBtn.textContent = bgmMuted ? '🔇 배경음 꺼짐' : '🎵 배경음 켜짐';
+    this.el.settingsKeyRows.innerHTML = actions.map(({ id, label, key }) =>
+      `<button class="settings-key${captureAction === id ? ' listening' : ''}" data-key-action="${id}"><span>${label}</span><kbd>${captureAction === id ? '새 키…' : key}</kbd></button>`).join('');
+    this.el.settingsSavePath.textContent = `💾 저장 위치 · ${saveLocation}`;
+  }
+  showSettings() { this.el.settingsModal.classList.remove('hidden'); }
+  hideSettings() { this.el.settingsModal.classList.add('hidden'); }
+  isSettingsOpen() { return !this.el.settingsModal.classList.contains('hidden'); }
+  setShortcutLabels(bindings, labelForCode) {
+    const label = (action) => labelForCode(bindings[action]);
+    this.el.spellBtn.querySelector('.bkey').textContent = label('spell');
+    this.el.ultBtn.querySelector('.bkey').textContent = label('ultimate');
+    this.el.skillBtn.querySelector('.bkey').textContent = label('skills');
+    this.el.spellBtn.title = `별똥별 — 성문에 가까운 적에게 별이 떨어져요 (${label('spell')})`;
+    this.el.ultBtn.title = `은하수 — 화면의 모든 적을 때리고 얼려요! 처치로 충전 (${label('ultimate')})`;
+    this.el.skillBtn.title = `별자리 — 레벨 업으로 얻은 포인트를 써요 (${label('skills')})`;
+    this.el.speedBtn.title = `게임 속도 (${label('speed')})`;
+    this.el.demoBtn.title = `밸런스 봇이 실제 게임을 플레이하는 모습을 봐요 (${label('spectate')})`;
+    this.el.spectateBtn.title = `밸런스 봇이 실제 전술 스왑과 방어를 수행하는 모습을 봐요 (${label('spectate')})`;
+    const spectateKey = this.el.spectateBtn.querySelector('span');
+    if (spectateKey) spectateKey.textContent = label('spectate');
+    this.el.helpBox.querySelectorAll('[data-shortcut]').forEach((element) => {
+      element.textContent = label(element.dataset.shortcut);
+    });
   }
   /* 음소거 버튼 상태 — 꺼진 건 한눈에 보이게 (아이콘 + 회색 처리) */
   setSoundLabels(sfxOff, bgmOff) {

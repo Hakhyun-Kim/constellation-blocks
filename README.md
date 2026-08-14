@@ -43,5 +43,6 @@ The design decisions were human-led: matching must map to a visible road, each t
 - The release uses a single CC0 Quaternius character/monster family and compact CC0 Kenney combat samples, with procedural terrain, VFX, and synthesized fallbacks.
 - `?art=procedural` runs without requesting the external-asset manifest. Every bundled asset has recorded provenance and must pass the initial-download, integrity, and rendering-performance gates.
 - The 📊 toolbar button exports up to 40 locally stored play-session records for duration testing. No identifier or play telemetry is sent over the network.
+- The ⚙️ panel shares graphics, reduced-effects, audio, and remappable physical-key preferences across browser and desktop builds. Reserved navigation keys remain fixed and shortcut conflicts swap safely.
 
 See [CREDITS.md](CREDITS.md) for asset and font credits.

@@ -40,4 +40,13 @@ assert.equal(store.effectsReduced, true, 'reduced effects preference persists');
 store.effectsReduced = false;
 assert.equal(store.effectsReduced, false, 'lively effects preference persists');
 
+assert.deepEqual(store.keyBindings, {}, 'key bindings start empty and are normalized by the preference layer');
+store.keyBindings = { spell: 'KeyZ' };
+assert.deepEqual(store.keyBindings, { spell: 'KeyZ' }, 'key bindings persist as device preferences');
+assert.equal(store.language, 'ko', 'Korean is the default locale');
+store.language = 'en';
+assert.equal(store.language, 'en', 'supported locale persists');
+store.language = 'invalid';
+assert.equal(store.language, 'ko', 'unsupported locales fall back to Korean');
+
 console.log('Storage migration checks passed.');

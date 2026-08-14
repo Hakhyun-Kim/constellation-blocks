@@ -25,6 +25,9 @@ import { advanceAutoPhase, createAutoPhaseClock } from './app/phase-flow.js';
 import { summarizeFrameDurations } from './app/perf-probe.js';
 import { captureCanvasVideo, captureFilename } from './app/visual-capture.js';
 import { createLocalPlaytestLog, createSessionMeter, formatPlayMinutes } from './app/session-metrics.js';
+import {
+  KEY_ACTIONS, actionForCode, defaultBindings, keyCodeLabel, normalizeBindings, rebindAction,
+} from './app/preferences.js';
 
 registerDucker((amt, dur) => music.duck(amt, dur));
 
@@ -49,6 +52,8 @@ const sessionEligible = !judgeMode && !previewChapter && !urlParams.has('demo')
   && !urlParams.has('perf') && !urlParams.has('sessionqa');
 const playtestLog = createLocalPlaytestLog();
 ui.setPlaytestLogStatus(playtestLog.records().length);
+let keyBindings = normalizeBindings(store.keyBindings);
+let keyCaptureAction = null;
 if (weeklyChallenge) {
   document.body.classList.add('weekly-mode');
   const badge = document.createElement('div');
@@ -1101,36 +1106,64 @@ const handlers = {
       return;
     }
     ui.showTab('bench');
-    ui.toast(`${C.emoji} ${C.name}를 노려요! S키(또는 소환 버튼)로 뽑아 보세요`, '');
+    ui.toast(`${C.emoji} ${C.name}를 노려요! ${keyCodeLabel(keyBindings.squad)}키로 영웅 성장을 열어 보세요`, '');
     doSummon();
   },
   onSpeed() {
     speed = speed === 1 ? 2 : 1;
-    ui.setSpeedLabel(speed);
+    ui.setSpeedLabel(speed, keyCodeLabel(keyBindings.speed));
     SFX.tap();
   },
   onToggleSfx() {
     toggleSfx();
     ui.setSoundLabels(isSfxMuted(), isMusicMuted());
+    if (ui.isSettingsOpen()) renderSettings();
     if (!isSfxMuted()) SFX.tap();
   },
   onToggleBgm() {
     toggleMusic();
     ui.setSoundLabels(isSfxMuted(), isMusicMuted());
     music.sync();
+    if (ui.isSettingsOpen()) renderSettings();
   },
   onToggleEffects() {
-    if (systemReducedEffects) {
-      ui.toast('🌙 기기의 동작 줄이기 설정을 따르고 있어요.', 'good');
-      return;
-    }
-    reducedEffects = !reducedEffects;
-    store.effectsReduced = reducedEffects;
-    document.body.classList.toggle('reduced-effects', reducedEffects);
-    renderer.setReducedEffects(reducedEffects);
-    villageRenderer.setReducedEffects(reducedEffects);
-    ui.setEffectsLabel(reducedEffects, false);
+    if (!setEffectsPreference(!reducedEffects)) return;
     ui.toast(reducedEffects ? '🌙 국소 파티클을 줄였어요.' : '✨ 국소 파티클을 더 보여줘요. 전체 화면 점멸은 항상 꺼져요.', 'good');
+    if (ui.isSettingsOpen()) renderSettings();
+  },
+  onSettingsOpen() {
+    keyCaptureAction = null;
+    renderSettings();
+    ui.showSettings();
+    SFX.tap();
+  },
+  onSettingsClose() {
+    keyCaptureAction = null;
+    ui.hideSettings();
+    SFX.tap();
+  },
+  onSettingsGraphics(value) {
+    store.gfx = value === 'lite' ? 'lite' : 'high';
+    renderSettings();
+    ui.toast('⚙️ 그래픽 품질은 다음 실행부터 적용됩니다.', 'good');
+  },
+  onSettingsEffects(value) {
+    if (setEffectsPreference(value === 'reduced')) {
+      ui.toast(reducedEffects ? '🌙 절제 효과를 사용합니다.' : '✨ 국소 파티클 밀도를 높였습니다.', 'good');
+    }
+    renderSettings();
+  },
+  onSettingsKeyCapture(actionId) {
+    keyCaptureAction = actionId;
+    renderSettings();
+  },
+  onSettingsKeyReset() {
+    keyBindings = defaultBindings();
+    store.keyBindings = keyBindings;
+    keyCaptureAction = null;
+    syncShortcutLabels();
+    renderSettings();
+    ui.toast('⌨️ 단축키를 기본값으로 되돌렸어요.', 'good');
   },
   onDiff(d) {
     if (!(state.phase === 'prep' && state.wave === 1)) return;
@@ -1509,14 +1542,45 @@ document.addEventListener('click', (ev) => {
   if (ev.target instanceof HTMLButtonElement) ev.target.blur();
 });
 
-/* 한글 IME 상태에서도 단축키가 통하도록 매핑 */
-const KO = { 'ㄴ': 's', 'ㅔ': 'p', 'ㅊ': 'c', 'ㅂ': 'q', 'ㄱ': 'r', 'ㅌ': 'x', 'ㅗ': 'h', 'ㅡ': 'm', 'ㄹ': 'f',
-             'ㅁ': 'a', 'ㄷ': 'e', 'ㅍ': 'v', 'ㅠ': 'b' };
-
 document.addEventListener('keydown', (ev) => {
-  let key = ev.key;
-  if (KO[key]) key = KO[key];
-  const lower = key.length === 1 ? key.toLowerCase() : key;
+  const key = ev.key;
+
+  /* 문자 입력값이 아닌 물리 키 코드로 저장하므로 한글 IME와 영문 배열에서
+   * 같은 위치의 단축키가 동작한다. Esc/Enter/Space/Tab/방향키는 UI 탐색용 고정 키다. */
+  if (ui.isSettingsOpen()) {
+    ev.preventDefault();
+    if (keyCaptureAction) {
+      if (key === 'Escape') {
+        keyCaptureAction = null;
+        renderSettings();
+        return;
+      }
+      if (ev.ctrlKey || ev.altKey || ev.metaKey) {
+        ui.toast('⌨️ Ctrl·Alt·시스템 키 조합은 단축키로 저장하지 않습니다.', 'bad');
+        return;
+      }
+      const action = KEY_ACTIONS.find(({ id }) => id === keyCaptureAction);
+      const result = rebindAction(keyBindings, keyCaptureAction, ev.code);
+      if (!result.ok) {
+        ui.toast('⌨️ Esc·Enter·Space·Tab·방향키는 화면 탐색용으로 유지합니다.', 'bad');
+        return;
+      }
+      keyBindings = result.bindings;
+      store.keyBindings = keyBindings;
+      keyCaptureAction = null;
+      syncShortcutLabels();
+      renderSettings();
+      const swapped = KEY_ACTIONS.find(({ id }) => id === result.swappedAction);
+      ui.toast(swapped
+        ? `⌨️ ${action?.label}와 ${swapped.label}의 키를 서로 바꿨어요.`
+        : `⌨️ ${action?.label} 단축키를 ${keyCodeLabel(ev.code)}로 바꿨어요.`, 'good');
+      return;
+    }
+    if (key === 'Escape') handlers.onSettingsClose();
+    return;
+  }
+
+  const shortcutAction = actionForCode(keyBindings, ev.code);
 
   /* --- 시작 메뉴 (이어하기 / 처음부터) --- */
   if (ui.isStartOpen()) {
@@ -1545,7 +1609,7 @@ document.addEventListener('keydown', (ev) => {
 
   /* --- 도감 · 기록 --- */
   if (ui.isBookOpen()) {
-    if (key === 'Escape' || key === 'Enter' || lower === 'b') { ev.preventDefault(); ui.hideBook(); }
+    if (key === 'Escape' || key === 'Enter' || shortcutAction === 'codex') { ev.preventDefault(); ui.hideBook(); }
     return;
   }
 
@@ -1558,7 +1622,7 @@ document.addEventListener('keydown', (ev) => {
 
   /* --- 별자리(스킬트리) 모달 --- */
   if (ui.isSkillOpen()) {
-    if (key === 'Escape' || key === 'Enter' || lower === 'v') { ev.preventDefault(); ui.hideSkills(); }
+    if (key === 'Escape' || key === 'Enter' || shortcutAction === 'skills') { ev.preventDefault(); ui.hideSkills(); }
     return;
   }
 
@@ -1614,13 +1678,13 @@ document.addEventListener('keydown', (ev) => {
       if (selBench != null || selHero != null) { ev.preventDefault(); cyclePad(1); }
       return;
   }
-  switch (lower) {
-    case 'a': if (state.champ) doSpell(); return;
-    case 'e': if (state.champ) doUlt(); return;
-    case 'v': if (state.champ) openSkills(); return;
-    case 'b': handlers.onBookOpen(); return;
-    case 's': ui.showTab('squad'); return;
-    case 'c': {
+  switch (shortcutAction) {
+    case 'spell': if (state.champ) doSpell(); return;
+    case 'ultimate': if (state.champ) doUlt(); return;
+    case 'skills': if (state.champ) openSkills(); return;
+    case 'codex': handlers.onBookOpen(); return;
+    case 'squad': ui.showTab('squad'); return;
+    case 'combine': {
       if (state.squad) { ui.showTab('squad'); return; }
       const combo = E.bestCombo(state);
       if (combo) doCombineDirect(E.comboToAction(combo));
@@ -1632,26 +1696,26 @@ document.addEventListener('keydown', (ev) => {
       }
       return;
     }
-    case 'd': demo.toggle(); SFX.tap(); return;
-    case 'm': {
+    case 'spectate': demo.toggle(); SFX.tap(); return;
+    case 'mute': {
       const off = toggleAll();
       ui.setSoundLabels(isSfxMuted(), isMusicMuted());
       music.sync();
       ui.toast(off ? '🔇 소리를 모두 껐어요 (M)' : '🔊 소리를 다시 켰어요 (M)');
       return;
     }
-    case 'q':
+    case 'speed':
       speed = speed === 1 ? 2 : 1;
-      ui.setSpeedLabel(speed);
+      ui.setSpeedLabel(speed, keyCodeLabel(keyBindings.speed));
       SFX.tap();
       return;
-    case 'f': cycleField(1); return;
-    case 'g': doMonsterBlueprint(); return;
-    case 'r': if (selHero != null && !ui.el.recallBtn.classList.contains('hidden')) ui.el.recallBtn.click(); return;
-    case 'x': if (selHero != null) ui.el.sellBtn.click(); return;
-    case '7': ui.el.castleRows.querySelector('button[data-key="repair"]')?.click(); return;
-    case '8': ui.el.castleRows.querySelector('button[data-key="fortify"]')?.click(); return;
-    case '9': ui.el.castleRows.querySelector('button[data-key="tower"]')?.click(); return;
+    case 'cycleHero': cycleField(1); return;
+    case 'blueprint': doMonsterBlueprint(); return;
+    case 'recall': if (selHero != null && !ui.el.recallBtn.classList.contains('hidden')) ui.el.recallBtn.click(); return;
+    case 'sell': if (selHero != null) ui.el.sellBtn.click(); return;
+    case 'castleRepair': ui.el.castleRows.querySelector('button[data-key="repair"]')?.click(); return;
+    case 'castleFortify': ui.el.castleRows.querySelector('button[data-key="fortify"]')?.click(); return;
+    case 'castleTower': ui.el.castleRows.querySelector('button[data-key="tower"]')?.click(); return;
   }
 });
 
@@ -1659,13 +1723,51 @@ document.addEventListener('keydown', (ev) => {
 function isPaused() {
   /* 이야기는 준비 단계에만 뜨므로 멈출 게 없지만, 전설 연출은 전투 중에도 뜬다.
    * 별자리(스킬)·옷장·도감·승리 화면도 멈춘다 — 열어 놓고 고민할 시간을 준다 */
-  return ui.isMetaOpen() || ui.isSkillOpen() || ui.isClosetOpen()
+  return ui.isMetaOpen() || ui.isSkillOpen() || ui.isClosetOpen() || ui.isSettingsOpen()
     || ui.isRevealOpen() || ui.isBookOpen() || ui.isVictoryOpen() || state.phase === 'over';
+}
+
+function settingsSaveLocation() {
+  return window.constellationDesktop?.storageLabel || '브라우저 사이트 저장소';
+}
+
+function renderSettings() {
+  ui.renderSettings({
+    actions: KEY_ACTIONS.map(({ id, label }) => ({ id, label, key: keyCodeLabel(keyBindings[id]) })),
+    bindings: keyBindings,
+    captureAction: keyCaptureAction,
+    graphics: store.gfx || graphicsQuality,
+    reducedEffects,
+    systemReduced: systemReducedEffects,
+    sfxMuted: isSfxMuted(),
+    bgmMuted: isMusicMuted(),
+    saveLocation: settingsSaveLocation(),
+  });
+}
+
+function syncShortcutLabels() {
+  ui.setShortcutLabels(keyBindings, keyCodeLabel);
+  ui.setSpeedLabel(speed, keyCodeLabel(keyBindings.speed));
+}
+
+function setEffectsPreference(next) {
+  if (systemReducedEffects) {
+    reducedEffects = true;
+    ui.toast('🌙 기기의 동작 줄이기 설정을 따르고 있어요.', 'good');
+    return false;
+  }
+  reducedEffects = !!next;
+  store.effectsReduced = reducedEffects;
+  document.body.classList.toggle('reduced-effects', reducedEffects);
+  renderer.setReducedEffects(reducedEffects);
+  villageRenderer.setReducedEffects(reducedEffects);
+  ui.setEffectsLabel(reducedEffects, false);
+  return true;
 }
 
 function observePlaySession(now, forceInactive = false) {
   if (!sessionMeter || sessionMeter.finished) return;
-  const management = ui.isMetaOpen() || ui.isSkillOpen() || ui.isClosetOpen()
+  const management = ui.isMetaOpen() || ui.isSkillOpen() || ui.isClosetOpen() || ui.isSettingsOpen()
     || ui.isBookOpen() || ui.isVictoryOpen();
   const phase = ui.isStoryOpen() ? 'story'
     : ui.isVillageActive() ? 'village'
@@ -1872,7 +1974,7 @@ if (bootSave) ui.showStart(bootSave);
 }
 ui.setSoundLabels(isSfxMuted(), isMusicMuted());
 ui.setEffectsLabel(reducedEffects, systemReducedEffects);
-ui.setSpeedLabel(speed);
+syncShortcutLabels();
 ui.coachChip();
 requestAnimationFrame(frame);
 
