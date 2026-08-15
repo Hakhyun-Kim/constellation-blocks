@@ -30,10 +30,9 @@ assert.match(forge, /@electron-forge\/maker-zip/);
 assert.match(forge, /icon/);
 assert.match(html, /Content-Security-Policy/);
 assert.match(html, /script-src 'self';/);
-/* GLB의 내장 텍스처는 GLTFLoader가 만든 blob:을 다시 읽어 올린다. blob:은
- * 페이지가 스스로 만든 객체라 밖으로 나가는 경로가 아니다. 반면 외부 호스트는
- * 여전히 막혀 있어야 하므로 허용 목록을 정확히 고정한다. */
-assert.match(html, /connect-src 'self' blob:"/);
+/* GLB 내장 텍스처는 gfx/gltf-assets.js가 직접 디코딩하므로 blob: fetch가 없다.
+ * 그래서 connect-src는 'self' 하나로 닫아 둘 수 있다 — 이 검사가 그 사실을 고정한다. */
+assert.match(html, /connect-src 'self'"/);
 assert.doesNotMatch(html, /connect-src[^"]*https?:/);
 assert.doesNotMatch(html, /script-src[^;]*(blob:|data:|unsafe-)/);
 assert.doesNotMatch(html, /<script>(.|\n)*<\/script>/);
