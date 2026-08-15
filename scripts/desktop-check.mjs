@@ -29,7 +29,13 @@ assert.match(forge, /asar:\s*true/);
 assert.match(forge, /@electron-forge\/maker-zip/);
 assert.match(forge, /icon/);
 assert.match(html, /Content-Security-Policy/);
-assert.match(html, /script-src 'self'/);
+assert.match(html, /script-src 'self';/);
+/* GLB의 내장 텍스처는 GLTFLoader가 만든 blob:을 다시 읽어 올린다. blob:은
+ * 페이지가 스스로 만든 객체라 밖으로 나가는 경로가 아니다. 반면 외부 호스트는
+ * 여전히 막혀 있어야 하므로 허용 목록을 정확히 고정한다. */
+assert.match(html, /connect-src 'self' blob:"/);
+assert.doesNotMatch(html, /connect-src[^"]*https?:/);
+assert.doesNotMatch(html, /script-src[^;]*(blob:|data:|unsafe-)/);
 assert.doesNotMatch(html, /<script>(.|\n)*<\/script>/);
 assert.doesNotMatch(html, /fonts\.googleapis\.com|fonts\.gstatic\.com/);
 

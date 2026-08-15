@@ -18,6 +18,8 @@ The redesign decisions and verification gates are recorded in [docs/design/block
 
 ## Play
 
+[Play in the browser](https://hakhyun-kim.github.io/constellation-blocks/)
+
 ```bash
 npm install
 npm run build
