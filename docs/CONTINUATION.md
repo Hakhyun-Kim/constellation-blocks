@@ -94,8 +94,8 @@ procedural presentation.
 In PowerShell:
 
 ```powershell
-git clone https://github.com/Hakhyun-Kim/constellation-defense.git
-Set-Location constellation-defense
+git clone https://github.com/Hakhyun-Kim/constellation-blocks.git
+Set-Location constellation-blocks
 git switch main
 git pull --ff-only origin main
 npm.cmd ci
@@ -204,7 +204,7 @@ desktop horizontal overflow was absent, and browser console errors were empty.
 
 This repository is public. Do not add application copy, checklist text,
 recordings, credentials, or other submission material from the separate private
-directory `D:\constellation-defense-submission`. If that directory is not
+directory `D:\constellation-blocks-submission`. If that directory is not
 available on the next computer, continue game work here and leave submission
 material untouched.
 
