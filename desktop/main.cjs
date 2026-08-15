@@ -14,7 +14,7 @@ protocol.registerSchemesAsPrivileged([{
   privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true, codeCache: true },
 }]);
 app.enableSandbox();
-app.setName('Constellation Defense');
+app.setName('Constellation Blocks');
 if (process.platform === 'win32') app.setAppUserModelId('com.hakhyunkim.constellationdefense');
 
 function trustedUrl(raw) {
@@ -65,7 +65,7 @@ function installDesktopInfoBridge() {
 
 function createWindow() {
   const window = new BrowserWindow({
-    title: 'Constellation Defense',
+    title: 'Constellation Blocks',
     width: 1440,
     height: 900,
     minWidth: 1080,

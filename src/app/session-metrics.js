@@ -9,7 +9,7 @@ export const PLAYTEST_STORAGE_KEY = 'constellation-defense.playtest-sessions';
 export const PLAYTEST_LIMIT = 40;
 
 const ACTION_KEYS = Object.freeze([
-  'waveStarts', 'tacticSwaps', 'tacticCasts', 'heroActives',
+  'waveStarts', 'blockPlacements', 'tacticCasts', 'heroActives',
   'blueprintCasts', 'journeyMoves', 'recruits', 'restarts',
 ]);
 

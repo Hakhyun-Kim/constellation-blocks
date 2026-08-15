@@ -25,14 +25,14 @@ assert.equal(localStorage.getItem('mathdef_best_easy'), null, 'legacy best score
 assert.equal(localStorage.getItem('mathdef_mathlog'), null, 'former math log is removed');
 assert.equal(sfx.isSfxMuted(), true, 'legacy SFX preference migrates');
 assert.equal(sfx.isMusicMuted(), false, 'legacy music preference migrates');
-assert.equal(localStorage.getItem('constellation-defense.audio.sfx'), '1');
-assert.equal(localStorage.getItem('constellation-defense.audio.music'), '0');
+assert.equal(localStorage.getItem('constellation-blocks.audio.sfx'), '1');
+assert.equal(localStorage.getItem('constellation-blocks.audio.music'), '0');
 assert.equal(localStorage.getItem('mathdef_mute_sfx'), null, 'legacy SFX key is removed');
 assert.equal(localStorage.getItem('mathdef_mute_bgm'), null, 'legacy music key is removed');
 
 sfx.toggleAll();
-assert.equal(localStorage.getItem('constellation-defense.audio.sfx'), '1', 'audio toggles write the new key');
-assert.equal(localStorage.getItem('constellation-defense.audio.music'), '1', 'audio toggles write the new key');
+assert.equal(localStorage.getItem('constellation-blocks.audio.sfx'), '1', 'audio toggles write the new key');
+assert.equal(localStorage.getItem('constellation-blocks.audio.music'), '1', 'audio toggles write the new key');
 
 assert.equal(store.effectsReduced, null, 'effect intensity is unset until the player chooses');
 store.effectsReduced = true;

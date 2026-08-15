@@ -17,10 +17,10 @@ import {
   store, heroName,
   codex, earned, codexAddHero, codexAddKill, flushRecords, markDirty,
 } from './app/store.js';
-import { createTacticFlow } from './app/tacticflow.js';
+import { createBlockFlow } from './app/blockflow.js';
 import { createTacticFeedback } from './app/tacticfeedback.js';
 import { JUDGE_OPENING, prepareJudgeWave } from './app/judge-run.js';
-import { createSwapReplay, createWeeklyChallenge, seededRandom } from './challenges/weekly.js';
+import { createPlacementReplay, createWeeklyChallenge, seededRandom } from './challenges/weekly.js';
 import { advanceAutoPhase, createAutoPhaseClock } from './app/phase-flow.js';
 import { summarizeFrameDurations } from './app/perf-probe.js';
 import { captureCanvasVideo, captureFilename } from './app/visual-capture.js';
@@ -56,7 +56,7 @@ const systemReducedEffects = typeof matchMedia === 'function'
  * 전체 품질을 쓰며, 운영체제의 동작 줄이기 설정은 항상 우선한다. */
 let reducedEffects = systemReducedEffects || store.effectsReduced !== false;
 document.body.classList.toggle('reduced-effects', reducedEffects);
-const weeklyReplay = weeklyChallenge ? createSwapReplay(weeklyChallenge.id) : null;
+const weeklyReplay = weeklyChallenge ? createPlacementReplay(weeklyChallenge.id) : null;
 const sessionEligible = !judgeMode && !previewChapter && !urlParams.has('demo')
   && !urlParams.has('perf') && !urlParams.has('sessionqa');
 const playtestLog = createLocalPlaytestLog();
@@ -311,7 +311,7 @@ function exportPlaytestLog() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
-  link.download = `constellation-defense-playtest-${new Date().toISOString().slice(0, 10)}.json`;
+  link.download = `constellation-blocks-playtest-${new Date().toISOString().slice(0, 10)}.json`;
   link.hidden = true;
   document.body.appendChild(link);
   ui.setPlaytestLogStatus(data.sessions.length, true);
@@ -692,7 +692,7 @@ function doSummon() {
 }
 
 /* 수학 관문은 별자리 전술판으로 옮겼다. 조합은 준비 단계의 경제 판단으로
- * 남겨 두고, 전투 중 손맛과 위험 관리는 3매치가 맡는다. */
+ * 남겨 두고, 전투 중 손맛과 위험 관리는 블록 퍼즐이 맡는다. */
 function doCombineDirect(action) {
   if (state.phase !== 'prep') {
     ui.toast('⚗️ 조합은 웨이브 사이에만! 전투 중엔 별자리 전술판으로 길을 지켜요.', 'bad');
@@ -839,7 +839,7 @@ function saveGame() {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `constellation-defense_${state.wave}wave_${D.DIFFICULTIES[state.difficulty].name}.json`;
+  a.download = `constellation-blocks_${state.wave}wave_${D.DIFFICULTIES[state.difficulty].name}.json`;
   a.click();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
   SFX.tap();
@@ -1950,7 +1950,7 @@ newGame(store.diff, { holdStory: !!bootSave || !!previewChapter });
 
 /* 전술판은 웨이브 동안만 손을 받는다. 이벤트는 기존 렌더러와 사운드 경로로
  * 흘려 보내므로, 새 퍼즐도 원래 전장의 별똥별·피격·회복 연출을 똑같이 쓴다. */
-tactics = createTacticFlow({
+tactics = createBlockFlow({
   getPhase: () => state.phase,
   random: () => state.rng(),
   resolveTactic: (lane, type, size) => E.castTactic(state, lane, type, size),
@@ -1962,23 +1962,27 @@ tactics = createTacticFlow({
     renderer.onEvents(state, result.events);
     handleEvents(result.events);
     tacticFeedback.showCast(result, type, lane, size);
-    ui.toast(`${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} 성좌 ${size}개 — ${['왼쪽','가운데','오른쪽'][lane]} 길 전술 발동!`, 'good');
+    ui.toast(`${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} 성좌 ${size}등급 — ${['왼쪽','가운데','오른쪽'][lane]} 길 전술 발동!`, 'good');
     refreshAll();
   },
-  onMatch(type, lane, size) {
-    SFX.match(type, size);
-    tacticFeedback.announceMatch(type, lane, size);
+  /* 줄이 사라지는 순간과 전술이 나가는 순간을 나눈다. 예고를 먼저 보여 주면
+   * "무엇 때문에 마법이 떨어졌는가"가 읽힌다. */
+  onClear(commands, lines, combo) {
+    const lead = commands[0];
+    if (!lead) return;
+    SFX.match(lead.kind, lead.size);
+    tacticFeedback.announceClear(lead.kind, lead.route, lead.size, lines, combo);
   },
-  onSwap(from, to, groups) {
-    sessionMeter?.action('tacticSwaps');
+  onPlace(info) {
+    sessionMeter?.action('blockPlacements');
     if (judgeMode) document.body.classList.remove('judge-opening');
-    weeklyReplay?.record({ wave: state.wave, time: state.time, from, to, groups });
+    weeklyReplay?.record({ wave: state.wave, time: state.time, ...info });
   },
   onPreview(type, lane, size) {
     SFX.tactic(type, size);
     renderer.tacticCast(state, null, type, lane, size);
     tacticFeedback.showPreview(type, lane, size);
-    ui.toast(`✨ 테스트 연출 · ${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} ${size}개`, 'good');
+    ui.toast(`✨ 테스트 연출 · ${['☄️ 유성', '❄️ 서리', '🛡️ 수호'][['flare','tide','bloom'].indexOf(type)]} ${size}등급`, 'good');
   },
 });
 if (judgeMode) {
@@ -2026,7 +2030,7 @@ window.addEventListener('pointerdown', async () => {
  * ② 3D 캔버스에 그리는 글자는 아예 폴백 폰트로 구워져 텍스처에 박힌다. */
 if (document.fonts && document.fonts.load) {
   Promise.all([
-    document.fonts.load('16px Jua', 'Constellation Defense'),
+    document.fonts.load('16px Jua', 'Constellation Blocks'),
     document.fonts.load('700 27px Gaegu', 'CONSTELLATION'),
   ]).catch(() => {});
 }
@@ -2063,7 +2067,9 @@ demo.attach({
   heroLabel: (h) => `${h.name || D.CLASSES[h.cls].name} · Lv ${h.level || 1}`,
   onCaption: (text) => ui.setDemoCaption(text),
   getTacticBoard: () => tactics ? tactics.getBoard() : [],
-  tacticSwap(from, to) { return tactics ? tactics.swap(from, to) : false; },
+  getTacticTray: () => tactics ? tactics.getTray() : [],
+  getTacticCombo: () => tactics ? tactics.getCombo() : 0,
+  blockPlace(slot, row, col) { return tactics ? tactics.place(slot, row, col) : false; },
   onStart(profile) {
     ui.setDemoMode(true, profile);
     setSellMode(false);

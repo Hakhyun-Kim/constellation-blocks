@@ -1,8 +1,8 @@
 /* =====================================================
  * 전술 선택 보고서
  *
- * 같은 시드·같은 준비/전투 정책에서 전술을 끈 기준선, 무작위 합법 스왑,
- * 위협도 기반 합법 스왑을 비교한다. 봇은 실제 보드와 castTactic()만 쓴다.
+ * 같은 시드·같은 준비/전투 정책에서 전술을 끈 기준선, 무작위 합법 배치,
+ * 위협도 기반 배치를 비교한다. 봇은 실제 보드와 castTactic()만 쓴다.
  *
  * 사용법: node scripts/balance-report.mjs [runs=12] [difficulty=normal] [profile=보통] [--json]
  * ===================================================== */
@@ -15,7 +15,7 @@ const difficulty = args.find(arg => Object.hasOwn(D.DIFFICULTIES, arg)) || 'norm
 const profile = args.find(arg => ['초보', '보통', '고수'].includes(arg)) || '보통';
 const json = args.includes('--json');
 const seeds = Array.from({ length: runs }, (_, index) => index * 7919 + 13);
-const POLICY_LABEL = { none: '전술 없음', random: '무작위 합법 스왑', threat: '위협도 기반 스왑' };
+const POLICY_LABEL = { none: '전술 없음', random: '무작위 합법 배치', threat: '위협도 기반 배치' };
 const KIND_LABEL = { flare: 'Flare', tide: 'Tide', bloom: 'Bloom' };
 const ROUTE_LABEL = ['왼쪽', '가운데', '오른쪽'];
 
@@ -76,7 +76,7 @@ function reportPolicy(policy) {
 
 const reports = TACTIC_POLICIES.map(reportPolicy);
 const payload = {
-  game: 'Constellation Defense',
+  game: 'Constellation Blocks',
   generatedAt: new Date().toISOString(),
   conditions: { difficulty, profile, runs, seeds },
   policies: reports,
@@ -91,7 +91,7 @@ if (json) {
     console.log(`[${report.label}] 평균 ${s.waveMean}웨이브 · 중앙 ${s.waveMedian} · 범위 ${s.waveMin}~${s.waveMax}`
       + ` · 평균 전술 ${s.tacticMean}회 · 성공/거부 ${s.successfulCasts}/${s.rejectedCasts}`);
     if (s.successfulCasts) {
-      console.log(`  종류 ${JSON.stringify(s.kindUse)} · 길 ${JSON.stringify(s.routeUse)} · 매치 ${JSON.stringify(s.sizeUse)}`);
+      console.log(`  종류 ${JSON.stringify(s.kindUse)} · 길 ${JSON.stringify(s.routeUse)} · 등급 ${JSON.stringify(s.sizeUse)}`);
     }
   }
   const threatSample = reports.find(report => report.policy === 'threat')?.sample.find(entry => entry.swap);

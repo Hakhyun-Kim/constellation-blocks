@@ -4,20 +4,26 @@
  * ===================================================== */
 import * as D from '../data.js';
 
-const PREFIX = 'constellation-defense.';
+const PREFIX = 'constellation-blocks.';
 const LEGACY_PREFIX = 'mathdef_';
+/* 3매치판(Constellation Defense)에서 넘어온 사람의 별조각·최고 기록·설정은
+ * 살린다. 퍼즐이 바뀌어도 그 사람이 쌓은 것은 그 사람의 것이다. */
+const LEGACY_PREFIXES = [LEGACY_PREFIX, 'constellation-defense.'];
 const key = (name) => PREFIX + name;
 
-/* 한 번만 기존 전투 기록을 새 이름으로 옮긴다. 수학 풀이 기록은 현재 게임에서
+/* 한 번만 기존 기록을 새 이름으로 옮긴다. 수학 풀이 기록은 현재 게임에서
  * 의미가 없으므로 의도적으로 승계하지 않는다. */
 function migrate(name, legacyName = name) {
   const next = key(name);
   if (localStorage.getItem(next) != null) return;
-  const legacy = LEGACY_PREFIX + legacyName;
-  const value = localStorage.getItem(legacy);
-  if (value == null) return;
-  localStorage.setItem(next, value);
-  localStorage.removeItem(legacy);
+  for (const prefix of LEGACY_PREFIXES) {
+    const legacy = prefix + (prefix === LEGACY_PREFIX ? legacyName : name);
+    const value = localStorage.getItem(legacy);
+    if (value == null) continue;
+    localStorage.setItem(next, value);
+    localStorage.removeItem(legacy);
+    return;
+  }
 }
 [
   'shards', 'meta', 'diff', 'gfx', 'decor_off', 'story_off', 'effects_reduced', 'autosave', 'champ',

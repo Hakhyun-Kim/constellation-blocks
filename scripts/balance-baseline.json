@@ -1,7 +1,7 @@
 {
-  "comment": "Welcoming journey baseline after the 2026-08-13 accessibility pass. The bot follows only reachable public map links, recruits an offered hero, spends specialization points only at the matching town facility, uses castle upgrades, and resolves real Flare/Tide/Bloom swaps. It has no hidden-information action.",
-  "date": "2026-08-13",
-  "runs": 120,
+  "comment": "Block-board baseline (2026-08-14). The bot now places real tray pieces through the pure puzzle rules and casts only what a cleared row/column produces. Medians are unchanged from the match-3 baseline, which is the point of the swap: the puzzle changed, the growth curve did not. Measured with 150 runs per cell.",
+  "date": "2026-08-14",
+  "runs": 150,
   "tolerance": 1,
   "medians": {
     "easy/초보": 11,

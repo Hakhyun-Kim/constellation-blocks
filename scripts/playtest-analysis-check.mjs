@@ -27,7 +27,7 @@ const session = (mode, outcome, activeMinutes, sequence, extras = {}) => ({
     'dawn-road-complete': { activeMs: 1000 },
     'act2-start': { activeMs: 1000 },
   } : { 'first-defense-start': { activeMs: 1000 }, 'dawn-road-complete': { activeMs: 1000 } },
-  actions: { waveStarts: 7, tacticSwaps: 20, tacticCasts: 8 },
+  actions: { waveStarts: 7, blockPlacements: 20, tacticCasts: 8 },
   ...extras,
 });
 

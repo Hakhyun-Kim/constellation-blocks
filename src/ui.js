@@ -1579,7 +1579,7 @@ export class UI {
       <div class="msbox"><b>❄️</b><span>서리 성좌</span></div>
       <div class="msbox"><b>🛡️</b><span>수호 성좌</span></div>
     </div>
-    <div class="combine-empty">전투 중 6×6 별자리 전술판에서 이웃한 별을 바꾸세요. 3개를 맞추면 그 열의 길에 전술이 내려가고, 4개와 5개는 더 큰 성좌가 됩니다.</div>`;
+    <div class="combine-empty">전투 중 8×8 블록 전술판에 조각을 놓으세요. 세로줄을 채우면 그 열의 길 하나에 전술이 집중되고, 가로줄은 세 길에 나눠 떨어집니다. 두 줄·세 줄을 한 번에 지우거나 연속으로 세 번 지우면 더 큰 성좌가 됩니다.</div>`;
   }
 
   showBook() { this.el.bookModal.classList.remove('hidden'); this.el.bookDot.classList.add('hidden'); }
@@ -1757,7 +1757,7 @@ export class UI {
       : '🎬 AI 관전 <span>D</span>';
     document.body.classList.toggle('demo-on', !!on);
     this.el.demoDetail.textContent = on
-      ? '실제 스왑 · 실제 전술 · 실제 방어 규칙'
+      ? '실제 배치 · 실제 전술 · 실제 방어 규칙'
       : '밸런스 봇과 같은 실제 플레이 규칙';
     if (on && profile) this.setDemoCaption(`🤖 ${profile} AI 관전 중`);
   }
@@ -1928,7 +1928,7 @@ export class UI {
     this.el.skillBtn.title = `별자리 — 레벨 업으로 얻은 포인트를 써요 (${label('skills')})`;
     this.el.speedBtn.title = `게임 속도 (${label('speed')})`;
     this.el.demoBtn.title = `밸런스 봇이 실제 게임을 플레이하는 모습을 봐요 (${label('spectate')})`;
-    this.el.spectateBtn.title = `밸런스 봇이 실제 전술 스왑과 방어를 수행하는 모습을 봐요 (${label('spectate')})`;
+    this.el.spectateBtn.title = `밸런스 봇이 실제 블록 배치와 방어를 수행하는 모습을 봐요 (${label('spectate')})`;
     const spectateKey = this.el.spectateBtn.querySelector('span');
     if (spectateKey) spectateKey.textContent = label('spectate');
     this.el.helpBox.querySelectorAll('[data-shortcut]').forEach((element) => {

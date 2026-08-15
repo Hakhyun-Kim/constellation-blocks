@@ -11,7 +11,7 @@
  * ===================================================== */
 import * as D from './data.js';
 import * as E from './engine.js';
-import { findLegalSwaps, laneForGroup } from './tactics/board.js';
+import { boardFilled, cellCol, cellIndex, clearCommands, GRID, legalPlacements } from './blocks/board.js';
 
 /* 결정적 난수 — 같은 시드는 같은 판을 만든다 */
 export function mulberry32(a) {
@@ -30,8 +30,8 @@ export function mulberry32(a) {
  * midWave        전투 중에도 소환·배치하는가
  * sloppy         배치를 아무 데나 할 확률
  *
- * tacticUse      전투 중 합법 전술 스왑을 시도할 확률
- * tacticSloppy   더 낮은 기대값의 유효 스왑을 고를 확률
+ * tacticUse      전투 중 블록을 놓아 볼 확률
+ * tacticSloppy   더 낮은 기대값의 자리를 고를 확률
  */
 export const PROFILES = {
   '초보': { combineChance: 0.15, reserve: 0,   useCastle: false,        midWave: false, sloppy: 0.5, spellUse: 0.3, activeUse: 0.3, tacticUse: 0.32, tacticSloppy: 0.65 },
@@ -195,8 +195,10 @@ export function nextJourneyEnding(state) {
   return state?.journey?.complete && !state.journey.ending ? 'coauthor' : null;
 }
 
-/* ---------- 별자리 전술 ----------
- * 후보는 순수 보드 규칙이 보장한 '유효한 인접 스왑'뿐이다. 적이 어느 길에서
+const clearCommandsFor = (move, combo) => clearCommands(move.cells, move.clears, { combo: combo + 1 });
+
+/* ---------- 별자리 블록 전술 ----------
+ * 후보는 순수 퍼즐 규칙이 보장한 '놓을 수 있는 자리'뿐이다. 적이 어느 길에서
  * 성에 가까운지와 성 체력만 사용해 사람과 같은 공개 정보로 고른다. */
 function lanePressure(state, lane) {
   return state.enemies
@@ -205,25 +207,65 @@ function lanePressure(state, lane) {
       + (enemy.boss ? 4 : enemy.midBoss ? 2 : 0), 0);
 }
 
-function groupScore(state, cells, group) {
-  const type = cells[group[0]];
-  const lane = laneForGroup(group);
-  const stars = Math.min(5, group.length);
-  const pressure = lanePressure(state, lane);
-  if (type === 'flare') return pressure * (D.TACTICS.flare.targetCount[stars] + stars * 0.5);
-  if (type === 'tide') return pressure * (1.4 + stars * 0.35);
+export function commandScore(state, command) {
+  const stars = Math.min(5, Math.max(3, command.size));
+  const pressure = lanePressure(state, command.route);
+  if (command.kind === 'flare') return pressure * (D.TACTICS.flare.targetCount[stars] + stars * 0.5);
+  if (command.kind === 'tide') return pressure * (1.4 + stars * 0.35);
   const missingHp = state.castleMax - state.castleHp;
   return pressure * (0.8 + stars * 0.2) + missingHp / 18;
 }
 
-export function chooseTacticSwap(state, cells, P, rng = state.rng || Math.random) {
+/* 판 정리 점수 — 줄을 지우지 못하는 배치에도 좋고 나쁨이 있다.
+ * 사람도 "다음에 놓을 자리를 남기려고" 가장자리부터 채운다. 이 항이 없으면 봇은
+ * 판을 아무렇게나 메우다 막힘 처리에 기대게 되어 사람 기준선이 되지 못한다. */
+export function tidyScore(cells) {
+  let holes = 0;
+  for (let index = 0; index < cells.length; index++) {
+    if (cells[index] != null) continue;
+    const row = Math.floor(index / GRID);
+    const col = cellCol(index);
+    const closed = [[row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]]
+      .every(([r, c]) => r < 0 || r >= GRID || c < 0 || c >= GRID || cells[cellIndex(r, c)] != null);
+    if (closed) holes++;
+  }
+  return -boardFilled(cells) * 0.06 - holes * 0.9;
+}
+
+export function scorePlacement(state, move, combo = 0) {
+  const commands = move.commands || [];
+  const cast = commands.reduce((sum, command) => sum + commandScore(state, command), 0);
+  /* 연속 정리는 다음 전술의 등급을 올린다. 지금 당장 적이 없어도 줄을 이어
+   * 지우는 선택이 손해가 아니게 만든다. */
+  const streak = move.lines ? 3 + combo * 0.6 : 0;
+  return cast + streak + tidyScore(move.cells);
+}
+
+export function chooseBlockPlacement(state, cells, tray, P, rng = state.rng || Math.random, combo = 0) {
   if (!state || state.phase !== 'wave' || rng() > P.tacticUse) return null;
-  const moves = findLegalSwaps(cells);
+  const moves = listBlockMoves(cells, tray, combo);
   if (!moves.length) return null;
-  if (rng() < (P.tacticSloppy || 0)) return moves[Math.floor(rng() * moves.length)];
+  /* 서투른 플레이어도 "지금 꽉 차는 줄"은 본다. 3매치의 '아무 유효 스왑'과 달리
+   * 블록에서 완전 무작위 배치는 사람이 아니라 소음이다. 그래서 서투름은
+   * '줄은 지우되 길·색·판 정리를 못 본다'로 모형화한다. */
+  if (rng() < (P.tacticSloppy || 0)) {
+    const clearing = moves.filter(move => move.lines > 0);
+    const pool = clearing.length ? clearing : moves;
+    return pool[Math.floor(rng() * pool.length)];
+  }
   return moves
-    .map(move => ({ move, score: move.groups.reduce((sum, group) => sum + groupScore(state, move.cells, group), 0) }))
-    .sort((a, b) => b.score - a.score || a.move.from - b.move.from || a.move.to - b.move.to)[0].move;
+    .map(move => ({ move, score: scorePlacement(state, move, combo) }))
+    .sort((a, b) => b.score - a.score
+      || a.move.slot - b.move.slot || a.move.row - b.move.row || a.move.col - b.move.col)[0].move;
+}
+
+/* 후보에 전술 명령까지 붙여 둔다. 화면·봇·리포트가 같은 목록을 읽어야
+ * "봇이 본 수"와 "사람이 본 수"가 갈라지지 않는다. */
+export function listBlockMoves(cells, tray, combo = 0) {
+  return legalPlacements(cells, tray).map(move => ({
+    ...move,
+    commands: move.lines ? clearCommandsFor(move, combo) : [],
+  }));
 }
 
 /* ---------- 준비 단계: 스트림 ----------

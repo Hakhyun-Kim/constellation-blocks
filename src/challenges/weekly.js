@@ -22,7 +22,7 @@ export function normalizeWeeklyId(value, now = new Date()) {
 
 export function seedForChallenge(id) {
   let hash = 2166136261;
-  for (const char of `constellation-defense:${id}`) {
+  for (const char of `constellation-blocks:${id}`) {
     hash ^= char.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
   }
@@ -53,20 +53,24 @@ export function createWeeklyChallenge(id) {
   });
 }
 
-export function createSwapReplay(challengeId) {
+/* 리플레이는 "무엇을 놓았는가"만 남긴다. 판 전체를 저장하지 않아도
+ * 같은 시드에서 같은 조각이 나오므로 배치 순서만으로 재생된다. */
+export function createPlacementReplay(challengeId) {
   const actions = [];
   return {
-    record({ wave, time, from, to, groups }) {
+    record({ wave, time, slot, row, col, lines = 0, combo = 0 }) {
       actions.push({
         n: actions.length + 1,
         wave: Math.max(1, Math.round(wave || 1)),
         at: Math.max(0, Math.round((time || 0) * 100) / 100),
-        from,
-        to,
-        groups: (groups || []).map(group => [...group]),
+        slot,
+        row,
+        col,
+        lines,
+        combo,
       });
     },
     clear() { actions.length = 0; },
-    export() { return { version: 1, challengeId, actions: actions.map(action => ({ ...action, groups: action.groups.map(group => [...group]) })) }; },
+    export() { return { version: 2, challengeId, actions: actions.map(action => ({ ...action })) }; },
   };
 }

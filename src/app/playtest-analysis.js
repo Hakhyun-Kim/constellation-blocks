@@ -194,7 +194,7 @@ export function evaluateEarlyAccessScope(summary, {
         status: 'evidence-supported',
         recommendation: 'add-one-region-without-a-new-core-system',
         missing: [],
-        scope: 'Add one authored region or encounter family, reusing match-3, hero-active, and town systems. Re-measure before Act 3.',
+        scope: 'Add one authored region or encounter family, reusing the block board, hero-active, and town systems. Re-measure before Act 3.',
       };
     }
     return {
@@ -227,7 +227,7 @@ const minuteValue = (value) => value == null ? 'n/a' : `${value.toFixed(2)} min`
 
 export function formatPlaytestReport(summary, decision = evaluateEarlyAccessScope(summary)) {
   const lines = [
-    '# Constellation Defense playtest report',
+    '# Constellation Blocks playtest report',
     '',
     `- Participants: ${summary.evidence.participantCount ?? 'unverified'}`,
     `- Valid sessions: ${summary.evidence.validSessions} (excluded ${summary.evidence.excludedSessions})`,

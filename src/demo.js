@@ -6,30 +6,32 @@
  * 각본을 따르지 않고 **봇의 판단(src/bot.js)을 그대로 써서 진짜로 논다.**
  * 덕분에 각본을 유지보수할 필요가 없고, 게임이 바뀌면 데모도 따라 바뀐다.
  *
- * 조작은 전부 사람이 쓰는 경로로 흘린다(doSummon·doPlace·combine·tacticSwap…).
+ * 조작은 전부 사람이 쓰는 경로로 흘린다(doSummon·doPlace·combine·blockPlace…).
  * 데모 전용 지름길을 만들면 데모에서만 되는 버그가 생긴다.
  * ===================================================== */
 import * as Bot from './bot.js';
-import { laneForGroup } from './tactics/board.js';
+import { pieceById } from './blocks/board.js';
 
 const TACTIC_LABEL = { flare: '유성', tide: '서리', bloom: '수호' };
 const LANE_LABEL = ['왼쪽', '가운데', '오른쪽'];
 
-/* 관전자는 봇의 실제 판단을 읽을 수 있어야 한다. 이 함수는 이미 고른 합법 스왑을
+/* 관전자는 봇의 실제 판단을 읽을 수 있어야 한다. 이 함수는 이미 고른 합법 배치를
  * 설명할 뿐, 점수나 결과를 바꾸지 않는다. */
-export function describeTacticMove(move) {
-  const group = move.groups?.[0];
-  if (!group) return '🌌 별자리를 이어 전술을 준비합니다';
-  const kind = move.cells[group[0]];
-  const lane = laneForGroup(group);
-  const extra = move.groups.length > 1 ? ` + ${move.groups.length - 1}연쇄` : '';
-  return `🌌 ${LANE_LABEL[lane]} 길 · ${TACTIC_LABEL[kind] || '별자리'} ${group.length}매치${extra}`;
+export function describeBlockMove(move) {
+  const piece = pieceById(move.piece);
+  const size = piece ? piece.size : 1;
+  if (!move.lines) return `🧩 ${TACTIC_LABEL[move.type] || '별'}블록 ${size}칸 · ${move.row + 1}행 ${move.col + 1}열에 배치`;
+  const command = move.commands?.[0];
+  const lane = command ? LANE_LABEL[command.route] : LANE_LABEL[1];
+  const kind = command ? TACTIC_LABEL[command.kind] : '별자리';
+  const extra = (move.commands?.length || 1) > 1 ? ` + ${move.commands.length - 1}갈래` : '';
+  return `🌌 ${move.lines}줄 정리 · ${lane} 길 ${kind} ${command?.size || 3}등급${extra}`;
 }
 
 /* 사람이 보기 좋은 속도. 너무 빠르면 뭘 하는지 안 보이고, 느리면 지루하다 */
 const PACE = {
   prep: 0.55,        // 준비 단계 행동 사이 (초)
-  tactic: 0.45,      // 전술 스왑 뒤 다음 판단까지
+  tactic: 0.45,      // 블록 배치 뒤 다음 판단까지
   afterWave: 1.2,    // 웨이브를 깬 뒤 숨 고르기
   restart: 12.0,     // 회고와 공유 카드를 읽은 뒤 다시 시작할 시간
 };
@@ -168,14 +170,15 @@ export const demo = {
       return;
     }
 
-    /* ⑤ 전투 중 — 실제 전술 스왑 + 별지기 마법 + 여유 골드로 소환·배치 */
+    /* ⑤ 전투 중 — 실제 블록 배치 + 별지기 마법 + 여유 골드로 소환·배치 */
     this.midT -= dt;
     if (this.midT <= 0) {
-      this.midT = 2;
-      const move = Bot.chooseTacticSwap(state, A.getTacticBoard(), P, state.rng || Math.random);
+      this.midT = 1.2;
+      const move = Bot.chooseBlockPlacement(state, A.getTacticBoard(), A.getTacticTray(), P,
+        state.rng || Math.random, A.getTacticCombo());
       if (move) {
-        this.say(describeTacticMove(move));
-        A.tacticSwap(move.from, move.to);
+        this.say(describeBlockMove(move));
+        A.blockPlace(move.slot, move.row, move.col);
         this.t = PACE.tactic;
         return;
       }

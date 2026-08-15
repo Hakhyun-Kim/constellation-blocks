@@ -1,8 +1,8 @@
 {
-  "name": "constellation-defense",
-  "productName": "Constellation Defense",
+  "name": "constellation-blocks",
+  "productName": "Constellation Blocks",
   "version": "2.1.0",
-  "description": "A 3D real-time match-3 tactics defense game built with Codex.",
+  "description": "A 3D real-time block-puzzle tactics defense game.",
   "author": "Hakhyun Kim",
   "main": "desktop/main.cjs",
   "type": "module",
@@ -16,7 +16,7 @@
     "serve": "node scripts/serve.mjs",
     "balance:check": "node scripts/balance-check.mjs 60",
     "engine:check": "node scripts/engine-check.mjs",
-    "tactics:check": "node scripts/tactic-board-check.mjs",
+    "blocks:check": "node scripts/block-board-check.mjs",
     "ui:check": "node scripts/hero-card-check.mjs",
     "combat:ui:check": "node scripts/combat-focus-check.mjs",
     "act2:check": "node scripts/act2-content-check.mjs",
@@ -45,7 +45,7 @@
     "desktop:package": "npm run build && electron-forge package",
     "desktop:make": "npm run build && electron-forge make",
     "audit:runtime": "npm audit --omit=dev",
-    "check": "npm run engine:check && npm run tactics:check && npm run ui:check && npm run combat:ui:check && npm run act2:check && npm run village:check && npm run phase:check && npm run weekly:check && npm run session:check && npm run playtest:check && npm run preferences:check && npm run i18n:check && npm run desktop:check && npm run demo:check && npm run visual:check && npm run capture:check && npm run evidence:check && npm run perf:check && npm run audio:pilot:check && npm run asset:runtime:check && npm run asset:pilot:check && npm run asset:model:check && npm run build && npm run asset:check"
+    "check": "npm run engine:check && npm run blocks:check && npm run ui:check && npm run combat:ui:check && npm run act2:check && npm run village:check && npm run phase:check && npm run weekly:check && npm run session:check && npm run playtest:check && npm run preferences:check && npm run i18n:check && npm run desktop:check && npm run demo:check && npm run visual:check && npm run capture:check && npm run evidence:check && npm run perf:check && npm run audio:pilot:check && npm run asset:runtime:check && npm run asset:pilot:check && npm run asset:model:check && npm run build && npm run asset:check"
   },
   "devDependencies": {
     "@electron-forge/cli": "7.11.2",

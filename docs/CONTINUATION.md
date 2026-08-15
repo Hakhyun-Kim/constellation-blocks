@@ -3,36 +3,44 @@
 Last updated: 2026-08-14
 
 This document is the starting point for a developer or Codex session picking
-up `Constellation Defense` on another computer.
+up `Constellation Blocks` on another computer.
+
+This repository is a fork of `Constellation Defense`. It keeps that project's
+expedition, heroes, citadel, renderer, and audio, and replaces the match-3
+tactics board with a block-placement puzzle (`src/blocks/`, `src/app/blockflow.js`,
+`src/balance/blocks.js`). See `docs/design/block-board-redesign.md`.
 
 ## Current handoff state
 
 - Branch: `main`
 - Latest feature/fix commit: run `git log -1 --oneline`; the current handoff is
-  P3-4's local playtest aggregation and conservative Early Access evidence gate.
-- Working tree at handoff: clean after the P3-4 tooling commit.
+  the block-board redesign.
+- Working tree at handoff: clean after the block-board commit.
 - Latest deterministic gates: `npm.cmd run check` and `npm.cmd run storage:check`
-  passed on 2026-08-14. The first-expedition and full two-chapter 60-run balance
-  gates also passed with the real match-3, hero-active, and blueprint policies.
+  passed on 2026-08-14, plus `node scripts/balance-check.mjs 150` with the real
+  block-placement, hero-active, and blueprint policies.
 
 The current campaign is an authored constellation expedition. It starts with
 Arin and Luna, uses a fixed five-hero party, and connects short defense stages
-with map choices and towns. The live battle loop remains real-time match-3:
-Flare damages, Tide slows, and Bloom heals/pushes back enemies on the selected
-road. Do not restore the former math-prototype gates, random summoning, or
+with map choices and towns. The live battle loop is a real-time block puzzle:
+place tray pieces on the 8x8 board, and a filled column casts on that column's
+lane while a filled row casts on all three lanes one tier weaker. Flare damages,
+Tide slows, and Bloom heals/pushes back enemies on the target road. Do not
+restore the former match-3 board, math-prototype gates, random summoning, or
 rank-combination loop.
 
 The prize-focused presentation pass now also includes:
 
-- `?judge=1` for a direct, authored first battle and highlighted legal Flare swap.
-- `?weekly=YYYY-Www` for a deterministic weekly board and compact legal-swap replay.
+- `?judge=1` for a direct, authored first battle and a highlighted placement that
+  completes the middle lane's column.
+- `?weekly=YYYY-Www` for a deterministic weekly deal and compact placement replay.
 - Hero specializations that modify the matching Flare, Tide, or Bloom tactic.
-- Cinematic five-star feedback and a saved run memory for largest constellation,
+- Cinematic five-tier feedback and a saved run memory for largest constellation,
   most-defended lane, decisive recovery, and the expedition route.
 - Region-owned encounter pacing: a commander with minions before each regional
   finale, then a great boss arriving in formation with mid-boss lieutenants.
 - A combat-focus projection that keeps the three live lane pressures and the
-  selected hero active beside the match-3 board, while growth, codex, and castle
+  selected hero active beside the block board, while growth, codex, and castle
   management automatically recede until preparation resumes.
 - A Korean/English browser release plus an offline Windows desktop demo using a
   sandboxed local protocol, shared settings/key bindings, explicit save path,

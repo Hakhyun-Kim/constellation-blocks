@@ -1,7 +1,7 @@
 /* =====================================================
  * 전술 전장 피드백
  *
- * 3매치의 원인(매치)과 3D 전장의 결과(피해·감속·후퇴)를 짧은 HUD 문장으로
+ * 블록 퍼즐의 원인(지운 줄)과 3D 전장의 결과(피해·감속·후퇴)를 짧은 HUD 문장으로
  * 연결한다. 규칙을 만들지 않고 castTactic()이 이미 돌려준 이벤트만 읽는다.
  * ===================================================== */
 const SPELL = {
@@ -20,7 +20,7 @@ export function createTacticFeedback() {
   let generation = 0;
 
   if (!root || !icon || !title || !detail) {
-    return { announceMatch() {}, showCast() {}, showPreview() {}, reset() {} };
+    return { announceClear() {}, showCast() {}, showPreview() {}, reset() {} };
   }
 
   function present(kind, headline, subline, preview = false, size = 3) {
@@ -45,11 +45,12 @@ export function createTacticFeedback() {
     }, preview ? 1000 : 1700);
   }
 
-  function announceMatch(kind, lane, size) {
+  function announceClear(kind, lane, size, lines = 1, combo = 0) {
     const spell = SPELL[kind] || SPELL.flare;
     const bonus = size >= 5 ? '전장 강타 준비!' : size === 4 ? '강화 준비!' : '길을 조준해요';
-    present(kind, size >= 5 ? `STARFALL · ${spell.name}` : `${size}매치 · ${spell.name}`,
-      `${LANE[lane] || LANE[1]} 길 ${bonus}`, true, size);
+    const headline = size >= 5 ? `STARFALL · ${spell.name}` : `${lines}줄 정리 · ${spell.name}`;
+    const streak = combo >= 3 ? ` · 연속 ${combo}` : '';
+    present(kind, headline, `${LANE[lane] || LANE[1]} 길 ${bonus}${streak}`, true, size);
   }
 
   function showCast(result, kind, lane, size) {
@@ -75,7 +76,7 @@ export function createTacticFeedback() {
   function showPreview(kind, lane, size) {
     const spell = SPELL[kind] || SPELL.flare;
     present(kind, size >= 5 ? `STARFALL · ${spell.name}` : `테스트 · ${spell.name}`,
-      `${LANE[lane] || LANE[1]} 길 · ${size}매치 연출`, true, size);
+      `${LANE[lane] || LANE[1]} 길 · ${size}등급 연출`, true, size);
   }
 
   function reset() {
@@ -86,5 +87,5 @@ export function createTacticFeedback() {
     document.body.classList.remove('tactic-climax');
   }
 
-  return { announceMatch, showCast, showPreview, reset };
+  return { announceClear, showCast, showPreview, reset };
 }

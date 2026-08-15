@@ -230,7 +230,7 @@ body {
 #comboChip.pop { animation: combopop 0.35s cubic-bezier(0.2, 1.6, 0.4, 1); }
 @keyframes combopop { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
 
-/* 3매치의 결과를 전장에도 고정한다. 보드의 빛줄기만으로는 시선이 전장으로
+/* 줄 정리의 결과를 전장에도 고정한다. 보드의 빛줄기만으로는 시선이 전장으로
  * 돌아왔을 때 무슨 일이 일어났는지 놓치기 쉬워, 주문·대상 길·결과를 한 칩에 묶는다. */
 .tactic-impact {
   position: absolute;
@@ -2462,37 +2462,49 @@ body.demo-on #scene3d { box-shadow: inset 0 0 0 3px rgba(255, 123, 123, 0.55); }
 .tactic-routes span.active.flare { background: #d66656; box-shadow: 0 0 13px #f4a159; }
 .tactic-routes span.active.tide { background: #4e84c5; box-shadow: 0 0 13px #8de6ff; }
 .tactic-routes span.active.bloom { background: #4c9b72; box-shadow: 0 0 13px #aef58f; }
-.tactic-board { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; padding: 5px; border-radius: 11px; background: linear-gradient(135deg, #2a2255, #151938); box-shadow: inset 0 2px 6px #07071d77; }
-.tactic-board.casting { outline: 2px solid var(--tactic-glow, #d8b4ff); outline-offset: 1px; }
-.tactic-star { position: relative; z-index: 2; min-width: 0; aspect-ratio: 1; border: 1px solid #ffffff55; border-radius: 8px; cursor: pointer; font-size: clamp(15px, 2.1vw, 23px); line-height: 1; transition: transform .13s, filter .13s, outline .13s; background: #4d4185; }
-.tactic-star:hover { transform: translateY(-2px); filter: brightness(1.15); }
-.tactic-star.picked { outline: 3px solid #ffe985; transform: scale(.9); z-index: 1; }
-.tactic-star.flare { background: radial-gradient(circle at 40% 33%, #ffe4a3, #ee8b5e 46%, #9e4767); }
-.tactic-star.tide { background: radial-gradient(circle at 40% 33%, #d7f8ff, #78bce8 46%, #4f6eb6); }
-.tactic-star.bloom { background: radial-gradient(circle at 40% 33%, #e6ffd0, #8bd582 46%, #518f7c); }
-.guided-opening .tactic-star.guided-from,
-.guided-opening .tactic-star.guided-to {
+/* ===== 별자리 블록 전술판 =====
+ * 판(8×8)과 트레이 조각은 같은 칸 크기를 쓴다. 크기가 다르면 "저 조각이 저기에
+ * 들어갈까?"를 눈으로 재지 못해, 아이가 시행착오로만 배우게 된다. */
+.block-grid { position: relative; z-index: 2; display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; padding: 5px; border-radius: 11px; background: linear-gradient(135deg, #2a2255, #151938); box-shadow: inset 0 2px 6px #07071d77; }
+.block-grid.casting { outline: 2px solid var(--tactic-glow, #d8b4ff); outline-offset: 1px; }
+.block-cell { position: relative; z-index: 2; min-width: 0; aspect-ratio: 1; border: 1px solid #ffffff22; border-radius: 6px; cursor: pointer; line-height: 1; transition: transform .13s, filter .13s, box-shadow .13s; background: #241f47; }
+/* 가운데 길은 두 열뿐이라 색으로도 경계를 보여 준다 — 어느 열이 어느 길인지가
+ * 곧 "어디를 지킬까"이므로 판에서 바로 읽혀야 한다. */
+.block-cell[data-lane="1"] { background: #2b2557; }
+.block-cell.filled { border-color: #ffffff55; }
+.block-cell.filled.flare { background: radial-gradient(circle at 40% 33%, #ffe4a3, #ee8b5e 52%, #9e4767); }
+.block-cell.filled.tide { background: radial-gradient(circle at 40% 33%, #d7f8ff, #78bce8 52%, #4f6eb6); }
+.block-cell.filled.bloom { background: radial-gradient(circle at 40% 33%, #e6ffd0, #8bd582 52%, #518f7c); }
+.block-cell.ghost { box-shadow: inset 0 0 0 2px #fff9c4; filter: brightness(1.25); }
+.block-cell.ghost.flare { background: #7c4a4a; }
+.block-cell.ghost.tide { background: #3f5f8c; }
+.block-cell.ghost.bloom { background: #3f7358; }
+.block-cell.ghost-bad { box-shadow: inset 0 0 0 2px #ff9c9c; background: #4a2b3d; }
+.block-cell.will-clear { box-shadow: 0 0 0 2px #ffe985, 0 0 12px 2px #ffd15a88; }
+.block-cell.matched { z-index: 4; border-color: #fff; animation: tacticmatch .22s cubic-bezier(.18, 1.55, .42, 1) both; }
+.block-cell.matched.flare { box-shadow: 0 0 0 2px #ffe4a3, 0 0 20px 7px #f48559; }
+.block-cell.matched.tide { box-shadow: 0 0 0 2px #e7fbff, 0 0 20px 7px #6bd9ff; }
+.block-cell.matched.bloom { box-shadow: 0 0 0 2px #edffcf, 0 0 20px 7px #89e98c; }
+.block-cell.matched.jackpot { animation-duration: .28s; }
+
+.block-tray { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 7px; }
+.block-slot { display: grid; place-items: center; min-height: 62px; padding: 6px; border: 1px solid #c9c5e9; border-radius: 10px; background: #f6f3ff; cursor: pointer; transition: transform .12s, box-shadow .12s, background .12s; }
+.block-slot:hover { transform: translateY(-2px); background: #efe9ff; }
+.block-slot.picked { border-color: #ffbe3d; background: #fff4d8; box-shadow: 0 0 0 3px #ffd97a88; }
+.block-slot.stuck { opacity: .45; cursor: not-allowed; }
+.block-slot.used { border-style: dashed; background: #eceaf5; cursor: default; }
+.block-slot.used:hover { transform: none; }
+.block-piece { display: grid; grid-template-columns: repeat(var(--pw, 1), 11px); grid-template-rows: repeat(var(--ph, 1), 11px); gap: 2px; }
+.block-piece i { border-radius: 3px; border: 1px solid #ffffff66; }
+.block-piece.flare i { background: linear-gradient(150deg, #ffd79a, #dd7a54); }
+.block-piece.tide i { background: linear-gradient(150deg, #cdf1ff, #5f9ed6); }
+.block-piece.bloom i { background: linear-gradient(150deg, #dcffc7, #6cb87d); }
+.guided-opening .block-cell.guided-to,
+.guided-opening .block-slot.guided-from {
   z-index: 5;
   outline: 3px solid #fff3a6;
   box-shadow: 0 0 0 4px #ffd55a55;
 }
-.guided-opening .tactic-star.guided-from::after {
-  content: '→';
-  position: absolute;
-  left: 72%;
-  top: 50%;
-  z-index: 7;
-  color: #fff8c7;
-  font-size: 24px;
-  text-shadow: 0 2px 5px #342453;
-  transform: translateY(-50%);
-  pointer-events: none;
-}
-.tactic-star.matched { z-index: 4; border-color: #fff; animation: tacticmatch .22s cubic-bezier(.18, 1.55, .42, 1) both; }
-.tactic-star.matched.flare { box-shadow: 0 0 0 2px #ffe4a3, 0 0 20px 7px #f48559; }
-.tactic-star.matched.tide { box-shadow: 0 0 0 2px #e7fbff, 0 0 20px 7px #6bd9ff; }
-.tactic-star.matched.bloom { box-shadow: 0 0 0 2px #edffcf, 0 0 20px 7px #89e98c; }
-.tactic-star.matched.jackpot { animation-duration: .28s; }
 .tactic-beam { position: absolute; z-index: 5; height: 4px; border-radius: 99px; opacity: 0; pointer-events: none; transform-origin: left center; transform: rotate(var(--beam-angle)) scaleX(0); }
 .tactic-beam.run { animation: tacticbeam .23s cubic-bezier(.1, .8, .3, 1) both; }
 .tactic-beam.flare { background: linear-gradient(90deg, #fff4b0, #ff824f); box-shadow: 0 0 6px #fff2a6, 0 0 16px #ff7650; }
@@ -2510,7 +2522,8 @@ body.judge-mode #diffRow { display: none !important; }
 @keyframes tacticroute { 0% { filter: brightness(.8); } 55% { filter: brightness(1.45); } 100% { filter: brightness(1); } }
 @keyframes tacticbeam { 0% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(0); } 22% { opacity: 1; } 76% { opacity: 1; transform: rotate(var(--beam-angle)) scaleX(1); } 100% { opacity: 0; transform: rotate(var(--beam-angle)) scaleX(1.08); } }
 @media (max-width: 720px) {
-  .tactic-star { font-size: 23px; }
+  .block-grid { gap: 3px; }
+  .block-slot { min-height: 56px; }
   .tactic-head { align-items: flex-start; }
   .tactic-spectate { padding: 4px 5px; font-size: 9px; }
   .tactic-lanes { display: none; }
@@ -2563,13 +2576,13 @@ body.combat-focus #benchCard .bench { margin-top: 4px; }
 .reduced-effects .hcard.t3,
 .reduced-effects .hcard.t4,
 .reduced-effects .reveal.t4,
-.reduced-effects .tactic-board.casting,
+.reduced-effects .block-grid.casting,
 .reduced-effects .tactic-routes span.active,
-.reduced-effects .guided-opening .tactic-star.guided-from,
-.reduced-effects .guided-opening .tactic-star.guided-to {
+.reduced-effects .guided-opening .block-slot.guided-from,
+.reduced-effects .guided-opening .block-cell.guided-to {
   animation: none !important;
 }
-.reduced-effects .tactic-star.matched { animation-duration: .12s; }
+.reduced-effects .block-cell.matched { animation-duration: .12s; }
 .reduced-effects .tactic-beam.run { animation-duration: .13s; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2580,13 +2593,13 @@ body.combat-focus #benchCard .bench { margin-top: 4px; }
   .hcard.t3,
   .hcard.t4,
   .reveal.t4,
-  .tactic-board.casting,
+  .block-grid.casting,
   .tactic-routes span.active,
-  .guided-opening .tactic-star.guided-from,
-  .guided-opening .tactic-star.guided-to {
+  .guided-opening .block-slot.guided-from,
+  .guided-opening .block-cell.guided-to {
     animation: none !important;
   }
-  .tactic-star.matched { animation-duration: .12s; }
+  .block-cell.matched { animation-duration: .12s; }
   .tactic-beam.run { animation-duration: .13s; }
 }
 @font-face { font-family: "Jua"; src: url("../assets/fonts/Jua-Regular.ttf") format("truetype"); font-display: swap; font-weight: 400; }

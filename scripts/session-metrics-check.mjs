@@ -15,7 +15,7 @@ meter.observe({ active: true, phase: 'story', chapter: 'dawn-road', node: 'gate'
 time += 1200;
 meter.observe({ active: true, phase: 'wave', chapter: 'dawn-road', node: 'meadow', wave: 1 });
 meter.action('waveStarts');
-meter.action('tacticSwaps', 3);
+meter.action('blockPlacements', 3);
 time += 2800;
 meter.checkpoint('first-defense', { chapter: 'dawn-road', node: 'meadow', wave: 1 });
 time += 600;
@@ -30,7 +30,7 @@ assert.equal(result.startKind, 'new');
 assert.equal(result.experience, 'novice');
 assert.deepEqual(result.phaseMs, { story: 1200, wave: 3400 });
 assert.equal(result.actions.waveStarts, 1);
-assert.equal(result.actions.tacticSwaps, 3);
+assert.equal(result.actions.blockPlacements, 3);
 assert.equal(result.checkpoints['first-defense'].activeMs, 4000);
 assert.equal(result.outcome, 'defeat');
 assert.equal(meter.finish('duplicate'), null);

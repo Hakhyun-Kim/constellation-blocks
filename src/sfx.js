@@ -18,20 +18,27 @@ const sampleBank = new Map();
 let sampleDecodeRequested = false;
 
 /* 효과음과 배경음을 따로 끌 수 있다 — 배경음만 끄고 싶은 요구가 가장 흔하다 */
-const AUDIO_KEY = 'constellation-defense.audio.';
-const LEGACY_AUDIO_KEY = 'mathdef_';
+const AUDIO_KEY = 'constellation-blocks.audio.';
+/* 3매치판과 그 이전 프로토타입에서 넘어온 사람의 음소거 설정을 그대로 잇는다. */
+const LEGACY_AUDIO_KEYS = [
+  (name) => `mathdef_${name === 'sfx' ? 'mute_sfx' : 'mute_bgm'}`,
+  (name) => `constellation-defense.audio.${name}`,
+];
 
 function readAudioSetting(name) {
   const current = `${AUDIO_KEY}${name}`;
-  const legacy = `${LEGACY_AUDIO_KEY}${name === 'sfx' ? 'mute_sfx' : 'mute_bgm'}`;
   const value = localStorage.getItem(current);
   if (value != null) return value === '1';
 
-  const legacyValue = localStorage.getItem(legacy);
-  if (legacyValue == null) return false;
-  localStorage.setItem(current, legacyValue);
-  localStorage.removeItem(legacy);
-  return legacyValue === '1';
+  for (const legacyKey of LEGACY_AUDIO_KEYS) {
+    const legacy = legacyKey(name);
+    const legacyValue = localStorage.getItem(legacy);
+    if (legacyValue == null) continue;
+    localStorage.setItem(current, legacyValue);
+    localStorage.removeItem(legacy);
+    return legacyValue === '1';
+  }
+  return false;
 }
 
 function writeAudioSetting(name, muted) {
@@ -327,8 +334,8 @@ function limit(key, ms) {
 export const SFX = {
   tap()        { flowTone([660, 780], 0, 0.05, 'sine', 0.06); },
 
-  /* 전술 효과가 실제 전장에 닿기 전의 짧은 확인음. 유효 매치를 먼저 귀로 알려 주고,
-   * 적이 없어 시전이 거부되더라도 "매치는 됐다"는 사실은 남긴다. */
+  /* 전술 효과가 실제 전장에 닿기 전의 짧은 확인음. 지운 줄을 먼저 귀로 알려 주고,
+   * 적이 없어 시전이 거부되더라도 "줄은 지웠다"는 사실은 남긴다. */
   match(kind, size = 3) {
     if (limit(`match-${kind}`, 90)) return;
     const boosted = size >= 5;
@@ -340,7 +347,7 @@ export const SFX = {
       { filterSweep: kind === 'tide' ? [4400, 2400] : [1700, 5200] });
   },
 
-  /* 매치 확인음 뒤 실제 전장이 받는 주문의 도착음. match()와 분리해야
+  /* 줄 정리 확인음 뒤 실제 전장이 받는 주문의 도착음. match()와 분리해야
    * "맞췄다"와 "효과가 적용됐다"가 서로 다른 순간으로 읽힌다. */
   tactic(kind, size = 3) {
     if (limit(`tactic-${kind}`, 120)) return;

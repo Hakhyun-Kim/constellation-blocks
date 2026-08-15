@@ -15,8 +15,8 @@ const EN = new Map(Object.entries({
   '관전 끝내기': 'End Spectate',
   '보스 접근!': 'Boss approaching!',
   '보스': 'Boss',
-  '별자리 전술판': 'Constellation Tactics',
-  '세 칸 이상 맞추면 그 열의 길에 마법을 내려요': 'Match 3+ to cast on the lane below that column.',
+  '별자리 블록 전술판': 'Constellation Blocks',
+  '조각을 놓아 줄을 꽉 채우면 그 길에 마법이 떨어져요': 'Fill a full line to cast on the lane below it.',
   '영웅 액티브': 'Hero Active',
   '오른쪽 영웅 카드를 선택하세요': 'Select a hero card on the right.',
   '카드 선택': 'Select Hero',
@@ -33,7 +33,15 @@ const EN = new Map(Object.entries({
   '위기': 'Critical',
   '지휘관': 'Commander',
   '대보스': 'Great Boss',
-  '별자리 3매치 전술판': 'Constellation match-3 tactics board',
+  '블록 전술 보드': 'Block tactics board',
+  '놓을 수 있는 별블록 조각': 'Star block pieces you can place',
+  '웨이브가 시작되면 조각이 내려와요.': 'Pieces arrive when the wave begins.',
+  '아래 조각을 먼저 고르세요.': 'Pick a piece below first.',
+  '그 자리에는 조각이 들어가지 않아요.': "That piece doesn't fit there.",
+  '조각을 놓았어요. 줄을 꽉 채우면 전술이 나가요.': 'Placed. Fill a whole line to cast a tactic.',
+  '새 조각이 도착했어요.': 'New pieces have arrived.',
+  '들어갈 자리가 없어 새 조각을 받았어요.': 'Nothing fit, so new pieces were dealt.',
+  '판이 막혀 한 줄을 그냥 치웠어요 — 전술은 나가지 않아요.': 'The board jammed, so one row was swept with no tactic.',
   '수호 영웅단': 'Guardian Party',
   '카드를 눌러 위치를 바꾸세요': 'Select cards to reposition heroes.',
   '영웅 성장': 'Hero Growth',
@@ -299,7 +307,7 @@ export function installDocumentLocalization(locale = activeLocale, documentRef =
   const normalized = setLocale(locale);
   if (!documentRef) return null;
   documentRef.documentElement.lang = normalized;
-  documentRef.title = normalized === 'en' ? 'Constellation Defense' : '🌌 Constellation Defense';
+  documentRef.title = normalized === 'en' ? 'Constellation Blocks' : '🌌 Constellation Blocks';
   localizeSubtree(documentRef.body, normalized);
   if (normalized !== 'en' || typeof MutationObserver !== 'function') return null;
   const observer = new MutationObserver((mutations) => {

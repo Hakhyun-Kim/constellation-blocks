@@ -1,8 +1,8 @@
 /* =====================================================
- * Constellation Defense 밸런스 봇
+ * Constellation Blocks 밸런스 봇
  *
- * 실제 엔진과 실제 3매치 보드 규칙을 함께 사용한다. 전술은 임의로 시전하지
- * 않는다: 매번 현재 보드에서 유효한 인접 스왑을 찾고, 그 스왑이 만든 각 매치가
+ * 실제 엔진과 실제 블록 퍼즐 규칙을 함께 사용한다. 전술은 임의로 시전하지
+ * 않는다: 매번 트레이의 조각을 놓을 수 있는 자리를 찾고, 그 배치가 지운 줄이
  * Flare/Tide/Bloom으로 해당 방어로에 적용된다.
  *
  * 사용법: node scripts/balance-bot.mjs [runs] [difficulty] [profile] [check]
@@ -10,7 +10,7 @@
 import * as D from '../src/data.js';
 import * as E from '../src/engine.js';
 import * as Bot from '../src/bot.js';
-import { createStableBoard, findLegalSwaps, findMatchGroups, laneForGroup, refillCells } from '../src/tactics/board.js';
+import { createEmptyBoard, drawTray, hasAnyPlacement, breakDeadlock, resolvePlacement } from '../src/blocks/board.js';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -50,8 +50,8 @@ function spendTownSpecializations(state) {
   }
 }
 
-/* 화면 어댑터의 resolveQueue와 같은 순서다. 독립 매치는 타입·대상 방어로를
- * 섞지 않고 각각 해소한 뒤, 보충 때문에 새 매치가 생기면 연쇄로 처리한다. */
+/* 화면 어댑터(app/blockflow.js)와 같은 순서다: 조각을 놓고 → 지워진 줄이 만든
+ * 명령을 차례로 발동하고 → 트레이가 비면 새로 뽑는다. */
 export const TACTIC_POLICIES = ['none', 'random', 'threat'];
 
 function lanePressure(state) {
@@ -61,38 +61,46 @@ function lanePressure(state) {
       + (enemy.boss ? 4 : enemy.midBoss ? 2 : 0), 0));
 }
 
-export function choosePolicySwap(policy, state, board, profile, rng, legalMoves = findLegalSwaps(board)) {
+export function choosePolicyPlacement(policy, state, board, tray, profile, rng, combo = 0,
+  legalMoves = Bot.listBlockMoves(board, tray, combo)) {
   if (policy === 'none' || !legalMoves.length) return null;
   if (policy === 'random') {
     if (rng() > profile.tacticUse) return null;
     return legalMoves[Math.floor(rng() * legalMoves.length)];
   }
-  return Bot.chooseTacticSwap(state, board, profile, rng);
+  return Bot.chooseBlockPlacement(state, board, tray, profile, rng, combo);
 }
 
-export function resolveTacticSwap(state, move, onCast = null) {
-  let cells = move.cells;
-  let groups = move.groups;
+/* 한 번의 배치를 화면과 같은 순서로 해소한다. 트레이 보충과 막힘 처리까지
+ * 여기서 끝내야 밸런스 판이 사람의 판과 같은 템포로 흐른다. */
+export function resolveBlockPlacement(state, board, tray, move, combo = 0, onCast = null) {
+  const result = resolvePlacement(board, tray, move.slot, move.row, move.col, { combo });
+  if (!result.ok) return { board, tray, combo, casts: 0 };
   let casts = 0;
-  for (let cascade = 0; groups.length && cascade < 12; cascade++) {
-    for (const group of groups) {
-      const kind = cells[group[0]];
-      const route = laneForGroup(group);
-      const result = E.castTactic(state, route, kind, Math.min(5, group.length));
-      if (result.ok) casts++;
-      onCast?.({
-        cascade: cascade + 1,
-        kind,
-        route,
-        size: Math.min(5, group.length),
-        ok: result.ok,
-        reason: result.reason || null,
-      });
-      cells = refillCells(cells, group, state.rng);
-    }
-    groups = findMatchGroups(cells);
+  for (const command of result.commands) {
+    const outcome = E.castTactic(state, command.route, command.kind, command.size);
+    if (outcome.ok) casts++;
+    onCast?.({
+      axis: command.axis,
+      kind: command.kind,
+      route: command.route,
+      size: command.size,
+      ok: outcome.ok,
+      reason: outcome.reason || null,
+    });
   }
-  return { cells, casts };
+  let cells = result.cells;
+  let nextTray = result.tray;
+  if (!nextTray.some(Boolean)) nextTray = drawTray(state.rng, cells);
+  if (!hasAnyPlacement(cells, nextTray)) {
+    nextTray = drawTray(state.rng, cells);
+    if (!hasAnyPlacement(cells, nextTray)) {
+      cells = breakDeadlock(cells).cells;
+      nextTray = drawTray(state.rng, cells);
+      return { board: cells, tray: nextTray, combo: 0, casts };
+    }
+  }
+  return { board: cells, tray: nextTray, combo: result.combo, casts };
 }
 
 export function playRun(profileName, difficulty, seed, options = {}) {
@@ -103,7 +111,9 @@ export function playRun(profileName, difficulty, seed, options = {}) {
   const profile = Bot.PROFILES[profileName];
   const state = E.createGame({ rng: Bot.mulberry32(seed), difficulty });
 
-  let board = createStableBoard(state.rng);
+  let board = createEmptyBoard();
+  let tray = drawTray(state.rng, board);
+  let combo = 0;
   let stalemate = false;
   while (state.phase !== 'over' && state.wave <= waveCap && !stalemate) {
     if (state.phase === 'journey' && state.journey?.complete) {
@@ -141,27 +151,31 @@ export function playRun(profileName, difficulty, seed, options = {}) {
       actionTimer += 0.05;
       waveClock += 0.05;
       if (waveClock > 900) { stalemate = true; break; }
-      /* 실제 보드 애니메이션과 플레이어 판단 간격을 반영한다. 매 틱마다 스왑하면
-       * 손이 없는 봇만 초당 수십 번 전술을 쓰게 되어 사람 플레이 기준선이 아니다. */
-      if (actionTimer < 6) continue;
+      /* 실제 보드 애니메이션과 플레이어 판단 간격을 반영한다. 조각 하나를 놓는 데
+       * 드는 시간은 스왑보다 짧지만, 한 번 놓는다고 매번 줄이 지워지지는 않는다. */
+      if (actionTimer < 1.5) continue;
       actionTimer = 0;
 
-      const legalMoves = findLegalSwaps(board);
+      const legalMoves = Bot.listBlockMoves(board, tray, combo);
       const decision = trace && {
         wave: state.wave,
         second: Number(waveClock.toFixed(1)),
         policy: tacticPolicy,
         castleHp: Math.round(state.castleHp),
         lanePressure: lanePressure(state).map(value => Number(value.toFixed(2))),
-        legalSwaps: legalMoves.length,
+        placements: legalMoves.length,
       };
-      const swap = choosePolicySwap(tacticPolicy, state, board, profile, state.rng, legalMoves);
-      if (swap) {
+      const move = choosePolicyPlacement(tacticPolicy, state, board, tray, profile, state.rng, combo, legalMoves);
+      if (move) {
         if (decision) {
-          decision.swap = { from: swap.from, to: swap.to };
+          decision.place = { slot: move.slot, row: move.row, col: move.col, lines: move.lines };
           decision.casts = [];
         }
-        board = resolveTacticSwap(state, swap, cast => decision?.casts.push(cast)).cells;
+        const resolved = resolveBlockPlacement(state, board, tray, move, combo,
+          cast => decision?.casts.push(cast));
+        board = resolved.board;
+        tray = resolved.tray;
+        combo = resolved.combo;
       }
       if (decision) trace.push(decision);
 
@@ -249,7 +263,7 @@ if (checkMode) {
   baseline = JSON.parse(readFileSync(path, 'utf8'));
 }
 
-console.log(`\n=== Constellation Defense 밸런스 봇 (판수: ${runs}${checkMode ? ', 기준선 검증' : ''}) ===\n`);
+console.log(`\n=== Constellation Blocks 밸런스 봇 (판수: ${runs}${checkMode ? ', 기준선 검증' : ''}) ===\n`);
 let drift = false;
 for (const difficulty of difficulties) {
   for (const profile of profiles) {

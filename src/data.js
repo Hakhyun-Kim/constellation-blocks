@@ -16,7 +16,8 @@
  *   enemies.js  몬스터·보스·난이도 곡선                   ★ 성장 곡선의 축
  *   castle.js   성·포탑
  *   economy.js  골드·조합 비용·메타 진행                  ★ 성장 곡선의 축
- *   tactics.js  3매치가 방어선에 적용하는 전술 수치
+ *   tactics.js  퍼즐이 방어선에 적용하는 전술 수치
+ *   blocks.js   블록 퍼즐이 전술 등급을 정하는 규칙
  * ===================================================== */
 
 export * from './balance/field.js';
@@ -25,6 +26,7 @@ export * from './balance/enemies.js';
 export * from './balance/castle.js';
 export * from './balance/economy.js';
 export * from './balance/tactics.js';
+export * from './balance/blocks.js';
 export * from './balance/resonance.js';
 export * from './balance/champion.js';
 export * from './balance/achievements.js';

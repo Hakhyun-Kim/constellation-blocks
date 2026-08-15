@@ -173,7 +173,7 @@ export const BEATS = {
   },
   w2: {
     icon: '🔮', title: '루나의 첫 민원',
-    lines: ['루나가 별자리 판을 올려다봤다.', '「저 별 세 개를 맞추면 길에 마법이 떨어지는 거죠?」', '그렇다.', '「그럼 왜 설명서는 전투 시작 뒤에 뜨죠?」', '', '그건 정말 미안하다.'],
+    lines: ['루나가 별자리 판을 올려다봤다.', '「저 조각으로 줄을 꽉 채우면 길에 마법이 떨어지는 거죠?」', '그렇다.', '「그럼 왜 설명서는 전투 시작 뒤에 뜨죠?」', '', '그건 정말 미안하다.'],
   },
   w3: {
     icon: '📱', title: '현실의 재난 알림',
@@ -216,7 +216,7 @@ export const BEATS = {
 const ENGLISH_BEATS = {
   prologue: { icon: '▤', title: 'The Book Read You First', lines: ['Seoul, 2026. The final chapter of The Last Guardian of the Gate was blank.', 'When you turned the page, star roads and monsters formed beneath your fingertips.', '', 'Arin looked to the sky. “Commander, the citadel is on our side… right?”', 'There was no answer button. Only a defense button.'] },
   w1: { icon: '⚔️', title: 'A Command Everyone Can Hear', lines: ['The first defense began.', 'Arin and the monsters both looked up at the sound of your click.', '', 'Commands use a public channel in this world. The security officer has not spawned yet.'] },
-  w2: { icon: '🔮', title: "Luna's First Complaint", lines: ['Luna looked up at the constellation board.', '“Match three stars and magic falls on that lane, right?”', 'Correct.', '“Then why did the instructions appear after combat started?”', '', 'That one is on us.'] },
+  w2: { icon: '🔮', title: "Luna's First Complaint", lines: ['Luna looked up at the constellation board.', '“Fill a whole line and magic falls on that lane, right?”', 'Correct.', '“Then why did the instructions appear after combat started?”', '', 'That one is on us.'] },
   w3: { icon: '📱', title: 'A Disaster Alert from Reality', lines: ['A Seoul emergency alert appeared in midair.', '[ Gate Seven threat raised · Nearby hunters must assist evacuation ]', '', 'The storybook citadel and a real subway station pointed to the same coordinates.'] },
   w4: { icon: '♜', title: 'The Corrector Approaches', lines: ['Minions split across three lanes while a commander marched behind them.', 'A formation that follows orders is more dangerous than one strong enemy.', '', 'Sera drew her bow. “This is not another tutorial, is it?”', 'Unfortunately, this one is real.'] },
   w5: { icon: '🖋️', title: 'The Memory of a Dead Sentence', lines: ['The same line was written dozens of times inside the fallen commander’s armor.', '[ Created · Commanded · Deleted · Created again ]', '', 'The monster vanished, but the sentence remained.', 'What you create remembers you, even when you do not remember it.'] },

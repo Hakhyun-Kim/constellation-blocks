@@ -1,28 +1,44 @@
-import { findMatchGroups, swapCells } from '../tactics/board.js';
+import { GRID, createEmptyBoard, findClears, resolvePlacement } from '../blocks/board.js';
 
 /* The judge route is an authored presentation state, not a different ruleset.
- * Its opening still goes through the normal adjacent-swap and cast paths. */
+ * Its opening still goes through the normal place-a-piece and cast paths. */
+const openingCells = () => {
+  const cells = createEmptyBoard();
+  /* 가운데 길(3열)만 두 칸 남겨 둔다. 첫 배치가 곧 첫 전술이 되도록. */
+  for (let row = 0; row < 6; row++) cells[row * GRID + 3] = 'flare';
+  for (let row = 0; row < 3; row++) cells[row * GRID + 2] = 'tide';
+  for (let row = 5; row < 8; row++) cells[row * GRID + 6] = 'bloom';
+  return cells;
+};
+
 export const JUDGE_OPENING = Object.freeze({
-  cells: Object.freeze([
-    'flare', 'tide', 'bloom', 'bloom', 'flare', 'tide',
-    'flare', 'tide', 'tide', 'flare', 'bloom', 'bloom',
-    'tide', 'bloom', 'flare', 'flare', 'tide', 'flare',
-    'bloom', 'flare', 'flare', 'bloom', 'tide', 'bloom',
-    'bloom', 'flare', 'tide', 'bloom', 'flare', 'tide',
-    'tide', 'bloom', 'flare', 'tide', 'bloom', 'bloom',
+  cells: Object.freeze(openingCells()),
+  tray: Object.freeze([
+    Object.freeze({ piece: 'duoV', type: 'flare' }),
+    Object.freeze({ piece: 'square', type: 'tide' }),
+    Object.freeze({ piece: 'tri', type: 'bloom' }),
   ]),
-  from: 3,
-  to: 4,
+  slot: 0,
+  row: 6,
+  col: 3,
   lane: 1,
   kind: 'flare',
-  refill: Object.freeze(['flare', 'flare', 'tide']),
 });
 
-export function judgeOpeningMatch() {
-  if (findMatchGroups(JUDGE_OPENING.cells).length) return null;
-  const groups = findMatchGroups(swapCells(JUDGE_OPENING.cells, JUDGE_OPENING.from, JUDGE_OPENING.to));
-  const group = groups.find((entry) => entry.length === 3);
-  return group ? { group, kind: JUDGE_OPENING.kind, lane: JUDGE_OPENING.lane } : null;
+export function judgeOpeningClear() {
+  const opening = JUDGE_OPENING;
+  const before = findClears(opening.cells);
+  if (before.rows.length || before.cols.length) return null;
+  const result = resolvePlacement(
+    [...opening.cells],
+    opening.tray.map((entry) => ({ ...entry })),
+    opening.slot, opening.row, opening.col,
+  );
+  if (!result.ok || result.lines !== 1) return null;
+  const command = result.commands[0];
+  return command && command.route === opening.lane && command.kind === opening.kind
+    ? { command, commands: result.commands, lines: result.lines }
+    : null;
 }
 
 export function prepareJudgeWave(state) {
