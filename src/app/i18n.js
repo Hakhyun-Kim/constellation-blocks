@@ -176,6 +176,8 @@ const EN = new Map(Object.entries({
   '마을 광장 다시 둘러보기': 'Return to the Town Square',
   '시설': 'Facilities',
   '지도 보기': 'View Map',
+  '지도 보기 (아직 출발 불가)': 'View Map (cannot depart yet)',
+  '마을 광장으로 돌아가기': 'Back to the Town Square',
   '가까운 사람 또는 시설 찾기': 'Find a nearby person or facility',
   '방문': 'Visit',
   '와 대화': 'Talk',

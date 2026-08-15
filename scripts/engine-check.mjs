@@ -84,6 +84,49 @@ const put = (st, cls, tier, pad) => {
   ok('journey: party growth survives a trial', next.field.length === 3 && carried.level === 2 && carried.skills.knight_edge === 1);
 }
 
+/* ---------- recruit towns never trap the player ---------- */
+{
+  const st = E.createGame({ difficulty: 'normal' });
+  st.phase = 'journey';
+  E.travelJourney(st, 'meadow');
+  st.journey.activeBattle = null;
+  const arrive = E.travelJourney(st, 'town');
+  const town = E.journeyNode('town', st);
+  ok('journey: a fresh recruit town holds the party until one companion is chosen',
+    arrive.type === 'recruit' && st.journey.pendingRecruit === 'town' && E.recruitableOffers(st, town).length === 2);
+  ok('journey: the map stays closed while a companion is still owed', E.journeyChoices(st).length === 0);
+  const picked = E.recruitJourneyHero(st, 'doyun');
+  ok('journey: choosing one companion opens the road again',
+    picked.ok && st.journey.pendingRecruit === null && E.journeyChoices(st).length > 0);
+
+  /* 이미 다 데려온 마을은 영입 대기를 걸지 않는다 — 걸면 지도가 잠긴 채
+   * 마을에서 나갈 수도 없어 판이 멈춘다. */
+  const owned = E.createGame({ difficulty: 'normal' });
+  owned.phase = 'journey';
+  for (const key of ['doyun', 'sera']) {
+    owned.field.push({ ...owned.field[0], id: 800 + owned.field.length, heroKey: key, padIndex: owned.field.length });
+  }
+  E.travelJourney(owned, 'meadow');
+  owned.journey.activeBattle = null;
+  const revisit = E.travelJourney(owned, 'town');
+  ok('journey: a town whose companions already joined does not lock the map',
+    revisit.ok && revisit.type === 'town' && owned.journey.pendingRecruit === null);
+  ok('journey: that town still offers a way onward', E.journeyChoices(owned).length > 0);
+  ok('journey: no recruit target remains to walk to', E.recruitableOffers(owned, town).length === 0);
+
+  /* 자리가 없어도 마찬가지다. 영입할 수 없는 대기는 대기가 아니라 정지다. */
+  const full = E.createGame({ difficulty: 'normal' });
+  full.phase = 'journey';
+  while (full.field.length < D.SQUAD_MAX) {
+    full.field.push({ ...full.field[0], id: 900 + full.field.length, heroKey: `filler${full.field.length}`, padIndex: full.field.length });
+  }
+  E.travelJourney(full, 'meadow');
+  full.journey.activeBattle = null;
+  const crowded = E.travelJourney(full, 'town');
+  ok('journey: a full party is not held in a recruit town',
+    crowded.ok && full.journey.pendingRecruit === null && E.journeyChoices(full).length > 0);
+}
+
 /* ---------- chapter transition, save/restore, and one-time ending ---------- */
 {
   const st = E.createGame({ difficulty: 'normal' });

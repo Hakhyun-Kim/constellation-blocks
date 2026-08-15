@@ -181,11 +181,26 @@ export function travelJourney(state, id) {
   }
   if (node.kind === 'town' || node.kind === 'recruit') {
     if (node.refugeeStation) arriveRefugeeStation(state, node);
-    state.journey.pendingRecruit = id;
-    if (node.enterOnArrival && !(node.offers || []).length) state.journey.pendingRecruit = null;
-    return { ok: true, type: node.refugeeStation ? 'town' : 'recruit', node, refuge: node.refugeeStation ? { ...state.journey.refuge } : null };
+    /* 영입 대기는 "아직 고를 사람이 남았다"는 뜻이어야 한다. 이미 다 데려왔거나
+     * 자리가 없으면 대기를 걸지 않는다 — 걸어 두면 지도가 잠기고(journeyChoices가
+     * 빈 배열) 마을에서 나갈 수도 없어 판이 멈춘다. */
+    const open = recruitableOffers(state, node);
+    state.journey.pendingRecruit = open.length ? id : null;
+    return {
+      ok: true,
+      type: node.refugeeStation ? 'town' : open.length ? 'recruit' : 'town',
+      node,
+      refuge: node.refugeeStation ? { ...state.journey.refuge } : null,
+    };
   }
   return { ok: true, type: 'supply', node, ...applySupply(state, node) };
+}
+
+/* 지금 이 마을에서 실제로 영입할 수 있는 동료만 센다. 이미 파티에 있거나
+ * 자리가 꽉 찼으면 후보가 아니다 — 화면·엔진·봇이 같은 기준을 써야 한다. */
+export function recruitableOffers(state, node) {
+  if (!node?.offers?.length || state.field.length >= D.SQUAD_MAX) return [];
+  return node.offers.filter((key) => D.squadSpec(key) && !state.field.some((hero) => hero.heroKey === key));
 }
 
 export function recruitJourneyHero(state, key) {

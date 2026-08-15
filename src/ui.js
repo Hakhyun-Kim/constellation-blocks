@@ -174,7 +174,10 @@ export class UI {
   _activeVillageNode(state) {
     const pending = E.journeyNode(state?.journey?.pendingRecruit, state);
     const current = E.journeyNode(state?.journey?.current, state);
-    if (pending?.kind === 'town') return pending;
+    /* 영입이 남아 있어도 지도는 볼 수 있어야 한다. 마을을 스스로 닫았다면 그
+     * 선택을 지킨다 — 강제로 다시 열면 "나갈 수 없는 마을"이 된다.
+     * 출발은 어차피 engine의 journeyChoices가 막으므로 잠금은 유지된다. */
+    if (pending?.kind === 'town') return this._village.nodeId === pending.id && !this._village.open ? null : pending;
     if (this._village.open && current?.kind === 'town') return current;
     return null;
   }
@@ -187,8 +190,7 @@ export class UI {
   _villageTargets(state, node) {
     const targets = [];
     if (state.journey.pendingRecruit === node.id) {
-      for (const key of node.offers || []) {
-        if (state.field.some((hero) => hero.heroKey === key)) continue;
+      for (const key of E.recruitableOffers(state, node)) {
         const spec = D.squadSpec(key);
         const C = spec && D.CLASSES[spec.cls];
         const spot = VILLAGE_RECRUITER_SPOTS[key] || { x: 0, z: 0, place: '마을 광장' };
@@ -334,7 +336,7 @@ export class UI {
       return;
     }
     if (this._village.dialog) return;
-    if (event.key === 'Escape' && !state.journey.pendingRecruit) {
+    if (event.key === 'Escape') {
       event.preventDefault();
       event.stopImmediatePropagation();
       this._village.open = false;
@@ -397,7 +399,7 @@ export class UI {
     return `<section class="village-screen">
       <div id="village3d" class="village-3d" aria-label="${node.name} 3D 광장"></div>
       <header class="village-top"><span>CONSTELLATION VILLAGE</span><h1>${node.icon} ${node.name}</h1><p>${refuge ? '이름을 잃지 않도록 구조 기록을 지키고 다음 방어를 준비합니다.' : locked ? '동료 한 명과 대화해야 다음 길이 열립니다.' : '시설을 방문하거나 지도에서 다음 별길로 출발하세요.'}</p>${refugeStatus}</header>
-      <div class="village-bottom"><p data-village-hint>${hint}</p><div class="village-controls"><button data-village-action ${nearby ? '' : 'disabled'}>${nearby ? `${nearby.emoji} ${nearby.label} ${nearby.type === 'recruit' ? '와 대화' : '방문'}` : '가까운 사람 또는 시설 찾기'}</button><div class="village-dpad" aria-label="마을 이동"><button data-village-step="up">▲</button><span><button data-village-step="left">◀</button><button data-village-step="down">▼</button><button data-village-step="right">▶</button></span></div>${locked ? '' : '<button class="village-map-exit" data-village-leave>지도 보기</button>'}</div></div>
+      <div class="village-bottom"><p data-village-hint>${hint}</p><div class="village-controls"><button data-village-action ${nearby ? '' : 'disabled'}>${nearby ? `${nearby.emoji} ${nearby.label} ${nearby.type === 'recruit' ? '와 대화' : '방문'}` : '가까운 사람 또는 시설 찾기'}</button><div class="village-dpad" aria-label="마을 이동"><button data-village-step="up">▲</button><span><button data-village-step="left">◀</button><button data-village-step="down">▼</button><button data-village-step="right">▶</button></span></div><button class="village-map-exit" data-village-leave>${locked ? '지도 보기 (아직 출발 불가)' : '지도 보기'}</button></div></div>
       ${this._villageDialogMarkup(state, node)}
     </section>`;
   }
@@ -454,7 +456,7 @@ export class UI {
     const choices = E.journeyChoices(state);
     const choiceIds = new Set(choices.map((node) => node.id));
     const pending = E.journeyNode(journey.pendingRecruit, journey);
-    if (pending?.kind === 'town') this._village.open = true;
+    if (pending?.kind === 'town' && this._village.nodeId !== pending.id) this._village.open = true;
     if (current?.kind === 'town' && current.enterOnArrival && this._village.nodeId !== current.id) this._village.open = true;
     if (!pending && current?.kind !== 'town') {
       this._village.open = false;
@@ -521,7 +523,10 @@ export class UI {
           <span class="journey-offer-icon">${C.emoji}</span><div><b>${spec.name} · ${spec.role}</b><p>${owned ? '이미 함께하고 있습니다.' : '함께 원정에 합류합니다.'}</p></div><em>${owned ? '합류' : '영입'}</em>
         </button>`;
       }).join('');
-      action = `<div class="journey-action-title"><b>${pending.icon} ${pending.name}</b><span>${pending.text}</span></div><div class="journey-offers">${offers}</div>`;
+      const backToVillage = pending.kind === 'town'
+        ? '<button class="journey-choice-card recruit" data-village-enter><span>⌂</span><div><b>마을 광장으로 돌아가기</b><p>광장을 걸어 동료에게 직접 말을 걸거나 시설을 씁니다.</p></div><em>마을</em></button>'
+        : '';
+      action = `<div class="journey-action-title"><b>${pending.icon} ${pending.name}</b><span>${pending.text}</span></div><div class="journey-offers">${backToVillage}${offers}</div>`;
     } else if (current?.choices && !journey.flags[current.id]) {
       const routes = current.choices.map((choice) =>
         `<button class="journey-choice-card" data-journey-path="${choice.key}"><span>${choice.icon}</span><div><b>${choice.name}</b><p>${choice.text}</p></div><em>${choice.tag}</em></button>`).join('');
