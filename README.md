@@ -41,6 +41,7 @@ Use `?lang=en` for the English build, or change **Language** from the in-game �
 - The balance bot places real pieces through the same pure rules the player uses (`npm run balance:check`).
 - The release uses a single CC0 Quaternius character/monster family and compact CC0 Kenney combat samples, with procedural terrain, VFX, and synthesized fallbacks.
 - `?art=procedural` runs without requesting the external-asset manifest. Every bundled asset has recorded provenance and must pass the initial-download, integrity, and rendering-performance gates.
+- The first download is budgeted at 4 MiB (`npm run asset:check`). Fonts ship as WOFF2 subsets of the glyphs the game renders — after adding Korean copy, run `npm run fonts:subset`; `npm run fonts:check` fails the build if a character on screen is missing from the subset. No hero model is preloaded: the procedural hero holds the pad until its GLB streams in behind the preload set.
 - The 📊 toolbar button exports up to 40 locally stored play-session records for duration testing. No identifier or play telemetry is sent over the network.
 - The ⚙️ panel shares graphics, reduced-effects, audio, and remappable physical-key preferences across browser and desktop builds.
 - Korean and English share stable game/save IDs; localization changes presentation only. Saves and star shards from Constellation Defense are migrated once on first launch.

@@ -2602,5 +2602,8 @@ body.combat-focus #benchCard .bench { margin-top: 4px; }
   .block-cell.matched { animation-duration: .12s; }
   .tactic-beam.run { animation-duration: .13s; }
 }
-@font-face { font-family: "Jua"; src: url("../assets/fonts/Jua-Regular.ttf") format("truetype"); font-display: swap; font-weight: 400; }
-@font-face { font-family: "Gaegu"; src: url("../assets/fonts/Gaegu-Bold.ttf") format("truetype"); font-display: swap; font-weight: 700; }
+/* 화면에 실제로 쓰는 글자만 남긴 WOFF2 서브셋이다(원본 TTF 4.96MB → 382KB).
+ * 새 한국어 문장을 넣었으면 `npm run fonts:subset`을 다시 돌린다 — 빠뜨리면
+ * npm run fonts:check가 막는다. */
+@font-face { font-family: "Jua"; src: url("../assets/fonts/Jua-Regular.subset.woff2") format("woff2"); font-display: swap; font-weight: 400; }
+@font-face { font-family: "Gaegu"; src: url("../assets/fonts/Gaegu-Bold.subset.woff2") format("woff2"); font-display: swap; font-weight: 700; }

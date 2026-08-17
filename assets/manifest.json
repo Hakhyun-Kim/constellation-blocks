@@ -11,7 +11,7 @@
       "licenseUrl": "https://quaternius.com/faq.html",
       "acquiredAt": "2026-08-13",
       "sha256": "464794040bf3ad3d4fe86453f6ad9a296403ea38bd16105b2f7bf488d4ce2338",
-      "preload": true,
+      "preload": false,
       "profiles": ["high", "lite"]
     },
     {
@@ -24,7 +24,7 @@
       "licenseUrl": "https://quaternius.com/faq.html",
       "acquiredAt": "2026-08-14",
       "sha256": "b347cf0bdf9a7fdea4f86b8f1c48f814fe599b9470480821022a4735f11a5ded",
-      "preload": true,
+      "preload": false,
       "profiles": ["high", "lite"],
       "sourceAsset": "Wizard.gltf",
       "modifications": "Repacked as GLB without changing geometry, materials, embedded textures, or animation data."
@@ -421,34 +421,34 @@
     {
       "id": "google-fonts-jua-regular",
       "type": "font",
-      "path": "assets/fonts/Jua-Regular.ttf",
+      "path": "assets/fonts/Jua-Regular.subset.woff2",
       "creator": "Woowahan Brothers / Google Fonts",
       "sourceUrl": "https://github.com/google/fonts/tree/main/ofl/jua",
       "license": "SIL Open Font License 1.1",
       "licenseUrl": "https://github.com/google/fonts/blob/main/ofl/jua/OFL.txt",
       "acquiredAt": "2026-08-14",
-      "sha256": "769677aef240bfc3b9965f2b50748075bff885e6c6992fc591a3fb268279f898",
+      "sha256": "82bba649b4a1fdba6571edcc67ed1bb78aad83dd99afab52c23e79631050253b",
       "preload": true,
       "runtimeLoad": false,
       "profiles": ["high", "lite"],
       "sourceAsset": "Jua-Regular.ttf",
-      "modifications": "Bundled unchanged for offline browser and desktop typography."
+      "modifications": "Subset with harfbuzz to the glyphs the game renders, then compressed to WOFF2. Outlines, metrics, and family names are unchanged; the OFL declares no Reserved Font Name."
     },
     {
       "id": "google-fonts-gaegu-bold",
       "type": "font",
-      "path": "assets/fonts/Gaegu-Bold.ttf",
+      "path": "assets/fonts/Gaegu-Bold.subset.woff2",
       "creator": "JIKJI SOFT / Google Fonts",
       "sourceUrl": "https://github.com/google/fonts/tree/main/ofl/gaegu",
       "license": "SIL Open Font License 1.1",
       "licenseUrl": "https://github.com/google/fonts/blob/main/ofl/gaegu/OFL.txt",
       "acquiredAt": "2026-08-14",
-      "sha256": "cc38a4af9506a45254d1ce07c589ec473d9e5f0be319e5a77b17c214903f8c1c",
+      "sha256": "70d7a0c94c870f64518b1c5ce30f7778258d27ba1ae1dbd1358f17bf0bbf6839",
       "preload": true,
       "runtimeLoad": false,
       "profiles": ["high", "lite"],
       "sourceAsset": "Gaegu-Bold.ttf",
-      "modifications": "Bundled unchanged for offline browser and desktop typography."
+      "modifications": "Subset with harfbuzz to the glyphs the game renders, then compressed to WOFF2. Outlines, metrics, and family names are unchanged; the OFL declares no Reserved Font Name."
     },
     {
       "id": "constellation-defense-app-icon",

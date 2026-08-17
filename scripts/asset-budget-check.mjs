@@ -9,8 +9,12 @@ const ASSET_ROOT = join(ROOT, 'assets');
 const MANIFEST_PATH = join(ASSET_ROOT, 'manifest.json');
 const MIB = 1024 * 1024;
 
+/* 초기 예산은 실측 2.89MiB에 성장 여지를 더한 값이다. 예전 한도(12MiB)는
+ * 글꼴 원본 4.96MB와 선로딩 영웅 GLB 4MB를 다 통과시켜, 첫 화면이 10초 걸리는
+ * 상태가 게이트를 지나갔다. 한도는 "터지지 않을 만큼"이 아니라 "아이가 기다릴
+ * 수 있을 만큼"으로 잡는다. */
 const LIMITS = {
-  initial: 12 * MIB,
+  initial: 4 * MIB,
   total: 60 * MIB,
   single: 8 * MIB,
 };

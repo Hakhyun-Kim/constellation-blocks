@@ -123,6 +123,35 @@ await test('manifest 실패 뒤 명시적인 재시도가 가능하다', async (
   assert.equal(calls, 2);
 });
 
+/* 첫 화면에 필요 없는 큰 모델이 선로딩분을 밀어내면 안 된다. 영웅 GLB 4MB가
+ * 성문·소리보다 먼저 회선을 잡으면 아이는 그만큼 더 기다린다. */
+await test('선로딩이 아닌 에셋은 선로딩이 끝난 뒤에 받는다', async () => {
+  const order = [];
+  let releaseGate;
+  const gate = new Promise((resolve) => { releaseGate = resolve; });
+  const loader = new RuntimeAssetLoader({
+    enabled: true,
+    deferOnDemand: () => gate,
+    decoders: { model: ({ entry: asset }) => asset.id },
+    fetchFn: async (url) => {
+      if (url.endsWith('manifest.json')) {
+        return jsonResponse(manifestOf(entry('gate-wall', { preload: true }), entry('hero-glb')));
+      }
+      order.push(url);
+      return bytesResponse();
+    },
+  });
+
+  const onDemand = loader.load('hero-glb');
+  const preloaded = await loader.preload();
+  assert.deepEqual(preloaded, ['gate-wall']);
+  assert.deepEqual(order, ['assets/models/gate-wall.glb'], '선로딩 전에는 요청조차 나가지 않는다');
+
+  releaseGate();
+  assert.equal(await onDemand, 'hero-glb');
+  assert.deepEqual(order, ['assets/models/gate-wall.glb', 'assets/models/hero-glb.glb']);
+});
+
 await test('dispose 뒤 끝난 비동기 결과는 현재 장면에 반영하지 않는다', async () => {
   let finishBytes;
   const waitingBytes = new Promise((resolve) => { finishBytes = resolve; });

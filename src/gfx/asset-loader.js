@@ -16,6 +16,7 @@ export class RuntimeAssetLoader {
     manifestUrl = 'assets/manifest.json',
     fetchFn = globalThis.fetch?.bind(globalThis),
     decoders = {},
+    deferOnDemand = null,
     logger = globalThis.console || silentLogger,
   } = {}) {
     this.enabled = !!enabled;
@@ -23,6 +24,11 @@ export class RuntimeAssetLoader {
     this.manifestUrl = manifestUrl;
     this.fetchFn = fetchFn;
     this.decoders = { ...decoders };
+    /* 선로딩이 아닌 에셋은 이 약속이 풀린 뒤에 받는다. 영웅 GLB는 4MB인데
+     * 첫 화면은 그것 없이도 절차형 모델로 완성되므로, 먼저 받겠다고 나서면
+     * 정작 필요한 1MB가 뒤로 밀린다. 순서를 정하지 않으면 대역폭이 좁을수록
+     * 손해가 커진다. */
+    this.deferOnDemand = deferOnDemand;
     this.logger = logger || silentLogger;
     this.state = this.enabled ? 'idle' : 'disabled';
     this.manifest = null;
@@ -86,6 +92,11 @@ export class RuntimeAssetLoader {
     const generation = this._generation;
     const promise = (async () => {
       try {
+        /* preload 항목은 이 문을 지나지 않는다 — 자기 자신을 기다리게 된다. */
+        if (!entry.preload && this.deferOnDemand) {
+          await (typeof this.deferOnDemand === 'function' ? this.deferOnDemand() : this.deferOnDemand);
+          if (generation !== this._generation || this.state === 'disposed') return null;
+        }
         const response = await this.fetchFn(entry.path, {
           cache: entry.preload ? 'force-cache' : 'default',
           signal: this._controller.signal,

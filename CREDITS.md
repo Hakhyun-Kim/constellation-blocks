@@ -6,10 +6,22 @@
 - [Gaegu](https://github.com/google/fonts/tree/main/ofl/gaegu), distributed by Google Fonts under the SIL Open Font License 1.1.
 
 The two font files were acquired from the official Google Fonts repository on
-2026-08-14 and are bundled unchanged so that both the browser build and the
-desktop demo work offline. Their hashes are recorded in `assets/manifest.json`;
-the license text is bundled at `licenses/OFL-1.1.txt`. System sans-serif and
-cursive families remain the CSS fallbacks.
+2026-08-14 so that both the browser build and the desktop demo work offline.
+Their hashes are recorded in `assets/manifest.json`; the license text is bundled
+at `licenses/OFL-1.1.txt`. System sans-serif and cursive families remain the CSS
+fallbacks.
+
+**Modification.** Both files are shipped as subsets, not as the upstream
+originals. Each upstream TTF carries the full KS X 1001 set of 2,350 Hangul
+syllables, which the two together cost 4.96 MB — the largest single item in the
+first download, while the game renders only 922 of those syllables. `npm run
+fonts:subset` keeps the glyphs the game actually draws and compresses the result
+to WOFF2 (382 KB for both). Outlines, metrics, and family names are unchanged;
+only the glyph coverage is reduced. The OFL permits this, and neither font
+declares a Reserved Font Name — name ID 0 of each reads "Copyright 2018 The …
+Project Authors" with no reservation clause — so the `Jua` and `Gaegu` family
+names are retained. `npm run fonts:check` fails the build if a Korean character
+used on screen is missing from the shipped subset.
 
 ## Project branding
 

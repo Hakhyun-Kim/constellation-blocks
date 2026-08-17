@@ -114,6 +114,10 @@ const assetLoader = new RuntimeAssetLoader({
   enabled: artMode === 'v2',
   quality: graphicsQuality,
   decoders: { model: decodeGltfAsset },
+  /* 아린·루나는 첫 화면에 바로 서지만 그 둘의 GLB만 4MB다. 렌더러는 영웅이
+   * 생기는 즉시 요청하므로, 막지 않으면 성문·소리 같은 선로딩분과 대역폭을
+   * 다투어 첫 입력이 늦어진다. 선로딩이 끝난 뒤에 받게 한다. */
+  deferOnDemand: () => assetPreload,
 });
 const assetPreload = assetLoader.preload();
 void assetPreload.then(registerSfxAssets);

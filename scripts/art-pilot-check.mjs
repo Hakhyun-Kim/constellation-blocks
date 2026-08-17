@@ -34,10 +34,11 @@ for (const region of ART_REGIONS) {
 }
 
 for (const id of selectedAssets) assert.equal(assets.get(id)?.type, 'model', `${id} must be registered as a model`);
-assert.equal(assets.get('quaternius-warrior').preload, true);
-assert.equal(assets.get('quaternius-wizard').preload, true);
-for (const id of ['quaternius-monk', 'quaternius-ranger', 'quaternius-cleric']) {
-  assert.equal(assets.get(id).preload, false, `${id} must remain post-first-play`);
+/* 영웅 GLB는 하나도 선로딩하지 않는다. 아린·루나는 첫 화면에 바로 서지만 그
+ * 둘만 4MB라, 선로딩하면 첫 입력까지 그만큼 기다린다. 다른 세 영웅과 같은
+ * 경로로 필요할 때 받고, 도착 전에는 절차형 모델이 그 자리를 지킨다. */
+for (const id of Object.values(HERO_ASSETS)) {
+  assert.equal(assets.get(id).preload, false, `${id} must stream in behind the procedural hero`);
 }
 
 assert.equal(heroPilotSlot('unknown', { heroKey: 'arin' }), null);
