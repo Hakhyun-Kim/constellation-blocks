@@ -23,6 +23,7 @@ import { JUDGE_OPENING, prepareJudgeWave } from './app/judge-run.js';
 import { createPlacementReplay, createWeeklyChallenge, seededRandom } from './challenges/weekly.js';
 import { advanceAutoPhase, createAutoPhaseClock } from './app/phase-flow.js';
 import { summarizeFrameDurations } from './app/perf-probe.js';
+import { createGraphicsAutoTuner } from './app/graphics-auto.js';
 import { captureCanvasVideo, captureFilename } from './app/visual-capture.js';
 import { createLocalPlaytestLog, createSessionMeter, formatPlayMinutes } from './app/session-metrics.js';
 import { normalizePlaytestExperience } from './app/playtest-analysis.js';
@@ -1840,10 +1841,15 @@ const STEP = 1 / 60;          // 고정 시뮬레이션 타임스텝
 const MAX_STEPS = 8;          // 프레임당 최대 캐치업 (낮은 fps 대비)
 let lastT = performance.now();
 let simAcc = 0;
-let bootT = performance.now();
 let frameCount = 0;
 /* 폰은 lite 로 이미 결정된 것으로 친다 — 실측해서 high 로 올릴 이유가 없다 */
-let gfxDecided = store.gfx != null || urlGfx != null || isMobile;
+const gfxAuto = (store.gfx != null || urlGfx != null || isMobile)
+  ? null
+  : createGraphicsAutoTuner({ quality: renderer.quality, decor: !!renderer.decor });
+/* 빈 장면을 재고 "이 기기는 빠르다"로 확정하던 버그의 핵심 조건이다.
+ * 에셋이 도착하기 전에는 표본으로 치지 않는다. */
+let assetsReadyForGfx = false;
+void assetPreload.then(() => { assetsReadyForGfx = true; });
 
 function frame(now) {
   requestAnimationFrame(frame);
@@ -1853,25 +1859,28 @@ function frame(now) {
   syncPlaceBar();
   observePlaySession(now);
 
-  /* 그래픽 자동 품질: 시작 4초 후부터 3초간 실측 fps */
-  if (!gfxDecided) {
-    const elapsed = (now - bootT) / 1000;
-    if (elapsed > 4) {
-      if (!frame._fpsStart) { frame._fpsStart = now; frame._fpsFrames = 0; }
-      frame._fpsFrames++;
-      const win = (now - frame._fpsStart) / 1000;
-      if (win > 3) {
-        gfxDecided = true;
-        const avg = frame._fpsFrames / win;
-        const q = avg < 45 ? 'lite' : 'high';
-        store.gfx = q;
-        if (q === 'lite') { renderer.setQuality('lite'); ui.toast('⚙️ 부드러운 화면을 위해 그래픽을 조절했어요.'); }
-        /* lite 로 낮춰도 안 되는 기기: 배경 장식까지 접는다.
-         * 지형과 카메라가 같이 바뀌는 일이라 실행 중엔 못 바꾸고 다음 실행부터다. */
-        if (avg < 26 && renderer.decor) {
-          store.decorOff = true;
-          ui.toast('⚙️ 다음에 켤 때는 배경을 더 가볍게 할게요.');
-        }
+  /* 그래픽 자동 품질 — 전장이 실제로 그려지는 프레임만 표본으로 삼고,
+   * 판정 뒤에도 무너지면 한 번 더 낮춘다. 규칙은 app/graphics-auto.js. */
+  if (gfxAuto) {
+    const verdict = gfxAuto.sample({
+      dt: realDt,
+      ready: assetsReadyForGfx,
+      eligible: !isPaused() && !document.hidden
+        && !ui.isStoryOpen() && !ui.isStartOpen() && !ui.isVillageActive(),
+    });
+    if (verdict) {
+      store.gfx = verdict.quality;
+      if (verdict.quality !== renderer.quality) {
+        renderer.setQuality(verdict.quality);
+        ui.toast(verdict.stage === 'initial'
+          ? '⚙️ 부드러운 화면을 위해 그래픽을 조절했어요.'
+          : '⚙️ 화면이 무거워져서 그래픽을 한 단계 낮췄어요.');
+      }
+      /* lite 로 낮춰도 안 되는 기기: 배경 장식까지 접는다.
+       * 지형과 카메라가 같이 바뀌는 일이라 실행 중엔 못 바꾸고 다음 실행부터다. */
+      if (!verdict.decor && renderer.decor && !store.decorOff) {
+        store.decorOff = true;
+        ui.toast('⚙️ 다음에 켤 때는 배경을 더 가볍게 할게요.');
       }
     }
   }

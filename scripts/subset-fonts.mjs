@@ -32,18 +32,33 @@ if (missing.length) {
   process.exit(1);
 }
 
-for (const font of FONTS) {
-  const sourcePath = join(ROOT, font.source);
-  const outputPath = join(ROOT, font.output);
-  const source = readFileSync(sourcePath);
-  const subset = await subsetFont(source, text, { targetFormat: 'woff2' });
-  writeFileSync(outputPath, subset);
-  const sha256 = createHash('sha256').update(subset).digest('hex');
-  const before = statSync(sourcePath).size;
-  const after = subset.length;
-  console.log(`${font.family}: ${(before / 1024).toFixed(0)}KB → ${(after / 1024).toFixed(0)}KB`
-    + ` (${(after / before * 100).toFixed(1)}%) · ${font.output}`);
-  console.log(`   sha256 ${sha256}`);
+/* manifest의 무결성 해시는 사람이 옮겨 적을 값이 아니다. 한 글자만 틀려도
+ * asset:check가 막고, 맞게 고치는 유일한 방법은 여기서 나온 값이다. */
+const MANIFEST_PATH = join(ROOT, 'assets/manifest.json');
+let manifestText = readFileSync(MANIFEST_PATH, 'utf8');
+
+function setManifestHash(id, sha256) {
+  const idAt = manifestText.indexOf(`"id": "${id}"`);
+  if (idAt < 0) throw new Error(`manifest에 ${id} 항목이 없습니다.`);
+  const hashPattern = /"sha256": "[a-f0-9]{64}"/;
+  const rest = manifestText.slice(idAt);
+  const match = rest.match(hashPattern);
+  if (!match) throw new Error(`${id}의 sha256을 찾지 못했습니다.`);
+  const at = idAt + match.index;
+  manifestText = manifestText.slice(0, at) + `"sha256": "${sha256}"` + manifestText.slice(at + match[0].length);
 }
 
-console.log('\nmanifest.json의 sha256을 위 값으로 맞추세요.');
+for (const font of FONTS) {
+  const sourcePath = join(ROOT, font.source);
+  const source = readFileSync(sourcePath);
+  const subset = await subsetFont(source, text, { targetFormat: 'woff2' });
+  writeFileSync(join(ROOT, font.output), subset);
+  const sha256 = createHash('sha256').update(subset).digest('hex');
+  setManifestHash(font.id, sha256);
+  const before = statSync(sourcePath).size;
+  console.log(`${font.family}: ${(before / 1024).toFixed(0)}KB → ${(subset.length / 1024).toFixed(0)}KB`
+    + ` (${(subset.length / before * 100).toFixed(1)}%) · ${font.output}`);
+}
+
+writeFileSync(MANIFEST_PATH, manifestText);
+console.log('assets/manifest.json의 sha256을 갱신했습니다.');
