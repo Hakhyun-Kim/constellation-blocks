@@ -42,6 +42,11 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
   let generation = 0;
   const timers = new Set();
 
+  /* 정리 연출의 박자는 CSS의 .block-cell.matched 애니메이션과 같은 길이로 둔다.
+   * 절제 효과에서는 그 애니메이션이 .12s로 짧아지므로 대기도 함께 줄인다 —
+   * 숫자를 따로 박아 두면 한쪽만 바뀌어 연출이 끝난 뒤에도 판이 멈춰 있다. */
+  const resolveBeatMs = () => (document.body.classList.contains('reduced-effects') ? 120 : 210);
+
   const later = (fn, ms) => {
     const id = setTimeout(() => { timers.delete(id); fn(); }, ms);
     timers.add(id);
@@ -60,16 +65,45 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
     picked = null;
   }
 
-  function drawBoard() {
-    board.innerHTML = cells.map((type, index) =>
-      `<button class="block-cell${type ? ` filled ${type}` : ''}" data-i="${index}" data-lane="${laneForCol(cellCol(index))}"`
-      + ` aria-label="${cellCol(index) + 1}열 ${Math.floor(index / GRID) + 1}행"></button>`
-    ).join('');
-    board.querySelectorAll('button').forEach((button) => {
-      const index = Number(button.dataset.i);
-      button.addEventListener('click', () => drop(index));
-      button.addEventListener('pointerenter', () => ghost(index));
+  /* 칸은 한 번만 만든다. 예전에는 한 수를 놓을 때마다 innerHTML로 버튼 64개를
+   * 새로 만들고 리스너 128개를 다시 달았다. 저사양 기기에서는 이 재생성이
+   * 조각을 놓을 때마다 눈에 띄는 멈칫거림이 된다. 리스너도 판에 하나씩만 두고
+   * 위임으로 받는다 — pointerenter는 버블링하지 않으므로 pointerover를 쓴다. */
+  const cellEls = cells.map((_, index) => {
+    const button = document.createElement('button');
+    button.className = 'block-cell';
+    button.dataset.i = String(index);
+    button.dataset.lane = String(laneForCol(cellCol(index)));
+    button.setAttribute('aria-label', `${cellCol(index) + 1}열 ${Math.floor(index / GRID) + 1}행`);
+    return button;
+  });
+
+  function buildBoard() {
+    board.replaceChildren(...cellEls);
+    const cellAt = (event) => event.target?.closest?.('button[data-i]')?.dataset.i;
+    board.addEventListener('click', (event) => {
+      const index = cellAt(event);
+      if (index != null) drop(Number(index));
     });
+    board.addEventListener('pointerover', (event) => {
+      const index = cellAt(event);
+      if (index != null) ghost(Number(index));
+    });
+  }
+
+  /* 칸의 클래스는 언제나 판 상태에서 통째로 다시 만든다. 미리보기 클래스만
+   * 골라 지우면 채워진 칸의 색까지 함께 지워지는 일이 생긴다. */
+  const baseClass = (index) => {
+    const type = cells[index];
+    return type ? `block-cell filled ${type}` : 'block-cell';
+  };
+
+  function drawBoard() {
+    for (let index = 0; index < cellEls.length; index++) {
+      const next = baseClass(index);
+      if (cellEls[index].className !== next) cellEls[index].className = next;
+    }
+    ghosted.length = 0;
   }
 
   /* 조각은 판과 같은 칸 크기로 그린다. 크기가 다르면 "들어갈까?"를 눈으로 못 재고,
@@ -92,8 +126,6 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
       return `<button class="${classes.join(' ')}" data-s="${index}" aria-label="${LABEL[entry.type]} 조각">`
         + `${pieceSvg(entry)}</button>`;
     }).join('');
-    trayBox.querySelectorAll('button').forEach((button) =>
-      button.addEventListener('click', () => pick(Number(button.dataset.s))));
   }
 
   function draw() {
@@ -101,10 +133,21 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
     drawTrayBox();
   }
 
+  /* 지금 미리보기가 얹힌 칸만 기억한다. 예전에는 판 전체를 훑어 찾았고,
+   * 마우스가 칸을 지날 때마다 그 훑기가 다시 일어났다. */
+  const ghosted = [];
+
   function clearGhost() {
-    board.querySelectorAll('.ghost, .ghost-bad, .will-clear').forEach((element) =>
-      element.classList.remove('ghost', 'ghost-bad', 'will-clear', ...BLOCK_TYPES));
+    for (const index of ghosted) cellEls[index].className = baseClass(index);
+    ghosted.length = 0;
   }
+
+  const paint = (index, ...classes) => {
+    const element = cellEls[index];
+    if (!element) return;
+    if (!ghosted.includes(index)) ghosted.push(index);
+    element.classList.add(...classes);
+  };
 
   function ghost(index) {
     clearGhost();
@@ -115,10 +158,7 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
     const col = cellCol(index);
     const fits = canPlace(cells, spec, row, col);
     const targets = placementCells(spec, row, col).filter((cell) => cell >= 0);
-    for (const cell of targets) {
-      const element = board.querySelector(`button[data-i="${cell}"]`);
-      if (element) element.classList.add(fits ? 'ghost' : 'ghost-bad', entry.type);
-    }
+    for (const cell of targets) paint(cell, fits ? 'ghost' : 'ghost-bad', entry.type);
     if (!fits) return;
     /* 지금 놓으면 어느 줄이 사라지는지 미리 보인다. "우연히 터졌다"가 아니라
      * "노려서 터뜨렸다"가 되어야 다음 수를 계획한다. */
@@ -127,8 +167,8 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
     for (let line = 0; line < GRID; line++) {
       const rowFull = Array.from({ length: GRID }, (_, c) => preview[cellIndex(line, c)]).every(Boolean);
       const colFull = Array.from({ length: GRID }, (_, r) => preview[cellIndex(r, line)]).every(Boolean);
-      if (rowFull) for (let c = 0; c < GRID; c++) board.querySelector(`button[data-i="${cellIndex(line, c)}"]`)?.classList.add('will-clear');
-      if (colFull) for (let r = 0; r < GRID; r++) board.querySelector(`button[data-i="${cellIndex(r, line)}"]`)?.classList.add('will-clear');
+      if (rowFull) for (let c = 0; c < GRID; c++) paint(cellIndex(line, c), 'will-clear');
+      if (colFull) for (let r = 0; r < GRID; r++) paint(cellIndex(r, line), 'will-clear');
     }
   }
 
@@ -153,7 +193,7 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
   }
 
   function showBeam(indices, lane, type) {
-    const targets = indices.map((index) => board.querySelector(`button[data-i="${index}"]`)).filter(Boolean);
+    const targets = indices.map((index) => cellEls[index]).filter(Boolean);
     const target = card.querySelector(`.tactic-routes span[data-route="${lane}"]`);
     if (!targets.length || !target) return;
     const cardRect = card.getBoundingClientRect();
@@ -188,14 +228,16 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
     card.dataset.matchSize = String(command.size);
     card.dataset.tactic = command.kind;
     for (const index of cleared) {
-      const element = board.querySelector(`button[data-i="${index}"]`);
-      if (element) element.classList.add('matched', command.kind, ...(command.size >= 4 ? ['jackpot'] : []));
+      cellEls[index]?.classList.add('matched', command.kind, ...(command.size >= 4 ? ['jackpot'] : []));
     }
     showBeam(indices, command.route, command.kind);
   }
 
+  /* 정리 연출이 도는 동안에도 다음 조각은 고를 수 있다. 고르기는 판을 건드리지
+   * 않으므로 막을 이유가 없었고, 아이가 느끼는 대기의 절반은 여기서 났다.
+   * (연출 뒤 트레이가 새로 오면 refillTray가 선택을 지우므로, 본 것과 다른
+   * 조각이 놓이는 일은 없다.) */
   function pick(slot) {
-    if (resolving) return;
     if (getPhase() !== 'wave') {
       toast('전술판은 웨이브 중에만 사용할 수 있어요.', 'warn');
       return;
@@ -289,7 +331,7 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
         return;
       }
       resolving = false;
-    }, 210);
+    }, resolveBeatMs());
     return true;
   }
 
@@ -341,10 +383,15 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
   }
 
   refillTray();
+  buildBoard();
   draw();
-  /* 판 자체는 다시 그려도 남아 있으므로 리스너는 한 번만 단다. 셀마다 달면
-   * 재드로마다 리스너가 쌓인다. */
+  /* 리스너는 판과 트레이에 하나씩만 단다. 트레이는 조각이 바뀔 때마다 다시
+   * 그리므로, 버튼마다 달면 그릴 때마다 리스너가 쌓인다. */
   board.addEventListener('pointerleave', clearGhost);
+  trayBox.addEventListener('click', (event) => {
+    const slot = event.target?.closest?.('button[data-s]')?.dataset.s;
+    if (slot != null) pick(Number(slot));
+  });
   return {
     reset,
     preview,
@@ -366,7 +413,7 @@ export function createBlockFlow({ getPhase, random, resolveTactic, onCast, onCle
       draw();
       card.classList.add('guided-opening');
       for (const index of placementCells(pieceById(tray[picked].piece), opening.row, opening.col)) {
-        board.querySelector(`button[data-i="${index}"]`)?.classList.add('guided-to');
+        cellEls[index]?.classList.add('guided-to');
       }
       trayBox.querySelector(`button[data-s="${picked}"]`)?.classList.add('guided-from');
       status.textContent = '첫 지휘 · 빛나는 자리에 조각을 놓아 가운데 길에 유성을 내리세요.';
